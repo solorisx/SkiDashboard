@@ -1,15 +1,64 @@
-from django.db import models
+from django.contrib.gis.db import models
 
 # Create your models here.
 
 class Activity(models.Model):
     name = models.CharField(max_length=30)
-    #todo: all activity level data
-    #todo: 1:n segments
-    on_delete=models.CASCADE
+    file_id = models.PositiveIntegerField(null=True)
+    timestamp = models.DateTimeField()
+    start_time = models.DateTimeField()
+    total_elapsed_time = models.DurationField()
+    total_timer_time = models.DurationField()
+    total_distance = models.FloatField()
+    start_position = models.PointField()
+    # start_position_lat = models.DecimalField(max_digits=10, decimal_places=6)
+    # start_position_long = models.DecimalField(max_digits=10, decimal_places=6)
+    end_position = models.PointField()
+    # end_position_lat = models.DecimalField(max_digits=10, decimal_places=6)
+    # end_position_long = models.DecimalField(max_digits=10, decimal_places=6)
+    sport_profile_name = models.CharField(max_length=255)
+    enhanced_avg_speed = models.FloatField(null=True)
+    enhanced_max_speed = models.FloatField(null=True)
+    total_calories = models.FloatField(null=True)
+    total_ascent = models.FloatField(null=True)
+    total_descent = models.FloatField(null=True)
+    first_lap_index = models.PositiveIntegerField(null=True)
+    num_laps = models.PositiveIntegerField(null=True)
+    avg_heart_rate = models.PositiveIntegerField(null=True)
+    max_heart_rate = models.PositiveIntegerField(null=True)
     
-class Segment(models.Model):
-    downhill = models.BooleanField
-    #todo: all lap level data
+class Lap(models.Model):
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
+    timestamp = models.DateTimeField()
+    start_time = models.DateTimeField()
+    start_position = models.PointField()
+    # start_position_lat = models.DecimalField(max_digits=10, decimal_places=6)
+    # start_position_long = models.DecimalField(max_digits=10, decimal_places=6)
+    end_position = models.PointField()
+    # end_position_lat = models.DecimalField(max_digits=10, decimal_places=6)
+    # end_position_long = models.DecimalField(max_digits=10, decimal_places=6)
+    total_elapsed_time = models.DurationField()
+    total_timer_time = models.DurationField()
+    total_distance = models.FloatField()
+    enhanced_avg_speed = models.FloatField(null=True)
+    enhanced_max_speed = models.FloatField(null=True)
+    enhanced_min_altitude = models.FloatField(null=True)
+    enhanced_max_altitude = models.FloatField(null=True)
+    total_calories = models.FloatField(null=True)
+    total_ascent = models.FloatField(null=True)
+    total_descent = models.FloatField(null=True)
+    avg_heart_rate = models.PositiveIntegerField(null=True)
+    max_heart_rate = models.PositiveIntegerField(null=True)
+
+class Record(models.Model):
+    lap = models.ForeignKey(Lap, on_delete=models.CASCADE)
+    timestamp = models.DateTimeField()
+    position = models.PointField()
+    # position_lat = models.DecimalField(max_digits=10, decimal_places=6)
+    # position_long = models.DecimalField(max_digits=10, decimal_places=6)
+    distance = models.FloatField(null=True)
+    enhanced_speed = models.FloatField(null=True)
+    enhanced_altitude = models.FloatField(null=True)
+    heart_rate = models.PositiveIntegerField(null=True)
     
 
