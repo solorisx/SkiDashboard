@@ -1,0 +1,58 @@
+from django.contrib.gis.db import models
+
+# Basic OSM Node Model
+class Node(models.Model):
+    osm_id = models.BigIntegerField(unique=True)
+    geom = models.PointField(srid=4326)
+    tags = models.JSONField(default=dict)
+
+    def __str__(self):
+        return f"Node {self.osm_id}"
+
+# Basic OSM Way Model
+class Way(models.Model):
+    osm_id = models.BigIntegerField(unique=True)
+    nodes = models.ManyToManyField(Node)
+    tags = models.JSONField(default=dict)
+
+    def __str__(self):
+        return f"Way {self.osm_id}"
+
+# Aerialway Model
+class Aerialway(models.Model):
+    way = models.OneToOneField(Way, on_delete=models.CASCADE)
+    aerialway = models.CharField(max_length=255)
+    aerialway_bubble = models.BooleanField(default=False)
+    aerialway_capacity = models.IntegerField(blank=True, null=True)
+    aerialway_duration = models.IntegerField(blank=True, null=True)
+    aerialway_heating = models.BooleanField(default=False)
+    aerialway_occupancy = models.IntegerField(blank=True, null=True)
+    station_nodes = models.ManyToManyField(Node)
+    name = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"Aerialway {self.way.osm_id} - {self.name}"
+
+# Piste Model
+class Piste(models.Model):
+    way = models.OneToOneField(Way, on_delete=models.CASCADE)
+    lit = models.BooleanField(default=False)
+    name = models.CharField(max_length=100, blank=True, null=True)
+    oneway = models.BooleanField(default=True)
+    piste_difficulty = models.CharField(max_length=100, blank=True, null=True)
+    piste_grooming = models.CharField(max_length=100, blank=True, null=True)
+    piste_type = models.CharField(max_length=100, blank=True, null=True)
+    ref = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        return f"Piste {self.way.osm_id} - {self.name}"
+
+# SkiArea Model
+class SkiArea(models.Model):
+    name = models.CharField(max_length=255)
+    ways = models.ManyToManyField(Way, related_name='ski_areas')
+    url = models.URLField(blank=True, null=True)
+    wikipedia = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"Ski Area {self.name}"

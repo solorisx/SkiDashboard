@@ -1,6 +1,6 @@
 from django.contrib.gis.db import models
 
-# Create your models here.
+# Models according to FIT specification
 
 class Activity(models.Model):
     name = models.CharField(max_length=30)
