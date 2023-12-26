@@ -49,6 +49,7 @@ class Piste(models.Model):
 
 # SkiArea Model
 class SkiArea(models.Model):
+    osm_id = models.BigIntegerField(unique=True)
     name = models.CharField(max_length=255)
     ways = models.ManyToManyField(Way, related_name='ski_areas')
     url = models.URLField(blank=True, null=True)
