@@ -69,7 +69,8 @@ def parse_osm_file(file_path):
                     'aerialway_duration': way.tags.get('duration'),
                     'aerialway_heating': 'heating' in way.tags and way.tags['heating'] == 'yes',
                     'aerialway_occupancy': way.tags.get('occupancy'),
-                    'name': way.tags.get('name')
+                    'name': way.tags.get('name'),
+                    'station_nodes': way.nodes.filter(tags__contains={'aerialway': 'station'})
                 }
             )
 
