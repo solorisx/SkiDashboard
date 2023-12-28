@@ -27,6 +27,8 @@ class Activity(models.Model):
     num_laps = models.PositiveIntegerField(null=True)
     avg_heart_rate = models.PositiveIntegerField(null=True)
     max_heart_rate = models.PositiveIntegerField(null=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
     
 class Lap(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
