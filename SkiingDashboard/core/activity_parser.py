@@ -7,7 +7,7 @@ from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 
 # Get an instance of a logger
-logger = logging.getLogger('myapp')  # replace 'myapp' with your actual app name
+logger = logging.getLogger('SkiingDashboard')
 
 def extract_data(message, model_fields):
     """
