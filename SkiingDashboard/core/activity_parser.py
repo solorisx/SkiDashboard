@@ -1,30 +1,41 @@
+import logging
+import time
 from fitparse import FitFile
 from SkiingDashboardApp.activity_models import Activity, Lap, Record, LiftRide
 from SkiingDashboardApp.osm_models import Node, Way, Aerialway
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 
+# Get an instance of a logger
+logger = logging.getLogger('myapp')  # replace 'myapp' with your actual app name
 
 def extract_data(message, model_fields):
     """
     Extract data from a FIT message based on the fields available in the corresponding Django model.
     """
-    return {
+    start_time = time.time()
+    data = {
         field: message.get_value(field)
         for field in model_fields
         if message.get_value(field) is not None
     }
-
+    duration = time.time() - start_time
+    logger.debug(f"Extracted data: {data} (took {duration:.4f} seconds)")
+    return data
 
 def create_point(lat_field, lon_field, data):
+    start_time = time.time()
     if lat_field in data and lon_field in data:
         lon = data[lon_field] / 11930465
         lat = data[lat_field] / 11930465
-        return Point(lon, lat)
+        point = Point(lon, lat)
+        duration = time.time() - start_time
+        logger.debug(f"Created point: {point} (took {duration:.4f} seconds)")
+        return point
     return None
 
-
 def get_closest_aerialway(point: Point):
+    start_time = time.time()
     point.srid = 4326
     closest_station = (
         Node.objects.filter(tags__contains={"aerialway": "station"})
@@ -33,14 +44,22 @@ def get_closest_aerialway(point: Point):
         .first()
     )
     if closest_station:
-        return Aerialway.objects.filter(station_nodes=closest_station).first()
-
+        aerialway = Aerialway.objects.filter(station_nodes=closest_station).first()
+        duration = time.time() - start_time
+        logger.debug(f"Found closest aerialway: {aerialway} (took {duration:.4f} seconds)")
+        return aerialway
+    duration = time.time() - start_time
+    logger.debug(f"No closest aerialway found (took {duration:.4f} seconds)")
+    return None
 
 def parse_fit_file(file_path):
+    start_time = time.time()
+    logger.info(f"Starting to parse FIT file: {file_path}")
     fitfile = FitFile(file_path)
 
     activity_data = None
     laps = []
+    current_lap_records = []
     activity_fields = [f.name for f in Activity._meta.get_fields() if f.name != "laps"]
     lap_fields = [f.name for f in Lap._meta.get_fields() if f.name != "activity"]
     record_fields = [f.name for f in Record._meta.get_fields() if f.name != "lap"]
@@ -53,6 +72,7 @@ def parse_fit_file(file_path):
                 "position_lat", "position_long", record_data
             )
             current_lap_records.append(record_data)
+            logger.debug(f"Processed record message: {record_data}")
 
         elif message.name == "lap":
             current_lap_data = extract_data(message, lap_fields)
@@ -65,15 +85,21 @@ def parse_fit_file(file_path):
             current_lap_data["records"] = current_lap_records
             laps.append(current_lap_data)
             current_lap_records = []
+            logger.debug(f"Processed lap message: {current_lap_data}")
 
         elif message.name == "session":
             activity_data = extract_data(message, activity_fields)
+            logger.debug(f"Processed session message: {activity_data}")
+
+        logger.debug(f"Processed message: {message.name}")
 
     if not activity_data:
+        logger.error("No session found in FIT file.")
         raise ValueError("No session found in FIT file.")
 
     # Create Activity instance
     activity = Activity.objects.create(**activity_data)
+    logger.info(f"Created Activity: {activity.id}")
 
     # Create Lap and Record instances
     for lap_data in laps:
@@ -84,6 +110,7 @@ def parse_fit_file(file_path):
         lap_data.pop("end_position_long", None)
 
         lap = Lap.objects.create(activity=activity, **lap_data)
+        logger.info(f"Created Lap: {lap.id}")
 
         lift_ride = get_closest_aerialway(lap.start_position)
 
@@ -91,6 +118,7 @@ def parse_fit_file(file_path):
             LiftRide.objects.create(
                 lap=lap, aerialway=lift_ride, timestamp=lap.start_time
             )
+            logger.info(f"Created LiftRide for Lap: {lap.id}")
 
         for record_data in lap_data["records"]:
             # Remove the separate latitude and longitude fields
@@ -98,3 +126,9 @@ def parse_fit_file(file_path):
             record_data.pop("position_long", None)
 
             Record.objects.create(lap=lap, **record_data)
+            logger.debug(f"Created Record for Lap: {lap.id}")
+
+        logger.debug(f"Processed lap: {lap.id}")
+
+    total_duration = time.time() - start_time
+    logger.info(f"Finished parsing FIT file: {file_path} in {total_duration:.4f} seconds")

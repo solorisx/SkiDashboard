@@ -123,3 +123,91 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Logging
+
+LOG_DIR = 'SkiingDashboard/logs'
+
+print("Initializing LOGGING in settings.py - if you see this more than once use 'runserver --noreload'")
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {module} {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',  # Define the date format
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'django_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR + '/django_debug.log',
+            'backupCount': 1,      
+            'maxBytes': 10971520,   # 20 MB
+            'formatter': 'verbose',
+        },
+        'django_file_info': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR + '/django_info.log',
+            'backupCount': 1,     
+            'maxBytes': 10971520,   # 10 MB
+            'formatter': 'verbose',
+        },
+        'django_file_warn': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR + '/django_warn.log',
+            'backupCount': 1,    
+            'maxBytes': 10971520,   # 10 MB      
+            'formatter': 'verbose',
+        },                
+        'app_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR + '/app_debug.log',
+            'backupCount': 1,     
+            'maxBytes': 10971520,   # 10 MB        
+            'formatter': 'verbose',
+        },
+        'app_file_info': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR + '/app_info.log',
+            'backupCount': 1,      
+            'maxBytes': 10971520,   # 10 MB
+            'formatter': 'verbose',
+        },
+        'app_file_warn': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR + '/app_warn.log',
+            'backupCount': 1,   
+            'maxBytes': 10971520,   # 10 MB
+            'formatter': 'verbose',
+        },        
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'django_file', 'django_file_info', 'django_file_warn'],
+            'level': 'DEBUG',
+        },
+        'SkiingDashboard': {
+            'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
