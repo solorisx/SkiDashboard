@@ -1,5 +1,5 @@
 from django.contrib.gis.db import models
-from osm_models import Aerialway
+from .osm_models import Aerialway
 
 # Models according to FIT specification
 
@@ -52,7 +52,7 @@ class Lap(models.Model):
     total_descent = models.FloatField(null=True)
     avg_heart_rate = models.PositiveIntegerField(null=True)
     max_heart_rate = models.PositiveIntegerField(null=True)
-    lift_rides = models.ManyToManyField(Aerialway, through='LiftRide', null=True)
+    lift_rides = models.ManyToManyField(Aerialway, through='LiftRide')
 
 class Record(models.Model):
     lap = models.ForeignKey(Lap, on_delete=models.CASCADE)
