@@ -3,6 +3,9 @@ import logging
 import time
 from SkiingDashboardApp.osm_models import Way, Node, Aerialway, Piste, SkiArea  # Adjust the import path as needed
 
+# Get an instance of a logger
+logger = logging.getLogger('SkiingDashboard')
+
 class OSMHandler(osmium.SimpleHandler):
     def __init__(self):
         super().__init__()
@@ -37,33 +40,23 @@ class OSMHandler(osmium.SimpleHandler):
             }
             self.relations.append(relation_data)
 
-# Get an instance of a logger
-logger = logging.getLogger('SkiingDashboard')  # replace 'myapp' with your actual app name
-
-def parse_osm_file(file_path):
-    logger.info(f"Starting to parse OSM file: {file_path}")
-    start_time = time.time()
-
-    logger.info(f"Starting to apply OSM file to handler: {file_path}")
-    start_time_handler = time.time()
-    handler = OSMHandler()
-    handler.apply_file(file_path, locations=True)
-    total_duration_handler = time.time() - start_time_handler
-    logger.info(f"Applied OSM file to handler in {total_duration_handler:.4f} seconds")
-
-    # Process and save or update nodes
-    logger.info("Starting to process nodes")
-    for node_data in handler.nodes:
-        Node.objects.update_or_create(
-            osm_id=node_data['osm_id'],
-            defaults={'geom': node_data['geom'], 'tags': node_data.get('tags', {})}
-        )
-        logger.debug(f"Processed node: {node_data['osm_id']}")
+def process_nodes(handler):
+    chunk_size = 1000
+    logger.info(f"Starting to process nodes with chunk size {chunk_size}")
+    node_chunks = [handler.nodes[i:i + chunk_size] for i in range(0, len(handler.nodes), chunk_size)]
+    for i, chunk in enumerate(node_chunks):
+        node_objs = [Node(osm_id=node['osm_id'], geom=node['geom'], tags=node.get('tags', {})) for node in chunk]
+        Node.objects.bulk_create(node_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['geom', 'tags'], unique_fields=['osm_id'])
+        logger.debug(f"Processed {min((i + 1) * chunk_size, len(handler.nodes))} / {len(handler.nodes)} nodes")
+        if i % 100 == 0:
+            logger.info(f"Processed {round(i * chunk_size / len(handler.nodes) * 100,2)}% ({i * chunk_size} / {len(handler.nodes)} nodes)")
     logger.info("Finished processing nodes")
 
-    # Process and save or update ways, aerialways, and pistes
+def process_ways(handler):
     logger.info("Starting to process ways")
+    counter = 0
     for way_data in handler.ways:
+
         way, created = Way.objects.update_or_create(
             osm_id=way_data['osm_id'],
             defaults={'tags': way_data.get('tags', {})}
@@ -110,31 +103,58 @@ def parse_osm_file(file_path):
                 }
             )
             logger.debug(f"Processed piste for way: {way_data['osm_id']}")
+        else:
+            counter += 1
+            logger.debug(f"No aerialway or piste, way: {way_data['osm_id']}, count {counter}")
     logger.info("Finished processing ways")
+    
+def process_relations(handler):
+        logger.info("Starting to process relations")
+        for relation_data in handler.relations:
+            ski_area, created = SkiArea.objects.update_or_create(
+                osm_id=relation_data['osm_id'],
+                defaults={
+                    'name': relation_data['name'],
+                    'url': relation_data['url'],
+                    'wikipedia': relation_data['wikipedia']
+                }
+            )
+            logger.debug(f"{'Created' if created else 'Updated'} ski area: {relation_data['osm_id']}")
+
+            # Associate ways with this ski area
+            for way_id in relation_data['member_ids']:
+                try:
+                    way = Way.objects.get(osm_id=way_id)
+                    ski_area.ways.add(way)
+                except Way.DoesNotExist:
+                    logger.warning(f"Way {way_id} does not exist for ski area {relation_data['osm_id']}")
+                    pass
+        logger.info("Finished processing relations")
+
+def parse_osm_file(file_path):
+    logger.info(f"Starting to parse OSM file: {file_path}")
+    start_time = time.time()
+
+    logger.info(f"Starting to apply OSM file to handler: {file_path}")
+    start_time_handler = time.time()
+    handler = OSMHandler()
+    handler.apply_file(file_path, locations=True)
+    total_duration_handler = time.time() - start_time_handler
+    logger.info(f"Applied OSM file to handler in {total_duration_handler:.4f} seconds")
+
+    # Get the number of nodes, ways, and relations
+    logger.info(f"Number of nodes: {len(handler.nodes)}")
+    logger.info(f"Number of ways: {len(handler.ways)}")
+    logger.info(f"Number of relations: {len(handler.relations)}")
+
+    # Process and save or update nodes
+    process_nodes(handler)
+
+    # Process and save or update ways, aerialways, and pistes
+    process_ways(handler)
 
     # Process and save or update ski areas
-    logger.info("Starting to process relations")
-    for relation_data in handler.relations:
-        ski_area, created = SkiArea.objects.update_or_create(
-            osm_id=relation_data['osm_id'],
-            defaults={
-                'name': relation_data['name'],
-                'url': relation_data['url'],
-                'wikipedia': relation_data['wikipedia']
-            }
-        )
-        logger.debug(f"{'Created' if created else 'Updated'} ski area: {relation_data['osm_id']}")
-
-        # Associate ways with this ski area
-        for way_id in relation_data['member_ids']:
-            try:
-                way = Way.objects.get(osm_id=way_id)
-                ski_area.ways.add(way)
-            except Way.DoesNotExist:
-                logger.warning(f"Way {way_id} does not exist for ski area {relation_data['osm_id']}")
-                # TODO: add some logging or add call to OSM API
-                pass
-    logger.info("Finished processing relations")
+    process_relations(handler)
 
     total_duration = time.time() - start_time
     logger.info(f"Finished parsing OSM file: {file_path} in {total_duration:.4f} seconds")

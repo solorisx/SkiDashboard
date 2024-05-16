@@ -1,5 +1,5 @@
 from SkiingDashboard.core.osm_downloader import load_osm
-from django.core.management.base.BaseCommand import BaseCommand
+from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
     help = 'Downloads and extracts the OSM file'

@@ -1,7 +1,8 @@
-# Specific to th
+# Specific to this app
 
 *.fit
 *.osm
+planet_pistes-state.txt
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,django
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,django

@@ -10,7 +10,7 @@ logger = logging.getLogger('SkiingDashboard')
 def load_osm():
     url = 'https://www.opensnowmap.org/download/planet_pistes.osm.gz'
     state_url = 'https://www.opensnowmap.org/download/planet_pistes-state.txt'
-    dest = 'planet_pistes.osm'
+    dest = 'planet_pistes-osmium.osm'
     dest_compressed = 'planet_pistes.osm.gz'
     dest_state = 'planet_pistes-state.txt'
     
@@ -37,6 +37,9 @@ def load_osm():
                     with open(dest, 'wb') as f_out:
                         shutil.copyfileobj(f_in, f_out)
                 
+                # Remove the compressed file
+                os.remove(dest_compressed)
+
                 # Save the new state file
                 with open(dest_state, 'w') as f:
                     f.write(new_state)
