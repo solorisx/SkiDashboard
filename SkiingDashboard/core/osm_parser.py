@@ -42,6 +42,13 @@ class OSMHandler(osmium.SimpleHandler):
             }
             self.relations.append(relation_data)
 
+def duration_to_minutes(duration):
+    try:
+        minutes, seconds = duration.split(':')
+        return int(minutes) + int(seconds) / 60
+    except:
+        return None
+
 def process_nodes(handler):
     chunk_size = 1000
     logger.info(f"Starting to process nodes with chunk size {chunk_size}")
@@ -126,7 +133,7 @@ def process_ways(handler):
                         'aerialway': tags.get('aerialway'),
                         'aerialway_bubble': 'bubble' in tags and tags['bubble'] == 'yes',
                         'aerialway_capacity': tags.get('aerialway:capacity'),
-                        'aerialway_duration': tags.get('aerialway:duration'),
+                        'aerialway_duration': duration_to_minutes(tags.get('aerialway:duration')),
                         'aerialway_heating': 'heating' in tags and tags['aerialway:heating'] == 'yes',
                         'aerialway_occupancy': tags.get('aerialway:occupancy'),
                         'name': tags.get('name'),
