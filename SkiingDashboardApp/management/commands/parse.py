@@ -8,16 +8,25 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('file', type=str)
+        parser.add_argument('--ways', action='store_true', help='Parse ways only')
+        parser.add_argument('--relations', action='store_true', help='Parse relations only')
+        parser.add_argument('--nodes', action='store_true', help='Parse nodes only')
 
     def handle(self, *args, **options):
         file = options['file']
         filename, ext = os.path.splitext(file)
         
+        scope = [options['nodes'], options['ways'], options['relations']]
+        if not any(scope):
+            scope = [True, True, True]
+
         if ext == '.fit':
+            if any(scope):
+                raise CommandError('Cannot specify scope with a FIT file')
             parse_fit_file(file)
             self.stdout.write(self.style.SUCCESS('Successfully parsed "%s"' % file))
         elif ext == '.osm':
-            parse_osm_file(file)
+            parse_osm_file(file, scope)
             self.stdout.write(self.style.SUCCESS('Successfully parsed "%s"' % file))
         else:
             raise CommandError('Not a valid file')

@@ -62,6 +62,7 @@ class SkiArea(models.Model):
     ways = models.ManyToManyField(Way, related_name='ski_areas')
     url = models.URLField(blank=True, null=True)
     wikipedia = models.CharField(max_length=255, blank=True, null=True)
+    tags = models.JSONField(default=dict)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 
