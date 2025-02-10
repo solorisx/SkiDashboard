@@ -17,8 +17,6 @@ class Command(BaseCommand):
         filename, ext = os.path.splitext(file)
         
         scope = [options['nodes'], options['ways'], options['relations']]
-        if not any(scope):
-            scope = [True, True, True]
 
         if ext == '.fit':
             if any(scope):
@@ -26,6 +24,8 @@ class Command(BaseCommand):
             parse_fit_file(file)
             self.stdout.write(self.style.SUCCESS('Successfully parsed "%s"' % file))
         elif ext == '.osm':
+            if not any(scope):
+                scope = [True, True, True]
             parse_osm_file(file, scope)
             self.stdout.write(self.style.SUCCESS('Successfully parsed "%s"' % file))
         else:

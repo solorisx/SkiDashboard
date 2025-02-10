@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import timedelta
 from fitparse import FitFile
 from SkiingDashboardApp.activity_models import Activity, Lap, Record, LiftRide
 from SkiingDashboardApp.osm_models import Node, Way, Aerialway
@@ -89,6 +90,12 @@ def parse_fit_file(file_path):
 
         elif message.name == "session":
             activity_data = extract_data(message, activity_fields)
+            activity_data_pos = extract_data(message, ["start_position_lat", "start_position_long"])
+            activity_data['total_elapsed_time'] = timedelta(seconds=activity_data['total_elapsed_time'])
+            activity_data['total_timer_time'] = timedelta(seconds=activity_data['total_timer_time'])
+            activity_data['start_position'] = create_point(
+                "start_position_lat", "start_position_long", activity_data_pos
+            )
             logger.debug(f"Processed session message: {activity_data}")
 
         logger.debug(f"Processed message: {message.name}")
