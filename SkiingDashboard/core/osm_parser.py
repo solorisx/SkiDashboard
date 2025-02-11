@@ -48,6 +48,12 @@ def duration_to_minutes(duration):
         return int(minutes) + int(seconds) / 60
     except:
         return None
+    
+def str_to_int(s):
+    try:
+        return int(s)
+    except ValueError:
+        return None
 
 def process_nodes(handler):
     chunk_size = 1000
@@ -132,10 +138,10 @@ def process_ways(handler):
                     defaults={
                         'aerialway': tags.get('aerialway'),
                         'aerialway_bubble': 'bubble' in tags and tags['bubble'] == 'yes',
-                        'aerialway_capacity': tags.get('aerialway:capacity'),
+                        'aerialway_capacity': str_to_int(tags.get('aerialway:capacity')),
                         'aerialway_duration': duration_to_minutes(tags.get('aerialway:duration')),
                         'aerialway_heating': 'heating' in tags and tags['aerialway:heating'] == 'yes',
-                        'aerialway_occupancy': tags.get('aerialway:occupancy'),
+                        'aerialway_occupancy': str_to_int(tags.get('aerialway:occupancy')),
                         'name': tags.get('name'),
                     }
                 )
