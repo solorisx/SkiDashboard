@@ -52,7 +52,7 @@ def duration_to_minutes(duration):
 def str_to_int(s):
     try:
         return int(s)
-    except ValueError:
+    except:
         return None
 
 def process_nodes(handler):

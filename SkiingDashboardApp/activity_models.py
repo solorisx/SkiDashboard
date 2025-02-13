@@ -30,11 +30,7 @@ class Lap(models.Model):
     timestamp = models.DateTimeField()
     start_time = models.DateTimeField()
     start_position = models.PointField()
-    # start_position_lat = models.DecimalField(max_digits=10, decimal_places=6)
-    # start_position_long = models.DecimalField(max_digits=10, decimal_places=6)
     end_position = models.PointField()
-    # end_position_lat = models.DecimalField(max_digits=10, decimal_places=6)
-    # end_position_long = models.DecimalField(max_digits=10, decimal_places=6)
     total_elapsed_time = models.DurationField()
     total_timer_time = models.DurationField()
     total_distance = models.FloatField()
@@ -47,7 +43,6 @@ class Lap(models.Model):
     total_descent = models.FloatField(null=True)
     avg_heart_rate = models.PositiveIntegerField(null=True)
     max_heart_rate = models.PositiveIntegerField(null=True)
-    lift_rides = models.ManyToManyField(Aerialway, through='LiftRide')
 
 class Record(models.Model):
     lap = models.ForeignKey(Lap, on_delete=models.CASCADE)

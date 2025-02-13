@@ -69,23 +69,28 @@ def parse_fit_file(file_path):
     for message in fitfile.get_messages():
         if message.name == "record":
             record_data = extract_data(message, record_fields)
+            record_data_pos = extract_data(message, ["position_lat", "position_long"])
             record_data["position"] = create_point(
-                "position_lat", "position_long", record_data
+                "position_lat", "position_long", record_data_pos
             )
             current_lap_records.append(record_data)
             logger.debug(f"Processed record message: {record_data}")
 
         elif message.name == "lap":
             current_lap_data = extract_data(message, lap_fields)
+            current_lap_data_pos = extract_data(message, ["start_position_lat", "start_position_long", "end_position_lat", "end_position_long"])
+            current_lap_data['total_elapsed_time'] = timedelta(seconds=current_lap_data['total_elapsed_time'])
+            current_lap_data['total_timer_time'] = timedelta(seconds=current_lap_data['total_timer_time'])
             current_lap_data["start_position"] = create_point(
-                "start_position_lat", "start_position_long", current_lap_data
+                "start_position_lat", "start_position_long", current_lap_data_pos
             )
             current_lap_data["end_position"] = create_point(
-                "end_position_lat", "end_position_long", current_lap_data
+                "end_position_lat", "end_position_long", current_lap_data_pos
             )
             current_lap_data["records"] = current_lap_records
             laps.append(current_lap_data)
             current_lap_records = []
+            current_lap_data_pos = []
             logger.debug(f"Processed lap message: {current_lap_data}")
 
         elif message.name == "session":
@@ -116,6 +121,8 @@ def parse_fit_file(file_path):
         lap_data.pop("end_position_lat", None)
         lap_data.pop("end_position_long", None)
 
+        records = lap_data.pop("records")
+
         lap = Lap.objects.create(activity=activity, **lap_data)
         logger.info(f"Created Lap: {lap.id}")
 
@@ -127,7 +134,7 @@ def parse_fit_file(file_path):
             )
             logger.info(f"Created LiftRide for Lap: {lap.id}")
 
-        for record_data in lap_data["records"]:
+        for record_data in records:
             # Remove the separate latitude and longitude fields
             record_data.pop("position_lat", None)
             record_data.pop("position_long", None)

@@ -24,7 +24,7 @@ class Way(models.Model):
 
 # Aerialway Model
 class Aerialway(models.Model):
-    way = models.OneToOneField(Way, on_delete=models.CASCADE)
+    way = models.OneToOneField(Way, on_delete=models.CASCADE, null=True)
     aerialway = models.CharField(max_length=255)
     aerialway_bubble = models.BooleanField(default=False)
     aerialway_capacity = models.IntegerField(blank=True, null=True)
