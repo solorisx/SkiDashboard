@@ -29,6 +29,16 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+AUTHENTICATION_BACKENDS = [
+    
+    # Needed to login by username in Django admin, regardless of `allauth`
+    'django.contrib.auth.backends.ModelBackend',
+
+    # `allauth` specific authentication methods, such as login by email
+    'allauth.account.auth_backends.AuthenticationBackend',
+    
+]
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -38,11 +48,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.strava',
     'SkiingDashboard',
     'SkiingDashboardApp',
 ]
 
 MIDDLEWARE = [
+    'allauth.account.middleware.AuthenticationMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -50,7 +66,18 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
 ]
+
+SOCIALACCOUNT_PROVIDERS = {
+    'strava': {
+        'APP': {
+            'client_id': os.getenv('STRAVA_CLIENT_ID'),
+            'secret': os.getenv('STRAVA_CLIENT_SECRET'),
+            'key': '',
+        }
+    }
+}
 
 ROOT_URLCONF = 'SkiingDashboard.urls'
 
