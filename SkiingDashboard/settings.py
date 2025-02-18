@@ -64,21 +64,12 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',   
 ]
 
-SOCIALACCOUNT_PROVIDERS = {
-    'strava': {
-        'APP': {
-            'client_id': os.getenv('STRAVA_CLIENT_ID'),
-            'secret': os.getenv('STRAVA_CLIENT_SECRET'),
-            'key': '',
-        }
-    }
-}
-
 ROOT_URLCONF = 'SkiingDashboard.urls'
+
+SOCIALACCOUNT_STORE_TOKENS = True
 
 TEMPLATES = [
     {
