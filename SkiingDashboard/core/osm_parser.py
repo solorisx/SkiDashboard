@@ -60,11 +60,14 @@ def process_nodes(handler):
     logger.info(f"Starting to process nodes with chunk size {chunk_size}")
     node_chunks = [handler.nodes[i:i + chunk_size] for i in range(0, len(handler.nodes), chunk_size)]
     for i, chunk in enumerate(node_chunks):
-        node_objs = [Node(osm_id=node['osm_id'], geom=node['geom'], tags=node.get('tags', {})) for node in chunk]
-        Node.objects.bulk_create(node_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['geom', 'tags'], unique_fields=['osm_id'])
-        logger.debug(f"Processed {min((i + 1) * chunk_size, len(handler.nodes))} / {len(handler.nodes)} nodes")
-        if i % 100 == 0:
-            logger.info(f"Processed {round(i * chunk_size / len(handler.nodes) * 100,2)}% ({i * chunk_size} / {len(handler.nodes)} nodes)")
+        try:
+            node_objs = [Node(osm_id=node['osm_id'], geom=node['geom'], tags=node.get('tags', {})) for node in chunk]
+            Node.objects.bulk_create(node_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['geom', 'tags'], unique_fields=['osm_id'])
+            logger.debug(f"Processed {min((i + 1) * chunk_size, len(handler.nodes))} / {len(handler.nodes)} nodes")
+            if i % 100 == 0:
+                logger.info(f"Processed {round(i * chunk_size / len(handler.nodes) * 100,2)}% ({i * chunk_size} / {len(handler.nodes)} nodes)")
+        except Exception as e:
+            logger.error(f"Error processing chunk {i} of nodes: {e}")
     logger.info("Finished processing nodes")
 
 def chunks(lst, n):
@@ -88,38 +91,39 @@ def process_ways(handler):
     ways_chunks = [handler.ways[i:i + chunk_size] for i in range(0, len(handler.ways), chunk_size)]
 
     for i, chunk in enumerate(ways_chunks):
-        # Create Way objects without assigning nodes
-        way_objs = [Way(osm_id=way['osm_id'], tags=way.get('tags', {})) for way in chunk]
-        Way.objects.bulk_create(way_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['tags'], unique_fields=['osm_id'])
+        try:
+            # Create Way objects without assigning nodes
+            way_objs = [Way(osm_id=way['osm_id'], tags=way.get('tags', {})) for way in chunk]
+            Way.objects.bulk_create(way_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['tags'], unique_fields=['osm_id'])
 
-        # Fetch the created ways to update nodes
-        osm_ids = [way['osm_id'] for way in chunk]
-        ways = Way.objects.filter(osm_id__in=osm_ids)
-        ways_dict = {way.osm_id: way for way in ways}
+            # Fetch the created ways to update nodes
+            osm_ids = [way['osm_id'] for way in chunk]
+            ways = Way.objects.filter(osm_id__in=osm_ids)
+            ways_dict = {way.osm_id: way for way in ways}
 
-        # Fetch all nodes required in this chunk
-        node_ids = {node_id for way in chunk for node_id in way['nodes']}
-        nodes = Node.objects.filter(osm_id__in=node_ids)
-        nodes_dict = {node.osm_id: node for node in nodes}
+            # Fetch all nodes required in this chunk
+            node_ids = {node_id for way in chunk for node_id in way['nodes']}
+            nodes = Node.objects.filter(osm_id__in=node_ids)
+            nodes_dict = {node.osm_id: node for node in nodes}
 
-        with transaction.atomic():
-            for way_data in chunk:
-                way = ways_dict[way_data['osm_id']]
-                node_instances = [nodes_dict[node_id] for node_id in way_data['nodes'] if node_id in nodes_dict]
-                way.nodes.set(node_instances)
+            with transaction.atomic():
+                for way_data in chunk:
+                    way = ways_dict[way_data['osm_id']]
+                    node_instances = [nodes_dict[node_id] for node_id in way_data['nodes'] if node_id in nodes_dict]
+                    way.nodes.set(node_instances)
 
-        logger.debug(f"Processed {min((i + 1) * chunk_size, len(handler.ways))} / {len(handler.ways)} ways")
-        if i % 100 == 0:
-            logger.info(f"Processed {round(i * chunk_size / len(handler.ways) * 100, 2)}% ({i * chunk_size} / {len(handler.ways)} ways)")
-
+            logger.debug(f"Processed {min((i + 1) * chunk_size, len(handler.ways))} / {len(handler.ways)} ways")
+            if i % 100 == 0:
+                logger.info(f"Processed {round(i * chunk_size / len(handler.ways) * 100, 2)}% ({i * chunk_size} / {len(handler.ways)} ways)")
+        except Exception as e:
+            logger.error(f"Error processing chunk {i} of ways: {e}")
     logger.info("Finished processing ways")
 
     logger.info("Starting to process aerialways and pistes")
     counter = 0
 
-    with transaction.atomic():
-        for way in handler.ways:
-
+    for way in handler.ways:
+        try:
             tags=way.get('tags', {})
             nodes=way.get('nodes', [])
 
@@ -128,45 +132,49 @@ def process_ways(handler):
                 logger.warning(f"Way {way['osm_id']} does not exist")
                 continue
 
-            # Handle Aerialway
-            if 'aerialway' in tags:
-                # Get nodes associated with this way
-                nodes = way.get('nodes', [])
-                node_instances = Node.objects.filter(osm_id__in=nodes)
-                aerialway, created = Aerialway.objects.update_or_create(
-                    way=way_obj,
-                    defaults={
-                        'aerialway': tags.get('aerialway'),
-                        'aerialway_bubble': 'bubble' in tags and tags['bubble'] == 'yes',
-                        'aerialway_capacity': str_to_int(tags.get('aerialway:capacity')),
-                        'aerialway_duration': duration_to_minutes(tags.get('aerialway:duration')),
-                        'aerialway_heating': 'heating' in tags and tags['aerialway:heating'] == 'yes',
-                        'aerialway_occupancy': str_to_int(tags.get('aerialway:occupancy')),
-                        'name': tags.get('name'),
-                    }
-                )
-                station_nodes = [node for node in node_instances if node.tags.get('aerialway') == 'station']
-                aerialway.station_nodes.set(station_nodes)
-                logger.debug(f"Processed aerialway for way: {way['osm_id']}")
+            with transaction.atomic():    
+                
+                # Handle Aerialway
+                if 'aerialway' in tags:
+                    # Get nodes associated with this way
+                    nodes = way.get('nodes', [])
+                    node_instances = Node.objects.filter(osm_id__in=nodes)
+                    aerialway, created = Aerialway.objects.update_or_create(
+                        way=way_obj,
+                        defaults={
+                            'aerialway': tags.get('aerialway'),
+                            'aerialway_bubble': 'bubble' in tags and tags['bubble'] == 'yes',
+                            'aerialway_capacity': str_to_int(tags.get('aerialway:capacity')),
+                            'aerialway_duration': duration_to_minutes(tags.get('aerialway:duration')),
+                            'aerialway_heating': 'heating' in tags and tags['aerialway:heating'] == 'yes',
+                            'aerialway_occupancy': str_to_int(tags.get('aerialway:occupancy')),
+                            'name': tags.get('name'),
+                        }
+                    )
+                    station_nodes = [node for node in node_instances if node.tags.get('aerialway') == 'station']
+                    aerialway.station_nodes.set(station_nodes)
+                    logger.debug(f"Processed aerialway for way: {way['osm_id']}")
 
-            # Handle Piste
-            elif 'piste:type' in tags:
-                Piste.objects.update_or_create(
-                    way=way_obj,
-                    defaults={
-                        'lit': 'lit' in tags and tags['lit'] == 'yes',
-                        'name': tags.get('name'),
-                        'oneway': 'oneway' in tags and tags['oneway'] == 'yes',
-                        'piste_difficulty': tags.get('piste:difficulty'),
-                        'piste_grooming': tags.get('piste:grooming'),
-                        'piste_type': tags.get('piste:type'),
-                        'ref': tags.get('ref')
-                    }
-                )
-                logger.debug(f"Processed piste for way: {way['osm_id']}")
-            else:
-                counter += 1
-                logger.debug(f"No aerialway or piste, way: {way['osm_id']}, count {counter}")
+                # Handle Piste
+                elif 'piste:type' in tags:
+                    Piste.objects.update_or_create(
+                        way=way_obj,
+                        defaults={
+                            'lit': 'lit' in tags and tags['lit'] == 'yes',
+                            'name': tags.get('name'),
+                            'oneway': 'oneway' in tags and tags['oneway'] == 'yes',
+                            'piste_difficulty': tags.get('piste:difficulty'),
+                            'piste_grooming': tags.get('piste:grooming'),
+                            'piste_type': tags.get('piste:type'),
+                            'ref': tags.get('ref')
+                        }
+                    )
+                    logger.debug(f"Processed piste for way: {way['osm_id']}")
+                else:
+                    counter += 1
+                    logger.debug(f"No aerialway or piste, way: {way['osm_id']}, count {counter}")
+        except Exception as e:
+            logger.error(f"Error processing way {way['osm_id']}: {e}")
 
     logger.info("Finished processing ways")
     
