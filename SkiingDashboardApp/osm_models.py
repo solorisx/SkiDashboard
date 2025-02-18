@@ -43,12 +43,12 @@ class Aerialway(models.Model):
 class Piste(models.Model):
     way = models.OneToOneField(Way, on_delete=models.CASCADE)
     lit = models.BooleanField(default=False)
-    name = models.CharField(max_length=100, blank=True, null=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
     oneway = models.BooleanField(default=True)
-    piste_difficulty = models.CharField(max_length=100, blank=True, null=True)
-    piste_grooming = models.CharField(max_length=100, blank=True, null=True)
-    piste_type = models.CharField(max_length=100, blank=True, null=True)
-    ref = models.CharField(max_length=100, blank=True, null=True)
+    piste_difficulty = models.CharField(max_length=255, blank=True, null=True)
+    piste_grooming = models.CharField(max_length=255, blank=True, null=True)
+    piste_type = models.CharField(max_length=255, blank=True, null=True)
+    ref = models.CharField(max_length=255, blank=True, null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 

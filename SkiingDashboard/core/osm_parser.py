@@ -133,7 +133,7 @@ def process_ways(handler):
                 continue
 
             with transaction.atomic():    
-                
+
                 # Handle Aerialway
                 if 'aerialway' in tags:
                     # Get nodes associated with this way
@@ -148,7 +148,7 @@ def process_ways(handler):
                             'aerialway_duration': duration_to_minutes(tags.get('aerialway:duration')),
                             'aerialway_heating': 'heating' in tags and tags['aerialway:heating'] == 'yes',
                             'aerialway_occupancy': str_to_int(tags.get('aerialway:occupancy')),
-                            'name': tags.get('name'),
+                            'name': tags.get('name')[0:255] if 'name' in tags else None,
                         }
                     )
                     station_nodes = [node for node in node_instances if node.tags.get('aerialway') == 'station']
@@ -161,7 +161,7 @@ def process_ways(handler):
                         way=way_obj,
                         defaults={
                             'lit': 'lit' in tags and tags['lit'] == 'yes',
-                            'name': tags.get('name'),
+                            'name': tags.get('name')[0:255] if 'name' in tags else None,
                             'oneway': 'oneway' in tags and tags['oneway'] == 'yes',
                             'piste_difficulty': tags.get('piste:difficulty'),
                             'piste_grooming': tags.get('piste:grooming'),
@@ -174,34 +174,37 @@ def process_ways(handler):
                     counter += 1
                     logger.debug(f"No aerialway or piste, way: {way['osm_id']}, count {counter}")
         except Exception as e:
-            logger.error(f"Error processing way {way['osm_id']}: {e}")
+            logger.error(f"Error processing way {way['osm_id']} with tags {tags}: {e}")
 
     logger.info("Finished processing ways")
     
 def process_relations(handler):
         logger.info("Starting to process relations")
         for relation_data in handler.relations:
-            ski_area, created = SkiArea.objects.update_or_create(
-                osm_id=relation_data['osm_id'],
-                defaults={
-                    'name': relation_data['name'] or f"Unnamed relation {relation_data['osm_id']}",
-                    'url': relation_data['url'],
-                    'wikipedia': relation_data['wikipedia'],
-                    'tags': relation_data.get('tags', {})
-                }
-            )
-            if relation_data['name'] is None:
-                logger.warning(f"Relation {relation_data['osm_id']} has no name")
-            logger.debug(f"{'Created' if created else 'Updated'} ski area: {relation_data['osm_id']}")
+            try:
+                with transaction.atomic():
+                    ski_area, created = SkiArea.objects.update_or_create(
+                        osm_id=relation_data['osm_id'],
+                        defaults={
+                            'name': relation_data['name'] or f"Unnamed relation {relation_data['osm_id']}",
+                            'url': relation_data['url'],
+                            'wikipedia': relation_data['wikipedia'],
+                            'tags': relation_data.get('tags', {})
+                        }
+                    )
+                    if relation_data['name'] is None:
+                        logger.warning(f"Relation {relation_data['osm_id']} has no name")
+                    logger.debug(f"{'Created' if created else 'Updated'} ski area: {relation_data['osm_id']}")
 
-            # Associate ways with this ski area
-            for way_id in relation_data['member_ids']:
-                try:
-                    way = Way.objects.get(osm_id=way_id)
-                    ski_area.ways.add(way)
-                except Way.DoesNotExist:
-                    logger.warning(f"Way {way_id} does not exist for ski area {relation_data['osm_id']}")
-                    pass
+                    # Associate ways with this ski area
+                    for way_id in relation_data['member_ids']:
+                        way = Way.objects.filter(osm_id=way_id).first()
+                        if way:
+                            ski_area.ways.add(way)
+                        else:
+                            logger.warning(f"Way {way_id} does not exist for ski area {relation_data['osm_id']}")
+            except Exception as e:
+                logger.error(f"Error processing relation {relation_data['osm_id']}, {relation_data}: {e}")
         logger.info("Finished processing relations")
 
 def parse_osm_file(file_path, scope):
