@@ -166,8 +166,8 @@ def parse_strava_activity(user, activity_id, update=False):
     activity_data = {
         "name": activity.name,
         "type": activity.type,
-        "start_time": activity.start_date_local,
-        "timestamp": activity.start_date_local,
+        "start_time": activity.start_date_local, # TODO: add timezone
+        "timestamp": activity.start_date_local, # TODO: add timezone
         "total_elapsed_time": timedelta(seconds=activity.elapsed_time),
         "total_timer_time": timedelta(seconds=activity.moving_time),
         "total_distance": activity.distance,
@@ -179,11 +179,11 @@ def parse_strava_activity(user, activity_id, update=False):
         "avg_heart_rate": activity.average_heartrate,
         "max_heart_rate": activity.max_heartrate,
         "user": user,
-        #"strava_id": activity_id,
         "start_position": start_point,
     }
 
     activity_instance, created = Activity.objects.update_or_create(strava_id=activity_id, **activity_data)
-    logger.info(f"Created or updated Activity: {activity_instance.id}")
+    logger.info(f'{"Created" if created else "Updated"} Activity: {activity_instance.id}')
+
 
 

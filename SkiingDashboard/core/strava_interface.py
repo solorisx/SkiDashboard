@@ -12,31 +12,54 @@ import logging
 # Get an instance of a logger
 logger = logging.getLogger('SkiingDashboard')
 
-def get_access_token(User):
-    user = User
-    account = SocialAccount.objects.get(user=user, provider='strava')
-    if account is None:
-        raise ValueError("User does not have a Strava account")
-    token = SocialToken.objects.get(account=account)
-    app = token.app
-
-    if token.expires_at < UTC.localize(datetime.now()) + timedelta(minutes=5):
-        client = Client()
+def refresh_strava_token(user, token, app):
+    """
+    Refreshes the Strava access token using the refresh token.
+    """
+    client = Client()
+    try:
         refresh_response = client.refresh_access_token(
             client_id=app.client_id,
             client_secret=app.secret,
             refresh_token=token.token_secret
         )
-        token.token = refresh_response['access_token']
-        token.token_secret = refresh_response['refresh_token']
-        token.expires_at = datetime.fromtimestamp(refresh_response['expires_at'])
-        token.save()
-        logger.info("Refreshed Strava token for user %s", user.username)
+    except Exception as e:
+        logger.error(f"Failed to refresh Strava token for {user.username}: {e}")
+        raise
+
+    # Update token details
+    token.token = refresh_response.get('access_token')
+    token.token_secret = refresh_response.get('refresh_token')
+    token.expires_at = datetime.fromtimestamp(refresh_response.get('expires_at', 0), tz=UTC)
+    token.save()
+
+    logger.info("Refreshed Strava token for user %s", user.username)
+    return token.token
+
+
+def get_access_token(user):
+    """
+    Retrieves the latest valid Strava access token for a given user.
+    Refreshes the token if it's expired.
+    """
+    try:
+        account = SocialAccount.objects.select_related('user').get(user=user, provider='strava')
+        token = SocialToken.objects.select_related('app').get(account=account)
+    except SocialAccount.DoesNotExist:
+        raise ValueError(f"User {user.username} does not have a Strava account")
+    except SocialToken.DoesNotExist:
+        raise ValueError(f"No Strava token found for user {user.username}")
+
+    app = token.app
+
+    # Refresh token if it's close to expiring
+    if token.expires_at < UTC.localize(datetime.now()) + timedelta(minutes=5):
+        return refresh_strava_token(user, token, app)
+
     return token.token
 
 def load_activities(User, after=None):
     access_token = get_access_token(User)
-    print(access_token)
     client = Client(access_token)
     activities = client.get_activities(after=after)
     return activities
