@@ -37,25 +37,29 @@ def create_point(lat_field, lon_field, data):
         return point
     return None
 
-def get_closest_aerialway(point: Point):
+def get_closest_aerialway(point: Point, in_ski_area=False):
 
     start_time = time.time()
     point.srid = 4326
-    closest_station = (
-        Node.objects.filter(tags__contains={"aerialway": "station"})
-        .annotate(distance=Distance("geom", point))
+    
+    aerialways = Aerialway.objects.all()
+    
+    if in_ski_area:
+        aerialways = aerialways.filter(way__ski_areas__isnull=False)
+    
+    closest_aerialway = (
+        aerialways.annotate(distance=Distance("station_nodes__geom", point))
         .order_by("distance")
         .first()
     )
-
-    if closest_station:
-        aerialway = Aerialway.objects.filter(station_nodes=closest_station).first()
-        duration = time.time() - start_time
-        logger.debug(f"Found closest aerialway: {aerialway} (took {duration:.4f} seconds)")
-        return aerialway
+    
     duration = time.time() - start_time
-    logger.debug(f"No closest aerialway found (took {duration:.4f} seconds)")
-    return None
+    if closest_aerialway:
+        logger.debug(f"Found closest aerialway: {closest_aerialway} (took {duration:.4f} seconds)")
+    else:
+        logger.debug(f"No closest aerialway found (took {duration:.4f} seconds)")
+    
+    return closest_aerialway
 
 def parse_fit_file(file_path):
     start_time = time.time()
@@ -188,7 +192,8 @@ def parse_strava_activity(user, activity_id, update=False):
     activity_instance, created = Activity.objects.update_or_create(strava_id=activity_id, defaults=activity_data)
     logger.info(f'{"Created" if created else "Updated"} Activity: {activity_instance.id}')
 
-    get_closest_aerialway(start_point)
+    skiarea = SkiArea.objects.filter(ways=get_closest_aerialway(start_point, in_ski_area=True).way).first()
+    logger.debug(skiarea.name if skiarea else "No ski area found")
 
     # TODO: 
     #   - parse activity streams
