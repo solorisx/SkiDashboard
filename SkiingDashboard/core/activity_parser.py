@@ -7,7 +7,7 @@ from SkiingDashboardApp.osm_models import Node, Way, Aerialway
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
-import strava_interface
+from .strava_interface import load_activity, load_activity_streams, load_activity_laps
 
 # Get an instance of a logger
 logger = logging.getLogger('SkiingDashboard')
@@ -149,41 +149,41 @@ def parse_fit_file(file_path):
     total_duration = time.time() - start_time
     logger.info(f"Finished parsing FIT file: {file_path} in {total_duration:.4f} seconds")
 
-def parse_strava_activity(User, activity_id):
+def parse_strava_activity(user, activity_id, update=False):
     start_time = time.time()
     logger.info(f"Starting to parse Strava activity: {activity_id}")
-    activity = strava_interface.load_activity(User, activity_id)
-    activity_streams = strava_interface.load_activity_streams(User, activity_id)
-    activity_laps = strava_interface.load_activity_laps(User, activity_id)
-    logger.debug(f"Loaded Strava activity: {activity}")
+    
+    if not update and Activity.objects.filter(strava_id=activity_id).exists():
+        logger.warning(f"Strava activity {activity_id} already exists in the database.")
+        return
+    
+    activity = load_activity(user, activity_id)
+    activity_streams = load_activity_streams(user, activity_id)
+    start_point = Point(activity_streams["latlng"].data[0])
+    activity_laps = load_activity_laps(user, activity_id)
+    logger.debug(f"Loaded Strava activity: {activity_id}")
 
     activity_data = {
         "name": activity.name,
         "type": activity.type,
-        "start_time": activity.start_date,
+        "start_time": activity.start_date_local,
+        "timestamp": activity.start_date_local,
         "total_elapsed_time": timedelta(seconds=activity.elapsed_time),
         "total_timer_time": timedelta(seconds=activity.moving_time),
         "total_distance": activity.distance,
-        "total_elevation_gain": activity.total_elevation_gain,
-        "average_speed": activity.average_speed,
+        "total_ascent": activity.total_elevation_gain,
+        # TODO: get total_descent from streams
+        "avg_speed": activity.average_speed,
         "max_speed": activity.max_speed,
-        "calories": activity.calories,
-        "average_heartrate": activity.average_heartrate,
-        "max_heartrate": activity.max_heartrate,
+        "total_calories": activity.calories,
+        "avg_heart_rate": activity.average_heartrate,
+        "max_heart_rate": activity.max_heartrate,
+        "user": user,
+        #"strava_id": activity_id,
+        "start_position": start_point,
     }
 
-    activity_data_pos = {
-        "start_position_lat": activity.start_latitude,
-        "start_position_long": activity.start_longitude,
-    }
-
-    activity_data["start_position"] = create_point(
-        "start_position_lat", "start_position_long", activity_data_pos
-    )
-
-    activity_data["user"] = User.objects.get(username='admin')
-
-    activity_instance = Activity.objects.create(**activity_data)
-    logger.info(f"Created Activity: {activity_instance.id}")
+    activity_instance, created = Activity.objects.update_or_create(strava_id=activity_id, **activity_data)
+    logger.info(f"Created or updated Activity: {activity_instance.id}")
 
 

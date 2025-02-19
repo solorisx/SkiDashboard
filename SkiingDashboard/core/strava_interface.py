@@ -12,8 +12,6 @@ import logging
 # Get an instance of a logger
 logger = logging.getLogger('SkiingDashboard')
 
-
-
 def get_access_token(User):
     user = User
     account = SocialAccount.objects.get(user=user, provider='strava')
@@ -21,9 +19,8 @@ def get_access_token(User):
         raise ValueError("User does not have a Strava account")
     token = SocialToken.objects.get(account=account)
     app = token.app
-    print(app)
-    print(app.client_id)
-    if True: #token.expires_at < UTC.localize(datetime.now()) + timedelta(minutes=5):
+
+    if token.expires_at < UTC.localize(datetime.now()) + timedelta(minutes=5):
         client = Client()
         refresh_response = client.refresh_access_token(
             client_id=app.client_id,
@@ -33,6 +30,7 @@ def get_access_token(User):
         token.token = refresh_response['access_token']
         token.token_secret = refresh_response['refresh_token']
         token.expires_at = datetime.fromtimestamp(refresh_response['expires_at'])
+        token.save()
         logger.info("Refreshed Strava token for user %s", user.username)
     return token.token
 
@@ -61,12 +59,4 @@ def load_activity_laps(User, activity_id):
     laps = client.get_activity_laps(activity_id)
     return laps
 
-def test_strava():
-    user = User.objects.get(username='admin')
-    activities = load_activities(user, after=datetime.now() - timedelta(days=90))
-    for activity in activities:
-        print(activity.type)
-        if activity.type == 'AlpineSki':
-            streams = load_activity_streams(user, activity.id)
-            print(streams)
-            break
+    
