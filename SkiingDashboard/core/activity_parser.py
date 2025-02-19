@@ -3,7 +3,7 @@ import time
 from datetime import timedelta
 from fitparse import FitFile
 from SkiingDashboardApp.activity_models import Activity, Lap, Record, LiftRide
-from SkiingDashboardApp.osm_models import Node, Way, Aerialway
+from SkiingDashboardApp.osm_models import Node, Way, Aerialway, SkiArea
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
@@ -38,6 +38,7 @@ def create_point(lat_field, lon_field, data):
     return None
 
 def get_closest_aerialway(point: Point):
+
     start_time = time.time()
     point.srid = 4326
     closest_station = (
@@ -46,6 +47,7 @@ def get_closest_aerialway(point: Point):
         .order_by("distance")
         .first()
     )
+
     if closest_station:
         aerialway = Aerialway.objects.filter(station_nodes=closest_station).first()
         duration = time.time() - start_time
@@ -159,7 +161,8 @@ def parse_strava_activity(user, activity_id, update=False):
     
     activity = load_activity(user, activity_id)
     activity_streams = load_activity_streams(user, activity_id)
-    start_point = Point(activity_streams["latlng"].data[0])
+    lat, lon = activity_streams["latlng"].data[0]
+    start_point = Point(lon, lat)
     activity_laps = load_activity_laps(user, activity_id)
     logger.debug(f"Loaded Strava activity: {activity_id}")
 
@@ -182,8 +185,16 @@ def parse_strava_activity(user, activity_id, update=False):
         "start_position": start_point,
     }
 
-    activity_instance, created = Activity.objects.update_or_create(strava_id=activity_id, **activity_data)
+    activity_instance, created = Activity.objects.update_or_create(strava_id=activity_id, defaults=activity_data)
     logger.info(f'{"Created" if created else "Updated"} Activity: {activity_instance.id}')
+
+    get_closest_aerialway(start_point)
+
+    # TODO: 
+    #   - parse activity streams
+    #   - parse activity laps
+    #   - create line geom
+    #   - add ski area to activity    
 
 
 

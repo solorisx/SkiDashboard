@@ -1,6 +1,6 @@
 from django.contrib.gis.db import models
 from django.contrib.auth.models import User
-from .osm_models import Aerialway
+from .osm_models import Aerialway, SkiArea
 
 # Models according to FIT specification
 
@@ -28,6 +28,7 @@ class Activity(models.Model):
     max_heart_rate = models.PositiveIntegerField(null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+    ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
     
 class Lap(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
