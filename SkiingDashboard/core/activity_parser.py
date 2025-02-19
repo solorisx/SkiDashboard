@@ -168,6 +168,7 @@ def parse_strava_activity(user, activity_id, update=False):
     lat, lon = activity_streams["latlng"].data[0]
     start_point = Point(lon, lat)
     activity_laps = load_activity_laps(user, activity_id)
+    skiarea = SkiArea.objects.filter(ways=get_closest_aerialway(start_point, in_ski_area=True).way).first()
     logger.debug(f"Loaded Strava activity: {activity_id}")
 
     activity_data = {
@@ -187,19 +188,16 @@ def parse_strava_activity(user, activity_id, update=False):
         "max_heart_rate": activity.max_heartrate,
         "user": user,
         "start_position": start_point,
+        "ski_area": skiarea,
     }
 
     activity_instance, created = Activity.objects.update_or_create(strava_id=activity_id, defaults=activity_data)
     logger.info(f'{"Created" if created else "Updated"} Activity: {activity_instance.id}')
 
-    skiarea = SkiArea.objects.filter(ways=get_closest_aerialway(start_point, in_ski_area=True).way).first()
-    logger.debug(skiarea.name if skiarea else "No ski area found")
-
     # TODO: 
     #   - parse activity streams
     #   - parse activity laps
     #   - create line geom
-    #   - add ski area to activity    
 
 
 
