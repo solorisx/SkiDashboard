@@ -4,8 +4,10 @@ from datetime import timedelta
 from fitparse import FitFile
 from SkiingDashboardApp.activity_models import Activity, Lap, Record, LiftRide
 from SkiingDashboardApp.osm_models import Node, Way, Aerialway
+from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
+import strava_interface
 
 # Get an instance of a logger
 logger = logging.getLogger('SkiingDashboard')
@@ -146,3 +148,42 @@ def parse_fit_file(file_path):
 
     total_duration = time.time() - start_time
     logger.info(f"Finished parsing FIT file: {file_path} in {total_duration:.4f} seconds")
+
+def parse_strava_activity(User, activity_id):
+    start_time = time.time()
+    logger.info(f"Starting to parse Strava activity: {activity_id}")
+    activity = strava_interface.load_activity(User, activity_id)
+    activity_streams = strava_interface.load_activity_streams(User, activity_id)
+    activity_laps = strava_interface.load_activity_laps(User, activity_id)
+    logger.debug(f"Loaded Strava activity: {activity}")
+
+    activity_data = {
+        "name": activity.name,
+        "type": activity.type,
+        "start_time": activity.start_date,
+        "total_elapsed_time": timedelta(seconds=activity.elapsed_time),
+        "total_timer_time": timedelta(seconds=activity.moving_time),
+        "total_distance": activity.distance,
+        "total_elevation_gain": activity.total_elevation_gain,
+        "average_speed": activity.average_speed,
+        "max_speed": activity.max_speed,
+        "calories": activity.calories,
+        "average_heartrate": activity.average_heartrate,
+        "max_heartrate": activity.max_heartrate,
+    }
+
+    activity_data_pos = {
+        "start_position_lat": activity.start_latitude,
+        "start_position_long": activity.start_longitude,
+    }
+
+    activity_data["start_position"] = create_point(
+        "start_position_lat", "start_position_long", activity_data_pos
+    )
+
+    activity_data["user"] = User.objects.get(username='admin')
+
+    activity_instance = Activity.objects.create(**activity_data)
+    logger.info(f"Created Activity: {activity_instance.id}")
+
+
