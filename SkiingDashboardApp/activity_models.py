@@ -1,11 +1,14 @@
 from django.contrib.gis.db import models
+from django.contrib.auth.models import User
 from .osm_models import Aerialway
 
 # Models according to FIT specification
 
 class Activity(models.Model):
-    name = models.CharField(max_length=30)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
     file_id = models.PositiveIntegerField(null=True)
+    strava_id = models.PositiveIntegerField(null=True)
     timestamp = models.DateTimeField()
     start_time = models.DateTimeField()
     total_elapsed_time = models.DurationField()
