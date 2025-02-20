@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
 from django.db.models import F
 from django.contrib.gis.db.models.functions import Distance
+from django.db.models import Exists, OuterRef
 
 
 from .strava_interface import load_activity, load_activity_streams, load_activity_laps
@@ -56,7 +57,7 @@ def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bo
     
     # TODO add filter for bottom/top stations only
     
-    aerialways = aerialways.annotate(distance=Distance("station_nodes__geom", point))
+    aerialways = aerialways.annotate(distance=Distance("station_nodes__node__geom", point))
     
     closest_aerialways = (
         aerialways.filter(distance__lte=max_distance)
@@ -72,6 +73,38 @@ def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bo
     return closest_aerialways
 
 
+def get_closest_stations(point: Point, max_distance=250, bottom_only=False, top_only=False):
+
+    start_time = time.time()
+    point.srid = 4326
+    
+    stations = Station.objects.all()
+
+    if bottom_only and top_only:
+        raise ValueError("Cannot filter for bottom and top stations at the same time")
+    
+    if bottom_only:
+        stations = stations.filter(station = "bottom")
+    
+    if top_only:
+        stations = stations.filter(station = "top")
+    
+    stations = stations.annotate(distance=Distance("node__geom", point))
+    
+    closest_stations = (
+        stations.filter(distance__lte=max_distance)
+        .order_by("distance")
+    )
+    
+    duration = time.time() - start_time
+    if closest_stations:
+        logger.debug(f"Found closest aerialways: {closest_stations.all()} (took {duration:.4f} seconds)")
+    else:
+        logger.debug(f"No closest aerialway found (took {duration:.4f} seconds)")
+    
+    return closest_stations
+
+
 def get_closest_aerialway(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False):
     return get_closest_aerialways(point, in_ski_area, max_distance, bottom_only, top_only).first()
 
@@ -79,75 +112,102 @@ def get_closest_aerialway(point: Point, in_ski_area=False, max_distance=250, bot
 def find_direct_lift(start: Point, end: Point):
     """Finds a direct lift (Aerialway) connecting two points."""
     
-    start_stations = get_closest_aerialways(start)
-    end_stations = get_closest_aerialways(end)
+    start_stations = get_closest_stations(start)
+    end_stations = get_closest_stations(end)
 
-    direct_lift = Aerialway.objects.filter(
+    # Get aerialways that have a start station
+    aerialways_with_start = Aerialway.objects.filter(
         station_nodes__in=start_stations
-    ).filter(
-        station_nodes__in=end_stations
-    ).distinct().first()  # Get the first matching aerialway (or None if no match)
+    ).distinct()
+
+    # Get aerialways that have an end station
+    direct_lift = aerialways_with_start.filter(
+        Exists(
+            Station.objects.filter(
+                aerialways=OuterRef("pk"),
+                id__in=end_stations.values_list("id", flat=True)  # Ensure correct filtering
+            )
+        )
+    ).first()  # Fetch the first matching aerialway
 
     return direct_lift
 
 
-def build_lift_graph(start: Point, max_area: int = 200_000, max_distance: int = 250):
+def build_lift_graph(start: Point, max_area: int = 20_000, max_distance: int = 250):
     """Builds a graph of aerialways and walking connections within 200 km of the start position."""
+    startTime = time.time()
+    logger.info("Building lift graph")   
+    
     graph = {}
 
-    # **Filter stations within 200km of start**
+    # **Filter stations within 20km of start**
+    logger.info(f"Filtering stations within {max_area}m of start position")
     nearby_stations = Station.objects.annotate(
-        distance=Distance("geom", start)
+        distance=Distance("node__geom", start)
     ).filter(distance__lte=max_area)
 
+    for station in nearby_stations:
+        logger.debug(f"Station: {station.name}, OSM ID {station.node.osm_id} ({station.distance}m)")
+
     # **Filter aerialways whose stations are within 200km**
+    logger.info(f"Filtering aerialways with stations within {max_area}m of start position")
     nearby_aerialways = Aerialway.objects.filter(
         station_nodes__in=nearby_stations
     ).distinct().prefetch_related("station_nodes")
 
     # **Add direct lift connections**
+    logger.info("Number of nearby aerialways: %s", nearby_aerialways.count())
+    logger.info("Number of nearby stations: %s", nearby_stations.count())
+    logger.info("Adding direct lift connections")
     for aerialway in nearby_aerialways:
         stations = list(aerialway.station_nodes.all())
         for i in range(len(stations) - 1):
             station_a, station_b = stations[i], stations[i + 1]
-            distance = station_a.geom.distance(station_b.geom)
+            distance = station_a.node.geom.distance(station_b.node.geom)
             graph.setdefault(station_a, []).append((distance, station_b, aerialway))
             graph.setdefault(station_b, []).append((distance, station_a, aerialway))
 
     # **Add walking connections within max_distance**
+    logger.info("Adding walking connections")
     for station in nearby_stations:
         nearby_walkable_stations = (
-            nearby_stations.annotate(distance=Distance(F("geom"), station.geom))
+            nearby_stations.annotate(distance=Distance(F("node__geom"), station.node.geom))
             .filter(distance__lte=max_distance)
             .exclude(id=station.id)  # Exclude itself
         )
         for nearby_station in nearby_walkable_stations:
-            distance = station.geom.distance(nearby_station.geom)
+            distance = station.node.geom.distance(nearby_station.node.geom)
             graph.setdefault(station, []).append((distance, nearby_station, None))
             graph.setdefault(nearby_station, []).append((distance, station, None))  # Add both directions
 
+    duration = time.time() - startTime
+    logger.info(f"Built lift graph in {duration:.4f} seconds")
     return graph
 
 def dijkstra(start_nodes, end_nodes, graph):
     """Finds the shortest path between any start node and any end node."""
-    queue = [(0, start_node, []) for start_node in start_nodes]  # (distance, current_node, path)
+    logger.info("Running Dijkstra's algorithm")
+    startTime = time.time()
+    queue = [(0, id(start_node), start_node, []) for start_node in start_nodes]  # (distance, current_node, path)
     visited = set()
     path = None
 
     while queue:
-        dist, current, path = heapq.heappop(queue)
+        dist, _, current, path = heapq.heappop(queue)  # Pop the node with the smallest distance, then tie break by id
         if current in visited:
             continue
         visited.add(current)
         path = path + [current]
 
         if current in end_nodes:
+            logger.info(f"Found path in {time.time() - startTime:.4f} seconds")
             return path  # Return path if any destination is reached
 
         for weight, neighbor, aerialway in graph.get(current, []):
             if neighbor not in visited:
-                heapq.heappush(queue, (dist + weight, neighbor, path))
+                heapq.heappush(queue, (dist + weight, id(neighbor), neighbor, path))
 
+    logger.warning("No path found in %s seconds", time.time() - startTime)
     return []  # No path found
 
 def get_aerialways(start: Point, end: Point = None):
@@ -354,8 +414,9 @@ def parse_strava_activity(user, activity_id, update=False):
         lift_rides = get_aerialways(lift_start_pos, lift_end_pos)
         for lift_ride in lift_rides:
             LiftRide.objects.create(lap=lap, aerialway=lift_ride, timestamp=lap.start_time)
-            logger.info(f"Created LiftRide for Lap: {lap_instance.lap_index}")
+            logger.info(f"Created LiftRide for Lap: {lap.lap_index}")
 
+    logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")
     # TODO: 
     #   - create line geom
 

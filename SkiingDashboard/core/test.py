@@ -7,6 +7,7 @@ from SkiingDashboardApp.activity_models import Activity, Lap, Aerialway, LiftRid
 def test_strava():
     user = User.objects.get(username='admin')
     activities = load_activities(user, after=datetime.now() - timedelta(days=90))
+    Activity.objects.filter(user=user).delete()
     for activity in activities:
         if activity.type == 'AlpineSki':
             activity_id = activity.id
@@ -16,10 +17,14 @@ def test_strava():
 def print_activities():
     user = User.objects.get(username='admin')
     for activity in Activity.objects.filter(user=user):
-        print(activity.name if activity.name else "Unnamed activity")
+        print(activity.strava_id + activity.name if activity.name else "Unnamed activity")
         print(activity.ski_area.name if activity.ski_area else "Unknown ski area")
         laps = Lap.objects.filter(activity=activity)
         for lap in laps:
             print(f"Lap {lap.lap_index}: {lap.total_distance} m")
             for lift_ride in lap.lift_rides.all():
                 print(f"  Lift: {lift_ride.name}")
+
+def test_strava_activity(activity_id):
+    user = User.objects.get(username='admin')
+    parse_strava_activity(user, activity_id, update=True)
