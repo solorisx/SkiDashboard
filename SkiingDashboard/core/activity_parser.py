@@ -58,8 +58,6 @@ def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bo
     if bottom_only and top_only:
         raise ValueError("Cannot filter for bottom and top stations at the same time")
     
-    # TODO add filter for bottom/top stations only
-    
     aerialways = aerialways.annotate(distance=Distance("station_nodes__node__geom", point))
     
     closest_aerialways = (
@@ -140,7 +138,7 @@ def find_direct_lift(start: Point, end: Point):
 
 
 def build_lift_graph(start: Point, max_area: int = 20_000, max_distance: int = 500):
-    """Builds a graph of aerialways and walking connections within 200 km of the start position."""
+    """Builds a graph of aerialways and walking connections within 20 km of the start position."""
     startTime = time.time()
     logger.info("Building lift graph")   
     
@@ -151,9 +149,6 @@ def build_lift_graph(start: Point, max_area: int = 20_000, max_distance: int = 5
     nearby_stations = Station.objects.annotate(
         distance=Distance("node__geom", start)
     ).filter(distance__lte=max_area)
-
-    for station in nearby_stations:
-        logger.debug(f"Station: {station.name}, OSM ID {station.node.osm_id} ({station.distance}m)")
 
     # **Filter aerialways whose stations are within 200km**
     logger.info(f"Filtering aerialways with stations within {max_area}m of start position")
@@ -246,17 +241,28 @@ def get_aerialways(start: Point, end: Point = None):
     station_path = dijkstra(start_stations, end_stations, graph)
 
     logger.debug(f"Station path: {station_path}")
+
     for station in station_path:
         logger.debug(station.get_osm_url())
 
     # Extract aerialways from station path
     aerialway_path = []
+
     for i in range(len(station_path) - 1):
         station_a, station_b = station_path[i], station_path[i + 1]
+        if (station_b.altitude - station_a.altitude < -100) or station.station == "top":
+            logger.warning(f"Downhill connection found: {station_a} -> {station_b}, skipping lap - potential OSM data issue")
+            return []
+        logger.debug(f"Connection: {station_a} -> {station_b}")
+        logger.debug(graph[station_a])
+        
         connection = next(
             (aerialway for _, neighbor, aerialway in graph[station_a] if neighbor == station_b and aerialway),
             None
         )
+
+        logger.debug(connection if connection else "No connection found")
+
         if connection and connection not in aerialway_path:
             aerialway_path.append(connection)
 
