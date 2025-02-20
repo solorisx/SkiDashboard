@@ -29,6 +29,9 @@ class Activity(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
+
+    def get_strava_url(self):
+        return f"https://www.strava.com/activities/{self.strava_id}" if self.strava_id else None
     
 class Lap(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='laps')

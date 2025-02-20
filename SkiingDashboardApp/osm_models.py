@@ -10,6 +10,9 @@ class Node(models.Model):
 
     def __str__(self):
         return f"Node {self.osm_id}"
+    
+    def get_osm_url(self):
+        return f"https://www.openstreetmap.org/node/{self.osm_id}"
 
 # Basic OSM Way Model
 class Way(models.Model):
@@ -22,6 +25,9 @@ class Way(models.Model):
     def __str__(self):
         return f"Way {self.osm_id}"
     
+    def get_osm_url(self):
+        return f"https://www.openstreetmap.org/way/{self.osm_id}"
+    
 # Station Model
 class Station(models.Model):
     node = models.OneToOneField(Node, on_delete=models.CASCADE, related_name="station")
@@ -32,7 +38,10 @@ class Station(models.Model):
     modified_on = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Station {self.name or self.node.id}"    
+        return f"Station {self.name or self.node.id}"
+    
+    def get_osm_url(self):
+        return self.node.get_osm_url()
 
 # Aerialway Model
 class Aerialway(models.Model):
@@ -52,6 +61,9 @@ class Aerialway(models.Model):
 
     def __str__(self):
         return f"Aerialway {self.way.osm_id} - {self.name}"
+    
+    def get_osm_url(self):
+        return self.way.get_osm_url()
 
 # Piste Model
 class Piste(models.Model):
@@ -69,6 +81,9 @@ class Piste(models.Model):
     def __str__(self):
         return f"Piste {self.way.osm_id} - {self.name}"
 
+    def get_osm_url(self):
+        return self.way.get_osm_url()
+
 # SkiArea Model
 class SkiArea(models.Model):
     osm_id = models.BigIntegerField(unique=True)
@@ -82,3 +97,6 @@ class SkiArea(models.Model):
 
     def __str__(self):
         return f"Ski Area {self.name}"
+    
+    def get_osm_url(self):
+        return f"https://www.openstreetmap.org/relation/{self.osm_id}"

@@ -17,6 +17,9 @@ from .strava_interface import load_activity, load_activity_streams, load_activit
 # Get an instance of a logger
 logger = logging.getLogger('SkiingDashboard')
 
+def get_osm_url(point):
+    return f"https://www.openstreetmap.org/?mlat={point.y}&mlon={point.x}#map=17/{point.y}/{point.x}"
+
 def extract_data(message, model_fields):
     """
     Extract data from a FIT message based on the fields available in the corresponding Django model.
@@ -111,7 +114,10 @@ def get_closest_aerialway(point: Point, in_ski_area=False, max_distance=250, bot
 
 def find_direct_lift(start: Point, end: Point):
     """Finds a direct lift (Aerialway) connecting two points."""
-    
+    logger.debug(f"Finding direct lift between {start} and {end}")
+    logger.debug(f"Start OSM URL: {get_osm_url(start)}")
+    logger.debug(f"End OSM URL: {get_osm_url(end)}")
+
     start_stations = get_closest_stations(start)
     end_stations = get_closest_stations(end)
 
@@ -133,7 +139,7 @@ def find_direct_lift(start: Point, end: Point):
     return direct_lift
 
 
-def build_lift_graph(start: Point, max_area: int = 20_000, max_distance: int = 250):
+def build_lift_graph(start: Point, max_area: int = 20_000, max_distance: int = 500):
     """Builds a graph of aerialways and walking connections within 200 km of the start position."""
     startTime = time.time()
     logger.info("Building lift graph")   
@@ -228,8 +234,8 @@ def get_aerialways(start: Point, end: Point = None):
 
     # Find all nearby stations for start and end
     max_distance = 250
-    start_stations = list(Node.objects.annotate(distance=Distance("geom", start)).filter(distance__lte=max_distance))
-    end_stations = list(Node.objects.annotate(distance=Distance("geom", end)).filter(distance__lte=max_distance))
+    start_stations = list(Station.objects.annotate(distance=Distance("node__geom", start)).filter(distance__lte=max_distance))
+    end_stations = list(Station.objects.annotate(distance=Distance("node__geom", end)).filter(distance__lte=max_distance))
 
     if not start_stations or not end_stations:
         return []  # No valid stations found
@@ -238,6 +244,10 @@ def get_aerialways(start: Point, end: Point = None):
 
     # Get the shortest station path from multiple start and end stations
     station_path = dijkstra(start_stations, end_stations, graph)
+
+    logger.debug(f"Station path: {station_path}")
+    for station in station_path:
+        logger.debug(station.get_osm_url())
 
     # Extract aerialways from station path
     aerialway_path = []
@@ -331,7 +341,7 @@ def parse_fit_file(file_path):
             LiftRide.objects.create(
                 lap=lap, aerialway=lift_ride, timestamp=lap.start_time
             )
-            logger.info(f"Created LiftRide for Lap: {lap.id}")
+            logger.info(f"Created LiftRide for Lap: {lap.id} with lift {lift_ride.aerialway.name}")
 
         for record_data in records:
             # Remove the separate latitude and longitude fields
@@ -403,18 +413,21 @@ def parse_strava_activity(user, activity_id, update=False):
             "avg_heart_rate": lap.average_heartrate,
             "max_heart_rate": lap.max_heartrate,
             "start_position": Point(activity_streams["latlng"].data[lap.start_index][1], activity_streams["latlng"].data[lap.start_index][0]),
-            "end_position": Point(activity_streams["latlng"].data[lap.end_index][1], activity_streams["latlng"].data[lap.end_index][0]),
+            "end_position": Point(activity_streams["latlng"].data[lap.end_index-10][1], activity_streams["latlng"].data[lap.end_index-10][0]),
         }
         lap_instance, created = Lap.objects.update_or_create(lap_index=lap.lap_index, activity=activity_instance, defaults=lap_data)
         logger.info(f'{"Created" if created else "Updated"} Lap: {lap_instance.lap_index}')
 
     for lap in activity_instance.laps.all():
+        logger.debug(f"Processing Lap: {lap.lap_index}")
+        logger.debug(f"Start Position: {get_osm_url(lap.start_position)}")
+        logger.debug(f"End Position: {get_osm_url(lap.end_position)}")
         lift_end_pos = lap.start_position
         lift_start_pos = Lap.objects.filter(activity=activity_instance, lap_index=lap.lap_index-1).first().end_position if lap.lap_index > 1 else None
         lift_rides = get_aerialways(lift_start_pos, lift_end_pos)
         for lift_ride in lift_rides:
             LiftRide.objects.create(lap=lap, aerialway=lift_ride, timestamp=lap.start_time)
-            logger.info(f"Created LiftRide for Lap: {lap.lap_index}")
+            logger.info(f"Created LiftRide for Lap: {lap.lap_index} with lift {lift_ride.name if lift_ride else 'unnamed'}")
 
     logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")
     # TODO: 
