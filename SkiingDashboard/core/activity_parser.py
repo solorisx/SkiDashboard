@@ -71,6 +71,21 @@ def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bo
 def get_closest_aerialway(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False):
     return get_closest_aerialways(point, in_ski_area, max_distance, bottom_only, top_only).first()
 
+def find_direct_lift(start: Point, end: Point):
+    """Finds a direct lift (Aerialway) connecting two points."""
+    
+    start_stations = get_closest_aerialways(start)
+    end_stations = get_closest_aerialways(end)
+
+    direct_lift = Aerialway.objects.filter(
+        station_nodes__in=start_stations
+    ).filter(
+        station_nodes__in=end_stations
+    ).distinct().first()  # Get the first matching aerialway (or None if no match)
+
+    return direct_lift
+
+
 def get_aerialways(start: Point, end: Point = None):
     
     # TODO: improve this function
@@ -85,25 +100,79 @@ def get_aerialways(start: Point, end: Point = None):
             return [aerialway]
         else:
             return []
-    else:
-        # Log distances of station nodes to the end point
-        first_aerialway = get_closest_aerialway(start)
-        if first_aerialway:
-            station_distances = first_aerialway.station_nodes.annotate(distance=Distance("geom", end))
-            for node in station_distances:
-                logger.debug(f"Station Node ID: {node.osm_id}, Distance to end: {node.distance.m:.2f} meters")
-            
-            if station_distances.filter(distance__lte=250).exists():
-                return [first_aerialway]
-            else:
-                # TODO: return all aerialways between start and end
-                last_aerialway = get_closest_aerialway(end)
-                if not last_aerialway:
-                    return [first_aerialway]
-                else:
-                    return [first_aerialway, last_aerialway]
-        else:
-            return []
+        
+    direct_lift = find_direct_lift(start, end)
+    if direct_lift:
+        return [direct_lift]
+
+    # Find all nearby stations for start and end
+    max_distance = 250
+    start_stations = list(Node.objects.annotate(distance=Distance("geom", start)).filter(distance__lte=max_distance))
+    end_stations = list(Node.objects.annotate(distance=Distance("geom", end)).filter(distance__lte=max_distance))
+
+    if not start_stations or not end_stations:
+        return []  # No valid stations found
+
+    # Build Graph: Nodes (Stations), Edges (Aerialways + Walking connections)
+    graph = {}
+
+    # Add direct lift connections
+    for aerialway in Aerialway.objects.prefetch_related("station_nodes"):
+        stations = list(aerialway.station_nodes.all())
+        for i in range(len(stations) - 1):
+            station_a, station_b = stations[i], stations[i + 1]
+            distance = station_a.geom.distance(station_b.geom)
+            graph.setdefault(station_a, []).append((distance, station_b, aerialway))
+            graph.setdefault(station_b, []).append((distance, station_a, aerialway))
+
+    # Add walking connections within max_distance
+    stations = list(Node.objects.all())
+    for i in range(len(stations)):
+        for j in range(i + 1, len(stations)):
+            station_a, station_b = stations[i], stations[j]
+            distance = station_a.geom.distance(station_b.geom)
+            if distance <= max_distance:
+                graph.setdefault(station_a, []).append((distance, station_b, None))  # No lift, just walking
+                graph.setdefault(station_b, []).append((distance, station_a, None))
+
+    # Run Dijkstra’s Algorithm allowing multiple start & end nodes
+    def dijkstra(start_nodes, end_nodes):
+        """Finds the shortest path between any start node and any end node."""
+        queue = [(0, start_node, []) for start_node in start_nodes]  # (distance, current_node, path)
+        visited = set()
+        shortest_path = None
+
+        while queue:
+            dist, current, path = heapq.heappop(queue)
+            if current in visited:
+                continue
+            visited.add(current)
+            path = path + [current]
+
+            if current in end_nodes:
+                return path  # Return path if any destination is reached
+
+            for weight, neighbor, aerialway in graph.get(current, []):
+                if neighbor not in visited:
+                    heapq.heappush(queue, (dist + weight, neighbor, path))
+
+        return []  # No path found
+
+    # Get the shortest station path from multiple start and end stations
+    station_path = dijkstra(start_stations, end_stations)
+
+    # Extract aerialways from station path
+    aerialway_path = []
+    for i in range(len(station_path) - 1):
+        station_a, station_b = station_path[i], station_path[i + 1]
+        connection = next(
+            (aerialway for _, neighbor, aerialway in graph[station_a] if neighbor == station_b and aerialway),
+            None
+        )
+        if connection and connection not in aerialway_path:
+            aerialway_path.append(connection)
+
+    return aerialway_path
 
 def parse_fit_file(file_path):
     start_time = time.time()

@@ -21,6 +21,18 @@ class Way(models.Model):
 
     def __str__(self):
         return f"Way {self.osm_id}"
+    
+# Station Model
+class Station(models.Model):
+    node = models.OneToOneField(Node, on_delete=models.CASCADE, related_name="station")
+    name = models.CharField(max_length=255, blank=True, null=True)
+    station = models.CharField(max_length=255, blank=True, null=True)
+    altitude = models.FloatField(null=True, blank=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Station {self.name or self.node.id}"    
 
 # Aerialway Model
 class Aerialway(models.Model):
@@ -31,7 +43,9 @@ class Aerialway(models.Model):
     aerialway_duration = models.IntegerField(blank=True, null=True)
     aerialway_heating = models.BooleanField(default=False)
     aerialway_occupancy = models.IntegerField(blank=True, null=True)
-    station_nodes = models.ManyToManyField(Node)
+    station_nodes = models.ManyToManyField(Station, related_name="aerialways")
+    bottom_station = models.ForeignKey(Station, null=True, on_delete=models.CASCADE, related_name="bottom_aerialways")
+    top_station = models.ForeignKey(Station, null=True, on_delete=models.CASCADE, related_name="top_aerialways")
     name = models.CharField(max_length=255, blank=True, null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)

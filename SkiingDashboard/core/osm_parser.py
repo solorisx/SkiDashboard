@@ -1,7 +1,7 @@
 import osmium
 import logging
 import time
-from SkiingDashboardApp.osm_models import Way, Node, Aerialway, Piste, SkiArea
+from SkiingDashboardApp.osm_models import Way, Node, Aerialway, Piste, SkiArea, Station
 from django.db import transaction
 from django.db.models import Q
 
@@ -152,7 +152,22 @@ def process_ways(handler):
                         }
                     )
                     station_nodes = [node for node in node_instances if node.tags.get('aerialway') == 'station']
-                    aerialway.station_nodes.set(station_nodes)
+                    stations = []
+                    for node in station_nodes:
+                        station, created = Station.objects.update_or_create(
+                            node=node,
+                            defaults={
+                                'name': node.tags.get('name'),
+                                'altitude': node.tags.get('ele'),
+                                'station': node.tags.get('aerialway:station')
+                            }
+                        )
+                        stations.append(station)
+                        
+                    aerialway.station_nodes.set(stations)
+                    aerialway.bottom_station = aerialway.station_nodes.filter(station='bottom').first()
+                    aerialway.top_station = aerialway.station_nodes.filter(station='top').first()
+                    aerialway.save()
                     logger.debug(f"Processed aerialway for way: {way['osm_id']}")
 
                 # Handle Piste
