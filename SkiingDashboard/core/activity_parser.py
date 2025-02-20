@@ -75,6 +75,7 @@ def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bo
 def get_closest_aerialway(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False):
     return get_closest_aerialways(point, in_ski_area, max_distance, bottom_only, top_only).first()
 
+
 def find_direct_lift(start: Point, end: Point):
     """Finds a direct lift (Aerialway) connecting two points."""
     
@@ -89,12 +90,6 @@ def find_direct_lift(start: Point, end: Point):
 
     return direct_lift
 
-
-from django.contrib.gis.db.models.functions import Distance
-from django.contrib.gis.geos import Point
-from django.db.models import F
-
-max_distance = 200_000  # 200 km in meters
 
 def build_lift_graph(start: Point, max_area: int = 200_000, max_distance: int = 250):
     """Builds a graph of aerialways and walking connections within 200 km of the start position."""
@@ -137,7 +132,7 @@ def dijkstra(start_nodes, end_nodes, graph):
     """Finds the shortest path between any start node and any end node."""
     queue = [(0, start_node, []) for start_node in start_nodes]  # (distance, current_node, path)
     visited = set()
-    shortest_path = None
+    path = None
 
     while queue:
         dist, current, path = heapq.heappop(queue)

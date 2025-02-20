@@ -49,6 +49,14 @@ def duration_to_minutes(duration):
     except:
         return None
     
+def ele_to_float(ele):
+    try:
+        # format 1234.56m
+        ele = ele.replace('m', '')
+        return float(ele)
+    except:
+        return None
+    
 def str_to_int(s):
     try:
         return int(s)
@@ -158,7 +166,7 @@ def process_ways(handler):
                             node=node,
                             defaults={
                                 'name': node.tags.get('name'),
-                                'altitude': node.tags.get('ele'),
+                                'altitude': ele_to_float(node.tags.get('ele')),
                                 'station': node.tags.get('aerialway:station')
                             }
                         )
