@@ -31,7 +31,8 @@ class Activity(models.Model):
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
     
 class Lap(models.Model):
-    activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='laps')
+    lap_index = models.PositiveIntegerField(null=True)
     timestamp = models.DateTimeField()
     start_time = models.DateTimeField()
     start_position = models.PointField()
@@ -39,16 +40,19 @@ class Lap(models.Model):
     total_elapsed_time = models.DurationField()
     total_timer_time = models.DurationField()
     total_distance = models.FloatField()
-    enhanced_avg_speed = models.FloatField(null=True)
-    enhanced_max_speed = models.FloatField(null=True)
-    enhanced_min_altitude = models.FloatField(null=True)
-    enhanced_max_altitude = models.FloatField(null=True)
+    avg_speed = models.FloatField(null=True)
+    max_speed = models.FloatField(null=True)
+    min_altitude = models.FloatField(null=True)
+    max_altitude = models.FloatField(null=True)
     total_calories = models.FloatField(null=True)
     total_ascent = models.FloatField(null=True)
     total_descent = models.FloatField(null=True)
     avg_heart_rate = models.PositiveIntegerField(null=True)
     max_heart_rate = models.PositiveIntegerField(null=True)
     lift_rides = models.ManyToManyField(Aerialway, through='LiftRide')
+
+    class Meta:
+        unique_together = ('activity', 'lap_index')    
 
 class Record(models.Model):
     lap = models.ForeignKey(Lap, on_delete=models.CASCADE)

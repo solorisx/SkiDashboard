@@ -37,7 +37,7 @@ def create_point(lat_field, lon_field, data):
         return point
     return None
 
-def get_closest_aerialway(point: Point, in_ski_area=False):
+def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False):
 
     start_time = time.time()
     point.srid = 4326
@@ -46,20 +46,64 @@ def get_closest_aerialway(point: Point, in_ski_area=False):
     
     if in_ski_area:
         aerialways = aerialways.filter(way__ski_areas__isnull=False)
+
+    if bottom_only and top_only:
+        raise ValueError("Cannot filter for bottom and top stations at the same time")
     
-    closest_aerialway = (
-        aerialways.annotate(distance=Distance("station_nodes__geom", point))
+    # TODO add filter for bottom/top stations only
+    
+    aerialways = aerialways.annotate(distance=Distance("station_nodes__geom", point))
+    
+    closest_aerialways = (
+        aerialways.filter(distance__lte=max_distance)
         .order_by("distance")
-        .first()
     )
     
     duration = time.time() - start_time
-    if closest_aerialway:
-        logger.debug(f"Found closest aerialway: {closest_aerialway} (took {duration:.4f} seconds)")
+    if closest_aerialways:
+        logger.debug(f"Found closest aerialways: {closest_aerialways} (took {duration:.4f} seconds)")
     else:
         logger.debug(f"No closest aerialway found (took {duration:.4f} seconds)")
     
-    return closest_aerialway
+    return closest_aerialways
+
+
+def get_closest_aerialway(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False):
+    return get_closest_aerialways(point, in_ski_area, max_distance, bottom_only, top_only).first()
+
+def get_aerialways(start: Point, end: Point = None):
+    
+    # TODO: improve this function
+    # get set of aerialways, if multiple then check for start / end points
+
+    if start is None or end is None:
+        if start is None:
+            aerialway = get_closest_aerialway(end)
+        if end is None:
+            aerialway = get_closest_aerialway(start)
+        if aerialway:
+            return [aerialway]
+        else:
+            return []
+    else:
+        # Log distances of station nodes to the end point
+        first_aerialway = get_closest_aerialway(start)
+        if first_aerialway:
+            station_distances = first_aerialway.station_nodes.annotate(distance=Distance("geom", end))
+            for node in station_distances:
+                logger.debug(f"Station Node ID: {node.osm_id}, Distance to end: {node.distance.m:.2f} meters")
+            
+            if station_distances.filter(distance__lte=250).exists():
+                return [first_aerialway]
+            else:
+                # TODO: return all aerialways between start and end
+                last_aerialway = get_closest_aerialway(end)
+                if not last_aerialway:
+                    return [first_aerialway]
+                else:
+                    return [first_aerialway, last_aerialway]
+        else:
+            return []
 
 def parse_fit_file(file_path):
     start_time = time.time()
@@ -168,7 +212,7 @@ def parse_strava_activity(user, activity_id, update=False):
     lat, lon = activity_streams["latlng"].data[0]
     start_point = Point(lon, lat)
     activity_laps = load_activity_laps(user, activity_id)
-    skiarea = SkiArea.objects.filter(ways=get_closest_aerialway(start_point, in_ski_area=True).way).first()
+    skiarea = SkiArea.objects.filter(ways=get_closest_aerialway(start_point, in_ski_area=True, max_distance=5000).way).first()
     logger.debug(f"Loaded Strava activity: {activity_id}")
 
     activity_data = {
@@ -194,9 +238,38 @@ def parse_strava_activity(user, activity_id, update=False):
     activity_instance, created = Activity.objects.update_or_create(strava_id=activity_id, defaults=activity_data)
     logger.info(f'{"Created" if created else "Updated"} Activity: {activity_instance.id}')
 
+    if not created:
+        activity_instance.laps.all().delete()
+        logger.info(f"Deleted existing laps for Activity: {activity_instance.id}")
+
+    for lap in activity_laps:
+        lap_data = {
+            "start_time": lap.start_date_local, # TODO: add timezone
+            "timestamp": lap.start_date_local, # TODO: add timezone
+            "total_elapsed_time": timedelta(seconds=lap.elapsed_time),
+            "total_timer_time": timedelta(seconds=lap.moving_time),
+            "total_distance": lap.distance,
+            "total_ascent": lap.total_elevation_gain,
+            # TODO: get total_descent from streams
+            "avg_speed": lap.average_speed,
+            "max_speed": lap.max_speed,
+            "avg_heart_rate": lap.average_heartrate,
+            "max_heart_rate": lap.max_heartrate,
+            "start_position": Point(activity_streams["latlng"].data[lap.start_index][1], activity_streams["latlng"].data[lap.start_index][0]),
+            "end_position": Point(activity_streams["latlng"].data[lap.end_index][1], activity_streams["latlng"].data[lap.end_index][0]),
+        }
+        lap_instance, created = Lap.objects.update_or_create(lap_index=lap.lap_index, activity=activity_instance, defaults=lap_data)
+        logger.info(f'{"Created" if created else "Updated"} Lap: {lap_instance.lap_index}')
+
+    for lap in activity_instance.laps.all():
+        lift_end_pos = lap.start_position
+        lift_start_pos = Lap.objects.filter(activity=activity_instance, lap_index=lap.lap_index-1).first().end_position if lap.lap_index > 1 else None
+        lift_rides = get_aerialways(lift_start_pos, lift_end_pos)
+        for lift_ride in lift_rides:
+            LiftRide.objects.create(lap=lap, aerialway=lift_ride, timestamp=lap.start_time)
+            logger.info(f"Created LiftRide for Lap: {lap_instance.lap_index}")
+
     # TODO: 
-    #   - parse activity streams
-    #   - parse activity laps
     #   - create line geom
 
 
