@@ -250,7 +250,7 @@ def get_aerialways(start: Point, end: Point = None):
 
     for i in range(len(station_path) - 1):
         station_a, station_b = station_path[i], station_path[i + 1]
-        if (station_b.altitude - station_a.altitude < -100) or station.station == "top":
+        if (station_a.altitude and station_b.altitude and station_b.altitude - station_a.altitude < -100) or station_a.station == "top" or station_b.station == "bottom":
             logger.warning(f"Downhill connection found: {station_a} -> {station_b}, skipping lap - potential OSM data issue")
             return []
         logger.debug(f"Connection: {station_a} -> {station_b}")
