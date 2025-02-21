@@ -375,7 +375,13 @@ def parse_strava_activity(user, activity_id, update=False):
     lat, lon = activity_streams["latlng"].data[0]
     start_point = Point(lon, lat)
     activity_laps = load_activity_laps(user, activity_id)
-    skiarea = SkiArea.objects.filter(ways=get_closest_aerialway(start_point, in_ski_area=True, max_distance=5000).way).first()
+    start_lift = get_closest_aerialway(start_point, in_ski_area=True, max_distance=5000)
+    if start_lift:
+        logger.debug(f"Found start lift: {start_lift.name}")
+        skiarea = SkiArea.objects.filter(ways=start_lift.way).first()
+    else:
+        logger.warning(f"No start lift found for activity: {activity_id}")
+        
     logger.debug(f"Loaded Strava activity: {activity_id}")
 
     activity_data = {
