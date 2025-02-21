@@ -2,8 +2,6 @@ from django.contrib.gis.db import models
 from django.contrib.auth.models import User
 from .osm_models import Aerialway, SkiArea
 
-# Models according to FIT specification
-
 class Activity(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
@@ -38,6 +36,7 @@ class Lap(models.Model):
     lap_index = models.PositiveIntegerField(null=True)
     timestamp = models.DateTimeField()
     start_time = models.DateTimeField()
+    end_time = models.DateTimeField(null=True)
     start_position = models.PointField()
     end_position = models.PointField()
     total_elapsed_time = models.DurationField()

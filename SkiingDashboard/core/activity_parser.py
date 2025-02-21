@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
 from django.db.models import F
 from django.contrib.gis.db.models.functions import Distance
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Subquery
 
 
 from .strava_interface import load_activity, load_activity_streams, load_activity_laps
@@ -45,7 +45,7 @@ def create_point(lat_field, lon_field, data):
         return point
     return None
 
-def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False):
+def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False, use_nodes=False):
 
     start_time = time.time()
     point.srid = 4326
@@ -58,7 +58,20 @@ def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bo
     if bottom_only and top_only:
         raise ValueError("Cannot filter for bottom and top stations at the same time")
     
-    aerialways = aerialways.annotate(distance=Distance("station_nodes__node__geom", point))
+    if use_nodes:
+        nearest_node_distance = (
+            Node.objects.filter(way__aerialway=OuterRef("pk"))  # Get nodes related to aerialway
+            .annotate(distance=Distance("geom", point))  # Calculate distance to point
+            .order_by("distance")  # Order by closest
+            .values("distance")[:1]  # Take the closest node's distance
+        )
+
+        aerialways = Aerialway.objects.annotate(
+            distance=Subquery(nearest_node_distance)
+        )        
+        #aerialways = aerialways.annotate(distance=Distance("way__nodes__node__geom", point))
+    else:
+        aerialways = aerialways.annotate(distance=Distance("station_nodes__node__geom", point))
     
     closest_aerialways = (
         aerialways.filter(distance__lte=max_distance)
@@ -106,8 +119,8 @@ def get_closest_stations(point: Point, max_distance=250, bottom_only=False, top_
     return closest_stations
 
 
-def get_closest_aerialway(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False):
-    return get_closest_aerialways(point, in_ski_area, max_distance, bottom_only, top_only).first()
+def get_closest_aerialway(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False, use_nodes=False):
+    return get_closest_aerialways(point, in_ski_area, max_distance, bottom_only, top_only, use_nodes).first()
 
 
 def find_direct_lift(start: Point, end: Point):
@@ -213,19 +226,21 @@ def dijkstra(start_nodes, end_nodes, graph):
 
 def get_aerialways(start: Point, end: Point = None):
 
+    includes_downhill = False
+    
     if start is None or end is None:
         if start is None:
             aerialway = get_closest_aerialway(end)
         if end is None:
             aerialway = get_closest_aerialway(start)
         if aerialway:
-            return [aerialway]
+            return [aerialway], includes_downhill
         else:
-            return []
+            return [], includes_downhill
         
     direct_lift = find_direct_lift(start, end)
     if direct_lift:
-        return [direct_lift]
+        return [direct_lift], includes_downhill
 
     # Find all nearby stations for start and end
     max_distance = 250
@@ -233,7 +248,12 @@ def get_aerialways(start: Point, end: Point = None):
     end_stations = list(Station.objects.annotate(distance=Distance("node__geom", end)).filter(distance__lte=max_distance))
 
     if not start_stations or not end_stations:
-        return []  # No valid stations found
+        logger.debug("No valid stations found, trying to find aerialway without stations")
+        lift = get_closest_aerialway(start, use_nodes=True)
+        if lift:
+            return [lift], includes_downhill
+        else:
+            return [], includes_downhill  # No valid stations found
 
     graph = build_lift_graph(start)
 
@@ -250,9 +270,7 @@ def get_aerialways(start: Point, end: Point = None):
 
     for i in range(len(station_path) - 1):
         station_a, station_b = station_path[i], station_path[i + 1]
-        if (station_a.altitude and station_b.altitude and station_b.altitude - station_a.altitude < -100) or station_a.station == "top" or station_b.station == "bottom":
-            logger.warning(f"Downhill connection found: {station_a} -> {station_b}, skipping lap - potential OSM data issue")
-            return []
+
         logger.debug(f"Connection: {station_a} -> {station_b}")
         logger.debug(graph[station_a])
         
@@ -264,9 +282,12 @@ def get_aerialways(start: Point, end: Point = None):
         logger.debug(connection if connection else "No connection found")
 
         if connection and connection not in aerialway_path:
+            if (station_a.altitude and station_b.altitude and station_b.altitude - station_a.altitude < -100) or station_a.station == "top" or station_b.station == "bottom":
+                logger.debug(f"Potential downhill connection found: {station_a} -> {station_b}")
+                includes_downhill = True
             aerialway_path.append(connection)
 
-    return aerialway_path
+    return aerialway_path, includes_downhill
 
 def parse_fit_file(file_path):
     start_time = time.time()
@@ -381,7 +402,7 @@ def parse_strava_activity(user, activity_id, update=False):
         skiarea = SkiArea.objects.filter(ways=start_lift.way).first()
     else:
         logger.warning(f"No start lift found for activity: {activity_id}")
-        
+
     logger.debug(f"Loaded Strava activity: {activity_id}")
 
     activity_data = {
@@ -426,6 +447,7 @@ def parse_strava_activity(user, activity_id, update=False):
             "max_heart_rate": lap.max_heartrate,
             "start_position": Point(activity_streams["latlng"].data[lap.start_index][1], activity_streams["latlng"].data[lap.start_index][0]),
             "end_position": Point(activity_streams["latlng"].data[lap.end_index-10][1], activity_streams["latlng"].data[lap.end_index-10][0]),
+            "end_time": lap.start_date_local + timedelta(seconds=lap.elapsed_time),
         }
         lap_instance, created = Lap.objects.update_or_create(lap_index=lap.lap_index, activity=activity_instance, defaults=lap_data)
         logger.info(f'{"Created" if created else "Updated"} Lap: {lap_instance.lap_index}')
@@ -435,10 +457,20 @@ def parse_strava_activity(user, activity_id, update=False):
         logger.debug(f"Start Position: {get_osm_url(lap.start_position)}")
         logger.debug(f"End Position: {get_osm_url(lap.end_position)}")
         lift_end_pos = lap.start_position
-        lift_start_pos = Lap.objects.filter(activity=activity_instance, lap_index=lap.lap_index-1).first().end_position if lap.lap_index > 1 else None
-        lift_rides = get_aerialways(lift_start_pos, lift_end_pos)
+        prev_lap = Lap.objects.filter(activity=activity_instance, lap_index=lap.lap_index-1).first()
+        if prev_lap:
+            lift_start_pos = prev_lap.end_position
+            lift_start_time = prev_lap.end_time
+        else:
+            lift_start_pos = None
+            lift_start_time = lap.start_time
+        #lift_start_pos = Lap.objects.filter(activity=activity_instance, lap_index=lap.lap_index-1).first().end_position if lap.lap_index > 1 else None
+        lift_rides, includes_downhill = get_aerialways(lift_start_pos, lift_end_pos)
+        if includes_downhill:
+            logger.warning(f"Parsing {activity_id}: Downhill connection found for Lap: {lap.lap_index}")
         for lift_ride in lift_rides:
-            LiftRide.objects.create(lap=lap, aerialway=lift_ride, timestamp=lap.start_time)
+            lift = LiftRide.objects.create(lap=lap, aerialway=lift_ride, timestamp=lift_start_time)
+            lift_start_time = lift_start_time + timedelta(minutes=lift.aerialway.aerialway_duration if lift.aerialway.aerialway_duration else 1)
             logger.info(f"Created LiftRide for Lap: {lap.lap_index} with lift {lift_ride.name if lift_ride else 'unnamed'}")
 
     logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")

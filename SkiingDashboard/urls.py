@@ -25,4 +25,5 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path("activities/", views.activity_list, name="activity_list"),
     path("activities/<int:activity_id>/", views.activity_detail, name="activity_detail"),
+    path("activities/<int:activity_id>/reprocess/", views.reprocess_activity, name="reprocess_activity"),
 ]

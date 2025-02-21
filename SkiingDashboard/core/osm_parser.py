@@ -44,8 +44,8 @@ class OSMHandler(osmium.SimpleHandler):
 
 def duration_to_minutes(duration):
     try:
-        minutes, seconds = duration.split(':')
-        return int(minutes) + int(seconds) / 60
+        minutes = duration.split(':')
+        return int(minutes[0])
     except:
         return None
     

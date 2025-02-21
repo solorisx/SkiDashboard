@@ -13,11 +13,21 @@
     <h2>Lift Rides</h2>
     <ul>
         {% for lift_ride in lift_rides %}
-            <li>{{ lift_ride.aerialway.name }} at {{ lift_ride.timestamp }}</li>
+            <li>{{ lift_ride.aerialway.name }} at {{ lift_ride.timestamp }} during lap {{ lift_ride.lap.lap_index }}</li>
         {% empty %}
             <li>No lift rides recorded</li>
         {% endfor %}
     </ul>
 
+    <form action="{% url 'reprocess_activity' activity.id %}" method="POST">
+        {% csrf_token %}
+        <button type="submit" style="background-color: red; color: white; padding: 10px; border: none; cursor: pointer;">
+            Reprocess Activity
+        </button>
+    </form>
+
+    <a href="{{ activity.get_strava_url }}" target="_blank">View on Strava</a>
+
     <a href="{% url 'activity_list' %}">Back to Activities</a>
+
 {% endblock %}
