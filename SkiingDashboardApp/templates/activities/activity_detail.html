@@ -1,0 +1,23 @@
+{% block content %}
+    <h1>{{ activity.name }} - {{ activity.timestamp }}</h1>
+    
+    <h2>Laps</h2>
+    <ul>
+        {% for lap in laps %}
+            <li>Lap {{ lap.lap_index }} - Distance: {{ lap.total_distance }}m</li>
+        {% empty %}
+            <li>No laps recorded</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Lift Rides</h2>
+    <ul>
+        {% for lift_ride in lift_rides %}
+            <li>{{ lift_ride.aerialway.name }} at {{ lift_ride.timestamp }}</li>
+        {% empty %}
+            <li>No lift rides recorded</li>
+        {% endfor %}
+    </ul>
+
+    <a href="{% url 'activity_list' %}">Back to Activities</a>
+{% endblock %}

@@ -18,8 +18,11 @@ from django.contrib import admin
 from django.urls import include, path
 from SkiingDashboardApp import views
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('hello/', views.hello_world),
     path('accounts/', include('allauth.urls')),
+    path("activities/", views.activity_list, name="activity_list"),
+    path("activities/<int:activity_id>/", views.activity_detail, name="activity_detail"),
 ]
