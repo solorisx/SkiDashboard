@@ -4,7 +4,7 @@ import time
 from datetime import timedelta, datetime
 from fitparse import FitFile
 from SkiingDashboardApp.activity_models import Activity, Lap, Record, LiftRide
-from SkiingDashboardApp.osm_models import Node, Way, Aerialway, SkiArea, Station
+from SkiingDashboardApp.osm_models import Node, Way, Aerialway, SkiArea, Station, SkiAreaBoundary
 from SkiingDashboardApp.user_models import UserProfile
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
@@ -47,9 +47,30 @@ def create_point(lat_field, lon_field, data):
         return point
     return None
 
+def get_ski_area_boundary(point, buffer=0):
+    """
+    Finds the ski area containing the given point.
+    If buffer > 0, it expands the search to ski areas within the buffered distance.
+    
+    :param point: A GeoDjango Point object (longitude, latitude)
+    :param buffer: Optional buffer distance in meters
+    :return: SkiArea object or None if no match found
+    """
+    if buffer > 0:
+        # Find ski areas where the point is within a buffered geometry
+        ski_area_boundary = SkiAreaBoundary.objects.filter(geom__dwithin=(point, buffer)).annotate(
+            distance=Distance("geom", point)
+        ).order_by("distance").first()
+    else:
+        # Find the ski area that directly contains the point
+        ski_area_boundary = SkiAreaBoundary.objects.filter(geom__contains=point).first()
+
+    return ski_area_boundary
+
 def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False, use_nodes=False):
 
     logger.debug(f"Finding closest aerialways to {point} (in_ski_area={in_ski_area}, max_distance={max_distance}, bottom_only={bottom_only}, top_only={top_only}, use_nodes={use_nodes})")
+    logger.debug(f"OSM URL: {get_osm_url(point)}")
 
     start_time = time.time()
     point.srid = 4326
@@ -559,7 +580,10 @@ def parse_strava_activity(user, activity_id, update=False):
         logger.debug(f"Found start lift: {start_lift.name}")
         skiarea = SkiArea.objects.filter(ways=start_lift.way).first()
     else:
+        skiarea = None
         logger.warning(f"No start lift found for activity: {activity_id}")
+
+    ski_area_boundary = get_ski_area_boundary(start_point)
 
     logger.debug(f"Loaded Strava activity: {activity_id}")
 
@@ -580,7 +604,8 @@ def parse_strava_activity(user, activity_id, update=False):
         "max_heart_rate": activity.max_heartrate,
         "user": user,
         "start_position": start_point,
-        "ski_area": skiarea,
+        "ski_area": skiarea if skiarea else None,
+        "ski_area_boundary": ski_area_boundary if ski_area_boundary else None,
     }
 
     activity_instance, created = Activity.objects.update_or_create(strava_id=activity_id, defaults=activity_data)
@@ -664,6 +689,9 @@ def parse_strava_activities(user, update=False):
 
     for activity in activities:
         if activity.type == 'AlpineSki':
-            activity_id = activity
-            parse_strava_activity(user, activity_id, update=update)
-
+            try:
+                activity_id = activity
+                parse_strava_activity(user, activity_id, update=update)
+            except Exception as e:
+                logger.error(f"Error parsing Strava activity {activity_id}: {e}")
+                continue

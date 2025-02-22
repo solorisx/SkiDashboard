@@ -1,6 +1,6 @@
 from django.contrib.gis.db import models
 from django.contrib.auth.models import User
-from .osm_models import Aerialway, SkiArea
+from .osm_models import Aerialway, SkiArea, SkiAreaBoundary
 
 class Activity(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -27,6 +27,7 @@ class Activity(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
+    ski_area_boundary = models.ForeignKey(SkiAreaBoundary, on_delete=models.PROTECT, null=True)
     flagged = models.BooleanField(default=False)
     flagged_reason = models.TextField(blank=True, null=True)
     reviewed = models.BooleanField(default=False)

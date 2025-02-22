@@ -5,6 +5,8 @@ register = template.Library()
 @register.filter
 def divide(value, arg):
     try:
+        if value is None:
+            return 0
         return value / arg
     except (ValueError, ZeroDivisionError):
         return 0
@@ -12,6 +14,8 @@ def divide(value, arg):
 @register.filter
 def multiply(value, arg):
     try:
+        if value is None:
+            return 0
         return value * arg
     except (ValueError, ZeroDivisionError):
         return 0
@@ -33,6 +37,8 @@ def add(value, arg):
 @register.filter
 def round_to(value, arg):
     try:
+        if value is None:
+            return 0
         return round(value, arg)
     except (ValueError, ZeroDivisionError):
         return 0

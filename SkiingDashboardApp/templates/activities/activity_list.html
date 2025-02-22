@@ -6,6 +6,7 @@
             <th>Name</th>
             <th>Timestamp</th>
             <th>Ski Area</th>
+            <th>OSM ID</th>
             <th>Vertical</th>
             <th>Distance (km)</th>
             <th>Number of lift rides</th>
@@ -20,7 +21,8 @@
                 </td>
                 <td>{{ activity.timestamp }}</td>
                 <td>{{ activity.ski_area.name }}</td>
-                <td>{{ activity.total_descent }}</td>
+                <td> <a href="{{ activity.ski_area.get_osm_url }}" target="_blank"> {{ activity.ski_area.osm_id}}</a> </td>
+                <td>{{ activity.total_descent|round_to:0 }}</td>
                 <td>{{ activity.total_distance|divide:1000|round_to:2 }} </td>
                 <td>{{ activity.get_num_lift_rides }}</td>
                 <td>{% if activity.get_strava_url %}

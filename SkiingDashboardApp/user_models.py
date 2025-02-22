@@ -8,6 +8,6 @@ class UserProfile(models.Model):
     metric_units = models.BooleanField(default=True)
     dark_mode = models.BooleanField(default=False)
     last_strava_sync = models.DateTimeField(null=True)
-    max_strava_sync = models.PositiveIntegerField(default=90)
+    max_strava_sync = models.IntegerField(default=90)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)

@@ -34,4 +34,4 @@ def print_activities():
 
 def test_strava_activity(activity_id):
     user = User.objects.get(username='admin')
-    parse_strava_activity(user, activity_id, update=True)
+    parse_strava_activity(user, activity_id, update=False)

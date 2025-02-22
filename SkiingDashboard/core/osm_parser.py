@@ -1,18 +1,22 @@
 import osmium
+import osmium.geom
+import shapely.wkb
 import logging
 import time
-from SkiingDashboardApp.osm_models import Way, Node, Aerialway, Piste, SkiArea, Station
+from SkiingDashboardApp.osm_models import Way, Node, Aerialway, Piste, SkiArea, Station, SkiAreaBoundary
 from django.db import transaction
 from django.db.models import Q
 
 # Get an instance of a logger
 logger = logging.getLogger('SkiingDashboard')
+wkbfab = osmium.geom.WKBFactory()
 
 class OSMHandler(osmium.SimpleHandler):
     def __init__(self):
         super().__init__()
         self.ways = []
         self.nodes = []
+        self.areas = []
         self.relations = []
 
     def way(self, w):
@@ -30,6 +34,17 @@ class OSMHandler(osmium.SimpleHandler):
             'tags': dict(n.tags)
         }
         self.nodes.append(node_data)
+
+    def area(self, a):
+        if 'land_use' in a.tags and a.tags['land_use'] == 'winter_sports':
+            wkb = wkbfab.create_multipolygon(a)
+            logger.debug(f"Area {a.orig_id()} has Polygon {wkb}")
+            area_data = {
+                'osm_id': a.orig_id(),
+                'geom': wkb,
+                'name': a.tags.get('name')
+            }
+            self.areas.append(area_data)
 
     def relation(self, r):
         if 'site' in r.tags and r.tags['site'] == 'piste':
@@ -201,6 +216,27 @@ def process_ways(handler):
 
     logger.info("Finished processing ways")
     
+def process_areas(handler):
+    logger.info("Starting to process ways")
+    for area_data in handler.areas:
+        try:
+            with transaction.atomic():
+                area, created = SkiAreaBoundary.objects.update_or_create(
+                    osm_id=area_data['osm_id'],
+                    defaults={
+                        'geom': area_data['geom'],
+                        'name': area_data['name'] or f"Unnamed area {area_data['osm_id']}"
+                    }
+                )
+                logger.debug(f"{'Created' if created else 'Updated'} ski area boundary: {area_data['osm_id']}")
+
+                # Associate aerialway and pistes with this ski area boundary
+                # TODO
+
+        except Exception as e:
+            logger.error(f"Error processing area {area_data['osm_id']}, {area_data}: {e}")
+    logger.info("Finished processing ways")
+
 def process_relations(handler):
         logger.info("Starting to process relations")
         for relation_data in handler.relations:
@@ -245,6 +281,7 @@ def parse_osm_file(file_path, scope):
     # Get the number of nodes, ways, and relations
     logger.info(f"Number of nodes: {len(handler.nodes)}")
     logger.info(f"Number of ways: {len(handler.ways)}")
+    logger.info(f"Number of areas: {len(handler.areas)}")
     logger.info(f"Number of relations: {len(handler.relations)}")
 
     # Process and save or update nodes
@@ -258,6 +295,9 @@ def parse_osm_file(file_path, scope):
     # Process and save or update ski areas
     if scope[2]:
         process_relations(handler)
+
+    if scope[3]:
+        process_areas(handler)
 
     total_duration = time.time() - start_time
     logger.info(f"Finished parsing OSM file: {file_path} in {total_duration:.4f} seconds")

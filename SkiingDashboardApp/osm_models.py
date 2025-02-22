@@ -100,3 +100,17 @@ class SkiArea(models.Model):
     
     def get_osm_url(self):
         return f"https://www.openstreetmap.org/relation/{self.osm_id}"
+    
+
+class SkiAreaBoundary(models.Model):
+    way = models.OneToOneField(Way, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    geom = models.PolygonField(null=True, blank=True) 
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Ski Area Boundary {self.way.osm_id}"
+    
+    def get_osm_url(self):
+        return self.way.get_osm_url()
