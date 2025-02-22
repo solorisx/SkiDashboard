@@ -5,6 +5,9 @@ from .osm_models import Aerialway, SkiArea, SkiAreaBoundary
 class Activity(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
+    geom = models.LineStringField(null=True)
+    summary_polyline = models.TextField(null=True)
+    polyline = models.TextField(null=True)
     file_id = models.PositiveBigIntegerField(null=True)
     strava_id = models.PositiveBigIntegerField(null=True, unique=True)
     type = models.CharField(max_length=255, null=True)

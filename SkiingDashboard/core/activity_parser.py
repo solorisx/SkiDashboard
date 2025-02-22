@@ -3,11 +3,12 @@ import logging
 import time
 from datetime import timedelta, datetime
 from fitparse import FitFile
+import polyline
 from SkiingDashboardApp.activity_models import Activity, Lap, Record, LiftRide
 from SkiingDashboardApp.osm_models import Node, Way, Aerialway, SkiArea, Station, SkiAreaBoundary
 from SkiingDashboardApp.user_models import UserProfile
 from django.contrib.auth.models import User
-from django.contrib.gis.geos import Point
+from django.contrib.gis.geos import Point, LineString
 from django.db.models import F
 from django.contrib.gis.db.models.functions import Distance
 from django.db.models import Exists, OuterRef, Subquery
@@ -563,8 +564,15 @@ def calc_vertical_activity(activity: Activity, altitude_stream, update=True):
     logger.debug(f"Calculated vertical for activity: {activity.id}: up {activity.total_ascent}, down {activity.total_descent}")
 
 def calc_line_geom(activity: Activity):
-    # TODO: implement
-    pass
+    if activity.polyline:
+        coords = polyline.decode(activity.polyline)
+    elif activity.summary_polyline:
+        coords = polyline.decode(activity.summary_polyline)
+    else:
+        logger.error(f"No polyline found for activity: {activity.id}")
+        return
+    activity.geom = LineString(coords)
+    activity.save()
 
 def calc_ridden_segments(activity: Activity):
     # TODO: implement
@@ -610,11 +618,12 @@ def parse_strava_activity(user, activity_id, update=False):
         "type": activity.type,
         "start_time": activity.start_date_local, # TODO: add timezone
         "timestamp": activity.start_date_local, # TODO: add timezone
+        "summary_polyline": activity.map.summary_polyline,
+        "polyline": None,               # TODO: would separate API call, probably summary polyline is enough
         "total_elapsed_time": timedelta(seconds=activity.elapsed_time),
         "total_timer_time": timedelta(seconds=activity.moving_time),
         "total_distance": activity.distance,
         "total_ascent": activity.total_elevation_gain,
-        # TODO: get total_descent from streams
         "avg_speed": activity.average_speed,
         "max_speed": activity.max_speed,
         "total_calories": activity.calories,
