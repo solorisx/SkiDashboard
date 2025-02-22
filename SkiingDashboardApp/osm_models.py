@@ -105,7 +105,7 @@ class SkiArea(models.Model):
 class SkiAreaBoundary(models.Model):
     way = models.OneToOneField(Way, on_delete=models.CASCADE)
     name = models.CharField(max_length=255, blank=True, null=True)
-    geom = models.PolygonField(null=True, blank=True) 
+    geom = models.MultiPolygonField(null=True, blank=True) 
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 

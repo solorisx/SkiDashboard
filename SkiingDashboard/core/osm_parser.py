@@ -36,14 +36,13 @@ class OSMHandler(osmium.SimpleHandler):
         self.nodes.append(node_data)
 
     def area(self, a):
-        logger.debug(f"Area {a.orig_id()} found")
         if 'landuse' in a.tags and a.tags['landuse'] == 'winter_sports':
             wkb = wkbfab.create_multipolygon(a)
-            logger.debug(f"Area {a.orig_id()} has Polygon {wkb}")
             area_data = {
                 'osm_id': a.orig_id(),
                 'geom': wkb,
-                'name': a.tags.get('name')
+                'name': a.tags.get('name'),
+                'tags': dict(a.tags)
             }
             self.areas.append(area_data)
 
@@ -222,29 +221,37 @@ def process_areas(handler):
     for area_data in handler.areas:
         try:
             with transaction.atomic():
-                area, created = SkiAreaBoundary.objects.update_or_create(
-                    osm_id=area_data['osm_id'],
-                    defaults={
-                        'geom': area_data['geom'],
-                        'name': area_data['name'] or f"Unnamed area {area_data['osm_id']}"
-                    }
-                )
-                logger.debug(f"{'Created' if created else 'Updated'} ski area boundary: {area_data['osm_id']}")
+                name = area_data['name'] or f"Unnamed area {area_data['osm_id']}"
+                way = Way.objects.filter(osm_id=area_data['osm_id']).first()
+                if way is None:
+                    logger.warning(f"Way {area_data['osm_id']} for area {name} does not exist")
+                    way = Way.objects.create(osm_id=area_data['osm_id'], tags=area_data.get('tags', {}))
+                    logger.debug(f"Created way {area_data['osm_id']} for area {name} with tags {area_data.get('tags', {})}")
+                    
+                    area, created = SkiAreaBoundary.objects.update_or_create(
+                        way=Way.objects.filter(osm_id=area_data['osm_id']).first(),
+                        defaults={
+                            'geom': area_data['geom'],
+                            'name': area_data['name'] or f"Unnamed area {area_data['osm_id']}"
+                        }
+                    )
+                    logger.debug(f"{'Created' if created else 'Updated'} ski area boundary: {area_data['osm_id']}")
 
-                # Associate aerialway and pistes with this ski area boundary
-                # TODO
+                    # Associate aerialway and pistes with this ski area boundary
+                    # TODO
 
         except Exception as e:
-            logger.error(f"Error processing area {area_data['osm_id']}, {area_data}: {e}")
+            logger.error(f"Error processing area {area_data['osm_id']}: {e}")
 
-    for way in handler.ways:
-        tags=way.get('tags', {})
-        nodes=way.get('nodes', [])
-        landuse=tags.get('landuse', None)
-        if landuse == 'winter_sports':
-            logger.debug(f"Area {way['osm_id']} found")
-            wkb = wkbfab.create_multipolygon(way)
-            logger.debug(f"Area {way['osm_id']} has Polygon {wkb}")
+    # for way in handler.ways:
+    #     logger.debug(f"Processing way {way['osm_id']}")
+    #     tags=way.get('tags', {})
+    #     nodes=way.get('nodes', [])
+    #     landuse=tags.get('landuse', None)
+    #     if landuse == 'winter_sports':
+    #         logger.debug(f"Area {way['osm_id']} found")
+    #         wkb = wkbfab.create_multipolygon(way)
+    #         logger.debug(f"Area {way['osm_id']} has Polygon {wkb}")
 
 
             # try:
@@ -296,6 +303,7 @@ def process_relations(handler):
             except Exception as e:
                 logger.error(f"Error processing relation {relation_data['osm_id']}, {relation_data}: {e}")
         logger.info("Finished processing relations")
+
 
 def parse_osm_file(file_path, scope):
     logger.info(f"Starting to parse OSM file: {file_path}")

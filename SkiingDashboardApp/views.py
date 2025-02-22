@@ -1,9 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
 from .models import Activity, LiftRide
-from SkiingDashboard.core.activity_parser import parse_strava_activity
-
-# Create your views here.
+from SkiingDashboard.core.activity_parser import parse_strava_activity, parse_strava_activities
 
 def hello_world(request):
     return HttpResponse("Hello, World!")
@@ -37,3 +35,10 @@ def reprocess_activity(request, activity_id):
         return HttpResponse(f"Activity {activity_id} reprocessed.")
     else:
         return HttpResponse(f"Activity {activity_id} has no Strava ID.")
+    
+def sync_strava(request):
+    try:
+        parse_strava_activities(user=request.user, update=False)
+        return HttpResponse("Strava activities synced.")
+    except Exception as e:
+        return HttpResponse(f"Error syncing Strava activities: {e}")

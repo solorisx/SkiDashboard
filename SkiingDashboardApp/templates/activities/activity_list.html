@@ -32,4 +32,13 @@
             </tr>
         {% endfor %}
     </table>
+
+    <form action="{% url 'sync strava' %}" method="POST">
+        {% csrf_token %}
+        <button type="submit" style="background-color: red; color: white; padding: 10px; border: none; cursor: pointer;">
+            Sync Strava
+        </button>
+    </form>
+
+
 {% endblock %}

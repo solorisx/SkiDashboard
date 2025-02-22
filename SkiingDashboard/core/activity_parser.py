@@ -563,9 +563,12 @@ def calc_vertical_activity(activity: Activity, altitude_stream, update=True):
 
 def parse_strava_activity(user, activity_id, update=False):
     start_time = time.time()
-    logger.info(f"Starting to parse Strava activity: {activity_id}")
+    logger.info(f"Starting to parse Strava activity: {activity_id} for user: {user.username}, update: {update}")
     
-    if not update and Activity.objects.filter(strava_id=activity_id).exists():
+    exists = Activity.objects.filter(strava_id=activity_id).exists()
+    logger.debug(f"Activity {activity_id} exists: {exists}")
+
+    if not update and exists:
         logger.warning(f"Strava activity {activity_id} already exists in the database.")
         return
     
@@ -583,7 +586,13 @@ def parse_strava_activity(user, activity_id, update=False):
         skiarea = None
         logger.warning(f"No start lift found for activity: {activity_id}")
 
-    ski_area_boundary = get_ski_area_boundary(start_point)
+    try:
+        boundary_time = time.time()
+        ski_area_boundary = get_ski_area_boundary(start_point)
+        logger.debug(f"Found ski area boundary: {ski_area_boundary} in {time.time() - boundary_time:.4f} seconds")
+    except Exception as e:
+        logger.error(f"Error getting ski area boundary: {e}")
+        ski_area_boundary = None
 
     logger.debug(f"Loaded Strava activity: {activity_id}")
 
