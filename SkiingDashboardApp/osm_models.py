@@ -68,6 +68,7 @@ class Aerialway(models.Model):
 # Piste Model
 class Piste(models.Model):
     way = models.OneToOneField(Way, on_delete=models.CASCADE)
+    geom = models.LineStringField(null=True, blank=True)
     lit = models.BooleanField(default=False)
     name = models.CharField(max_length=255, blank=True, null=True)
     oneway = models.BooleanField(default=True)
@@ -83,6 +84,15 @@ class Piste(models.Model):
 
     def get_osm_url(self):
         return self.way.get_osm_url()
+    
+class PisteSegment(models.Model):
+    piste = models.ForeignKey(Piste, on_delete=models.CASCADE, related_name='segments')
+    geom = models.LineStringField(null=True, blank=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Piste Segment {self.piste.way.osm_id} - {self.geom.length}"
 
 # SkiArea Model
 class SkiArea(models.Model):

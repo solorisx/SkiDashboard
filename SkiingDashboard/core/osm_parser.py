@@ -1,6 +1,5 @@
 import osmium
 import osmium.geom
-import shapely.wkb
 import logging
 import time
 from SkiingDashboardApp.osm_models import Way, Node, Aerialway, Piste, SkiArea, Station, SkiAreaBoundary
@@ -22,6 +21,7 @@ class OSMHandler(osmium.SimpleHandler):
     def way(self, w):
         way_data = {
             'osm_id': w.id,
+            'geom': wkbfab.create_linestring(w),
             'nodes': [n.ref for n in w.nodes],
             'tags': dict(w.tags)
         }
@@ -37,10 +37,9 @@ class OSMHandler(osmium.SimpleHandler):
 
     def area(self, a):
         if 'landuse' in a.tags and a.tags['landuse'] == 'winter_sports':
-            wkb = wkbfab.create_multipolygon(a)
             area_data = {
                 'osm_id': a.orig_id(),
-                'geom': wkb,
+                'geom': wkbfab.create_multipolygon(a),
                 'name': a.tags.get('name'),
                 'tags': dict(a.tags)
             }
@@ -227,7 +226,7 @@ def process_areas(handler):
                     logger.warning(f"Way {area_data['osm_id']} for area {name} does not exist")
                     way = Way.objects.create(osm_id=area_data['osm_id'], tags=area_data.get('tags', {}))
                     logger.debug(f"Created way {area_data['osm_id']} for area {name} with tags {area_data.get('tags', {})}")
-                    
+
                     area, created = SkiAreaBoundary.objects.update_or_create(
                         way=Way.objects.filter(osm_id=area_data['osm_id']).first(),
                         defaults={

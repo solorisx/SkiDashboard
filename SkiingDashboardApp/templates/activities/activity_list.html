@@ -7,10 +7,14 @@
             <th>Timestamp</th>
             <th>Ski Area</th>
             <th>OSM ID</th>
+            <th>Ski Area Boundary</th>
+            <th>OSM ID</th>
             <th>Vertical</th>
             <th>Distance (km)</th>
             <th>Number of lift rides</th>
             <th>Strava</th>
+            <th>Created on</th>
+            <th>Modified on</th>
         </tr>
         {% for activity in activities %}
             <tr>
@@ -20,8 +24,23 @@
                     </a>
                 </td>
                 <td>{{ activity.timestamp }}</td>
-                <td>{{ activity.ski_area.name }}</td>
-                <td> <a href="{{ activity.ski_area.get_osm_url }}" target="_blank"> {{ activity.ski_area.osm_id}}</a> </td>
+                
+                {% if activity.ski_area %}
+                    <td>{{ activity.ski_area.name }}</td>
+                    <td> <a href="{{ activity.ski_area.get_osm_url }}" target="_blank"> {{ activity.ski_area.osm_id}}</a> </td>
+                {% else %}
+                    <td></td>
+                    <td></td>
+                {% endif %}
+                
+                {% if activity.ski_area_boundary %}
+                    <td>{{ activity.ski_area_boundary.name }}</td>
+                    <td> <a href="{{ activity.ski_area_boundary.get_osm_url }}" target="_blank"> {{ activity.ski_area_boundary.way.osm_id}}</a> </td>
+                {% else %}
+                    <td></td>
+                    <td></td>
+                {% endif %}
+
                 <td>{{ activity.total_descent|round_to:0 }}</td>
                 <td>{{ activity.total_distance|divide:1000|round_to:2 }} </td>
                 <td>{{ activity.get_num_lift_rides }}</td>
@@ -29,14 +48,22 @@
                     <a href="{{ activity.get_strava_url }}" target="_blank">View on Strava</a>
                 {% endif %}
                 </td>
+                <td>{{ activity.created_on }}</td>
+                <td>{{ activity.modified_on }}</td>
             </tr>
         {% endfor %}
     </table>
 
-    <form action="{% url 'sync strava' %}" method="POST">
+    <form action="{% url 'sync_strava' %}" method="POST">
         {% csrf_token %}
         <button type="submit" style="background-color: red; color: white; padding: 10px; border: none; cursor: pointer;">
             Sync Strava
+        </button>
+    </form>
+    <form action="{% url 'reprocess_all' %}" method="POST">
+        {% csrf_token %}
+        <button type="submit" style="background-color: red; color: white; padding: 10px; border: none; cursor: pointer;">
+            Reprocess all activities and sync Strava
         </button>
     </form>
 

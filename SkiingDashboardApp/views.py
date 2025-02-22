@@ -42,3 +42,10 @@ def sync_strava(request):
         return HttpResponse("Strava activities synced.")
     except Exception as e:
         return HttpResponse(f"Error syncing Strava activities: {e}")
+    
+def sync_reprocess_all(request):
+    try:
+        parse_strava_activities(user=request.user, update=True)
+        return HttpResponse("Strava activities synced and reprocessed.")
+    except Exception as e:
+        return HttpResponse(f"Error syncing Strava activities: {e}")    

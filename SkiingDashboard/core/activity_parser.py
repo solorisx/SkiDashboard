@@ -560,6 +560,13 @@ def calc_vertical_activity(activity: Activity, altitude_stream, update=True):
     activity.save()
     logger.debug(f"Calculated vertical for activity: {activity.id}: up {activity.total_ascent}, down {activity.total_descent}")
 
+def calc_line_geom(activity: Activity):
+    # TODO: implement
+    pass
+
+def calc_ridden_segments(activity: Activity):
+    # TODO: implement
+    pass
 
 def parse_strava_activity(user, activity_id, update=False):
     start_time = time.time()
@@ -682,9 +689,11 @@ def parse_strava_activity(user, activity_id, update=False):
 
     calc_vertical_activity(activity_instance, activity_streams["altitude"].data, update=True)
 
+    calc_line_geom(activity_instance)
+
+    calc_ridden_segments(activity_instance)
+
     logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")
-    # TODO: 
-    #   - create line geom
 
 def parse_strava_activities(user, update=False):
     
@@ -699,7 +708,7 @@ def parse_strava_activities(user, update=False):
     for activity in activities:
         if activity.type == 'AlpineSki':
             try:
-                activity_id = activity
+                activity_id = activity.id
                 parse_strava_activity(user, activity_id, update=update)
             except Exception as e:
                 logger.error(f"Error parsing Strava activity {activity_id}: {e}")
