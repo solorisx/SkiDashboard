@@ -28,4 +28,8 @@ urlpatterns = [
     path("activities/<int:activity_id>/reprocess/", views.reprocess_activity, name="reprocess_activity"),
     path("sync_strava/", views.sync_strava, name="sync_strava"),
     path("reprocess_all/", views.sync_reprocess_all, name="reprocess_all"),
+    path("liftrides/all/", views.lift_ride_list, name="lift_ride_list_all"),
+    path("liftrides/<int:year>/", views.lift_ride_list, name="lift_ride_list_year"),
+    
+    #path("admin/sync_osm/", views.sync_osm, name="sync_osm"),
 ]

@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404
+from django.db.models import Count, Avg, Min, Max, F
 from django.http import HttpResponse
 from .models import Activity, LiftRide
 from SkiingDashboard.core.activity_parser import parse_strava_activity, parse_strava_activities
@@ -48,4 +49,27 @@ def sync_reprocess_all(request):
         parse_strava_activities(user=request.user, update=True)
         return HttpResponse("Strava activities synced and reprocessed.")
     except Exception as e:
-        return HttpResponse(f"Error syncing Strava activities: {e}")    
+        return HttpResponse(f"Error syncing Strava activities: {e}")
+    
+def lift_ride_list(request, year=None):
+    """Show all lift rides."""
+
+    years = set(LiftRide.objects.dates("lap__activity__timestamp", "year", order="DESC"))
+    years = [y.year for y in years]
+    years.sort(reverse=True)
+    
+    rides = LiftRide.objects.filter(lap__activity__user=request.user)
+    if year:
+        rides = rides.filter(lap__activity__timestamp__year=year)
+    
+    lift_stats = rides.values('aerialway__name').annotate(
+        total_rides=Count('id'),
+    ).order_by('-total_rides')
+
+    context = {
+        'lift_stats': lift_stats,
+        'selected_year': year,
+        'years': years
+    }
+
+    return render(request, "liftrides/statistics.html", context)

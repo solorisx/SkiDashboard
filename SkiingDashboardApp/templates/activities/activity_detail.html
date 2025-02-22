@@ -1,10 +1,11 @@
+{% load custom_filters %}
 {% block content %}
     <h1>{{ activity.name }} - {{ activity.timestamp }}</h1>
     
     <h2>Laps</h2>
     <ul>
         {% for lap in laps %}
-            <li>Lap {{ lap.lap_index }} - Distance: {{ lap.total_distance }}m</li>
+            <li>Lap {{ lap.lap_index }} - Distance: {{ lap.total_distance|round_to:2 }}m</li>
         {% empty %}
             <li>No laps recorded</li>
         {% endfor %}

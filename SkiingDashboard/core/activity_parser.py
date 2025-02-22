@@ -527,6 +527,8 @@ def split_activity(activity: Activity, activity_streams: dict):
             "total_distance": dist[l] - dist[k],
             "total_ascent": np.sum(lap_diffs[lap_diffs > 0]),
             "total_descent": np.sum(np.abs(lap_diffs[lap_diffs < 0])),
+            "start_index_stream": k,
+            "end_index_stream": l,
         }
         logger.debug(lap_data)
         Lap.objects.update_or_create(lap_index=i+1, activity=activity, defaults=lap_data)
@@ -585,7 +587,7 @@ def parse_strava_activity(user, activity_id, update=False):
     lat, lon = activity_streams["latlng"].data[0]
     start_point = Point(lon, lat)
     activity_laps = load_activity_laps(user, activity_id)
-    start_lift = get_closest_aerialway(start_point, in_ski_area=True, max_distance=5000)
+    start_lift = get_closest_aerialway(start_point, in_ski_area=True, max_distance=2000)
     if start_lift:
         logger.debug(f"Found start lift: {start_lift.name}")
         skiarea = SkiArea.objects.filter(ways=start_lift.way).first()
