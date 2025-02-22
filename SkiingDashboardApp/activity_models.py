@@ -27,13 +27,21 @@ class Activity(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
+    flagged = models.BooleanField(default=False)
+    flagged_reason = models.TextField(blank=True, null=True)
+    reviewed = models.BooleanField(default=False)
 
     def get_strava_url(self):
         return f"https://www.strava.com/activities/{self.strava_id}" if self.strava_id else None
     
+    def get_num_lift_rides(self):
+        return sum(lap.lift_rides.count() for lap in self.laps.all())
+    
 class Lap(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='laps')
     lap_index = models.PositiveIntegerField(null=True)
+    start_index_stream = models.PositiveIntegerField(null=True)
+    end_index_stream = models.PositiveIntegerField(null=True)
     timestamp = models.DateTimeField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True)

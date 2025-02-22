@@ -34,4 +34,6 @@ def reprocess_activity(request, activity_id):
     activity = get_object_or_404(Activity, id=activity_id, user=request.user)
     if activity.strava_id:
         parse_strava_activity(user=request.user, activity_id=activity.strava_id, update=True)
-    return HttpResponse(f"Activity {activity_id} reprocessed.")
+        return HttpResponse(f"Activity {activity_id} reprocessed.")
+    else:
+        return HttpResponse(f"Activity {activity_id} has no Strava ID.")

@@ -10,6 +10,7 @@ from django.contrib.gis.geos import Point
 from django.db.models import F
 from django.contrib.gis.db.models.functions import Distance
 from django.db.models import Exists, OuterRef, Subquery
+import numpy as np
 
 
 from .strava_interface import load_activity, load_activity_streams, load_activity_laps
@@ -47,6 +48,8 @@ def create_point(lat_field, lon_field, data):
 
 def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False, use_nodes=False):
 
+    logger.debug(f"Finding closest aerialways to {point} (in_ski_area={in_ski_area}, max_distance={max_distance}, bottom_only={bottom_only}, top_only={top_only}, use_nodes={use_nodes})")
+
     start_time = time.time()
     point.srid = 4326
     
@@ -59,6 +62,9 @@ def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bo
         raise ValueError("Cannot filter for bottom and top stations at the same time")
     
     if use_nodes:
+        
+        logger.debug("Using all nodes to find closest aerialways")
+        
         nearest_node_distance = (
             Node.objects.filter(way__aerialway=OuterRef("pk"))  # Get nodes related to aerialway
             .annotate(distance=Distance("geom", point))  # Calculate distance to point
@@ -68,7 +74,13 @@ def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bo
 
         aerialways = Aerialway.objects.annotate(
             distance=Subquery(nearest_node_distance)
-        )        
+        )
+
+        aerialways.order_by("distance")
+
+        logger.debug(aerialways.query)
+        logger.debug(aerialways[:100])
+
         #aerialways = aerialways.annotate(distance=Distance("way__nodes__node__geom", point))
     else:
         aerialways = aerialways.annotate(distance=Distance("station_nodes__node__geom", point))
@@ -126,11 +138,14 @@ def get_closest_aerialway(point: Point, in_ski_area=False, max_distance=250, bot
 def find_direct_lift(start: Point, end: Point):
     """Finds a direct lift (Aerialway) connecting two points."""
     logger.debug(f"Finding direct lift between {start} and {end}")
-    logger.debug(f"Start OSM URL: {get_osm_url(start)}")
-    logger.debug(f"End OSM URL: {get_osm_url(end)}")
+    logger.debug(f"Start OSM URL Lift: {get_osm_url(start)}")
+    logger.debug(f"End OSM URL Lift: {get_osm_url(end)}")
 
     start_stations = get_closest_stations(start)
     end_stations = get_closest_stations(end)
+
+    logger.debug(f"Lift Start stations: {start_stations}")
+    logger.debug(f"Lift End stations: {end_stations}")
 
     # Get aerialways that have a start station
     aerialways_with_start = Aerialway.objects.filter(
@@ -226,7 +241,8 @@ def dijkstra(start_nodes, end_nodes, graph):
 
 def get_aerialways(start: Point, end: Point = None):
 
-    includes_downhill = False
+    flagged = False
+    flagged_reason = None
     
     if start is None or end is None:
         if start is None:
@@ -234,13 +250,13 @@ def get_aerialways(start: Point, end: Point = None):
         if end is None:
             aerialway = get_closest_aerialway(start)
         if aerialway:
-            return [aerialway], includes_downhill
+            return [aerialway], flagged, flagged_reason
         else:
-            return [], includes_downhill
+            return [], flagged, flagged_reason
         
     direct_lift = find_direct_lift(start, end)
     if direct_lift:
-        return [direct_lift], includes_downhill
+        return [direct_lift], flagged, flagged_reason
 
     # Find all nearby stations for start and end
     max_distance = 250
@@ -248,12 +264,61 @@ def get_aerialways(start: Point, end: Point = None):
     end_stations = list(Station.objects.annotate(distance=Distance("node__geom", end)).filter(distance__lte=max_distance))
 
     if not start_stations or not end_stations:
+
         logger.debug("No valid stations found, trying to find aerialway without stations")
-        lift = get_closest_aerialway(start, use_nodes=True)
+
+        lift = None
+
+        if start_stations:
+            # Find aerialways that have at least one of the start stations
+            aerialways = Aerialway.objects.filter(station_nodes__in=start_stations)
+
+            # Subquery to find the closest node from the aerialway's way to `end`
+            nearest_node_distance = (
+                Node.objects.filter(way__aerialway=OuterRef("pk"))  # Get all nodes for each aerialway
+                .annotate(distance=Distance("geom", end))  # Compute distance from node to `end`
+                .order_by("distance")  # Sort by closest node
+                .values("distance")[:1]  # Select the closest node distance
+            )
+
+            # Annotate aerialways with the closest node distance
+            aerialways = aerialways.annotate(distance=Subquery(nearest_node_distance))
+
+            # Get the closest aerialway
+            lift = aerialways.order_by("distance").first()
+
+        if not lift and end_stations:  # Only check end stations if no lift was found
+            aerialways = Aerialway.objects.filter(station_nodes__in=end_stations)
+
+            # Subquery to find the closest node from the aerialway's way to `start`
+            nearest_node_distance = (
+                Node.objects.filter(way__aerialway=OuterRef("pk"))
+                .annotate(distance=Distance("geom", start))
+                .order_by("distance")
+                .values("distance")[:1]
+            )
+
+            aerialways = aerialways.annotate(distance=Subquery(nearest_node_distance))
+            lift = aerialways.order_by("distance").first()
+
+        # use closer distance as we are using all nodes including waypoints
+        if not lift: 
+            logger.debug("No valid stations found, trying to find aerialway with all nodes")
+            lift = get_closest_aerialway(start, max_distance=100, use_nodes=True)
+
+        if not lift:
+            logger.debug("No valid stations found, trying to find aerialway with all nodes")
+            lift = get_closest_aerialway(end, max_distance=100, use_nodes=True)
+        
         if lift:
-            return [lift], includes_downhill
+            flagged = True
+            flagged_reason = "No valid stations found, using closest aerialway"
+            return [lift], flagged, flagged_reason
+        
         else:
-            return [], includes_downhill  # No valid stations found
+            flagged = True
+            flagged_reason = "No valid stations found"
+            return [], flagged, flagged_reason  # No valid stations found
 
     graph = build_lift_graph(start)
 
@@ -284,10 +349,11 @@ def get_aerialways(start: Point, end: Point = None):
         if connection and connection not in aerialway_path:
             if (station_a.altitude and station_b.altitude and station_b.altitude - station_a.altitude < -100) or station_a.station == "top" or station_b.station == "bottom":
                 logger.debug(f"Potential downhill connection found: {station_a} -> {station_b}")
-                includes_downhill = True
+                flagged = True
+                flagged_reason = "Downhill connection found"
             aerialway_path.append(connection)
 
-    return aerialway_path, includes_downhill
+    return aerialway_path, flagged, flagged_reason
 
 def parse_fit_file(file_path):
     start_time = time.time()
@@ -383,6 +449,96 @@ def parse_fit_file(file_path):
     total_duration = time.time() - start_time
     logger.info(f"Finished parsing FIT file: {file_path} in {total_duration:.4f} seconds")
 
+
+def split_activity(activity: Activity, activity_streams: dict):
+    """
+    Splits a single activity into multiple laps based on the activity streams.
+    """
+    logger.info(f"Splitting activity: {activity.id}")
+    altitude = activity_streams["altitude"].data
+    chunk_size = 30
+    reduced_altitude = np.array([np.mean(altitude[(i-1)*chunk_size:i*chunk_size]) for i in range(1, int(len(altitude)/chunk_size))])
+
+    x = 10  # threshold ele difference
+
+    # Find local maxima
+    local_maxima = (reduced_altitude[1:-1] > reduced_altitude[:-2]) & (reduced_altitude[1:-1] > reduced_altitude[2:]) & \
+                ((reduced_altitude[1:-1] - reduced_altitude[:-2] >= x) | (reduced_altitude[1:-1] - reduced_altitude[2:] >= x))
+
+    # Find local minima
+    local_minima = (reduced_altitude[1:-1] < reduced_altitude[:-2]) & (reduced_altitude[1:-1] < reduced_altitude[2:]) & \
+                ((reduced_altitude[:-2] - reduced_altitude[1:-1] >= x) | (reduced_altitude[2:] - reduced_altitude[1:-1] >= x))
+
+    # Combine indices and adjust for offset
+    turning_points = np.where(local_maxima | local_minima)[0] + 1
+
+    latlng = activity_streams["latlng"].data
+    dist = activity_streams["distance"].data
+    time = activity_streams["time"].data
+
+    logger.debug(f"Number of turning points: {len(turning_points)}")
+    for j in turning_points:
+        i = j * chunk_size
+        i = j * chunk_size + chunk_size // 2
+        logger.debug(f"Turning point: {latlng[i]}")
+        logger.debug(f"OSM URL: {get_osm_url(Point(latlng[i][1], latlng[i][0]))}")
+        logger.debug(f"Distance: {dist[i]}")
+
+    # Split activity into laps
+    diffs = np.diff(altitude)
+    asc = np.sum(diffs[diffs > 0])
+    desc = np.sum(diffs[diffs < 0])
+    for i in range(len(turning_points) - 1):
+        k = turning_points[i] * chunk_size + chunk_size // 2
+        l = turning_points[i + 1] * chunk_size + chunk_size // 2
+        lower = turning_points[i] * chunk_size
+        upper = turning_points[i + 1] * chunk_size
+        lap_diffs = diffs[lower:upper]
+        lap_data = {
+            "timestamp": activity.start_time + timedelta(seconds=time[k]),
+            "start_time": activity.start_time + timedelta(seconds=time[k]),
+            "end_time": activity.start_time + timedelta(seconds=time[l-1]),
+            "start_position": Point(latlng[k][1], latlng[k][0]),
+            "end_position": Point(latlng[l][1], latlng[l][0]),
+            "total_elapsed_time": timedelta(seconds=time[l] - time[k]),
+            "total_timer_time": timedelta(time[l] - time[k]),
+            "total_distance": dist[l] - dist[k],
+            "total_ascent": np.sum(lap_diffs[lap_diffs > 0]),
+            "total_descent": np.sum(np.abs(lap_diffs[lap_diffs < 0])),
+        }
+        logger.debug(lap_data)
+        Lap.objects.update_or_create(lap_index=i+1, activity=activity, defaults=lap_data)
+        
+def calc_vertical_lap(lap: Lap, altitude_stream, update=True):
+    """
+    Calculate the total ascent and descent for a lap.
+    """
+    logger.debug(f"Calculating vertical for lap: {lap.id}")
+    diffs = np.diff(altitude_stream[lap.start_index_stream:lap.end_index_stream])
+    lap.total_ascent = np.sum(diffs[diffs > 0])
+    lap.total_descent = np.sum(np.abs(diffs[diffs < 0]))
+    lap.save()
+    logger.debug(f"Calculated vertical for lap: {lap.id}: up {lap.total_ascent}, down {lap.total_descent}")
+
+
+def calc_vertical_activity(activity: Activity, altitude_stream, update=True):
+    """
+    Calculate the total ascent and descent for an activity.
+    """
+    logger.debug(f"Calculating vertical for activity: {activity.id}")
+    total_ascent = 0
+    total_descent = 0
+    for lap in activity.laps.all():
+        if update:
+            calc_vertical_lap(lap, altitude_stream, update=True)
+        total_ascent += lap.total_ascent
+        total_descent += lap.total_descent
+    activity.total_ascent = total_ascent
+    activity.total_descent = total_descent
+    activity.save()
+    logger.debug(f"Calculated vertical for activity: {activity.id}: up {activity.total_ascent}, down {activity.total_descent}")
+
+
 def parse_strava_activity(user, activity_id, update=False):
     start_time = time.time()
     logger.info(f"Starting to parse Strava activity: {activity_id}")
@@ -393,6 +549,7 @@ def parse_strava_activity(user, activity_id, update=False):
     
     activity = load_activity(user, activity_id)
     activity_streams = load_activity_streams(user, activity_id)
+        
     lat, lon = activity_streams["latlng"].data[0]
     start_point = Point(lon, lat)
     activity_laps = load_activity_laps(user, activity_id)
@@ -440,22 +597,31 @@ def parse_strava_activity(user, activity_id, update=False):
             "total_timer_time": timedelta(seconds=lap.moving_time),
             "total_distance": lap.distance,
             "total_ascent": lap.total_elevation_gain,
+            "start_index_stream": lap.start_index,
+            "end_index_stream": lap.end_index,
             # TODO: get total_descent from streams
             "avg_speed": lap.average_speed,
             "max_speed": lap.max_speed,
             "avg_heart_rate": lap.average_heartrate,
             "max_heart_rate": lap.max_heartrate,
-            "start_position": Point(activity_streams["latlng"].data[lap.start_index][1], activity_streams["latlng"].data[lap.start_index][0]),
-            "end_position": Point(activity_streams["latlng"].data[lap.end_index-10][1], activity_streams["latlng"].data[lap.end_index-10][0]),
+            "start_position": Point(activity_streams["latlng"].data[lap.start_index+5][1], activity_streams["latlng"].data[lap.start_index+5][0]),
+            "end_position": Point(activity_streams["latlng"].data[lap.end_index-5][1], activity_streams["latlng"].data[lap.end_index-5][0]),
             "end_time": lap.start_date_local + timedelta(seconds=lap.elapsed_time),
         }
         lap_instance, created = Lap.objects.update_or_create(lap_index=lap.lap_index, activity=activity_instance, defaults=lap_data)
         logger.info(f'{"Created" if created else "Updated"} Lap: {lap_instance.lap_index}')
 
+    logger.debug(f"Number of laps: {activity_instance.laps.count()}")
+    if activity_instance.laps.count() == 1:
+    # no auto pause used
+    # TODO: add logic to split activity into laps
+        activity_instance.laps.all().delete()
+        split_activity(activity_instance, activity_streams)
+
     for lap in activity_instance.laps.all():
         logger.debug(f"Processing Lap: {lap.lap_index}")
-        logger.debug(f"Start Position: {get_osm_url(lap.start_position)}")
-        logger.debug(f"End Position: {get_osm_url(lap.end_position)}")
+        logger.debug(f"Start Position (Lap): {get_osm_url(lap.start_position)} at {lap.start_time}")
+        logger.debug(f"End Position (Lap): {get_osm_url(lap.end_position)} at {lap.end_time}")
         lift_end_pos = lap.start_position
         prev_lap = Lap.objects.filter(activity=activity_instance, lap_index=lap.lap_index-1).first()
         if prev_lap:
@@ -465,13 +631,21 @@ def parse_strava_activity(user, activity_id, update=False):
             lift_start_pos = None
             lift_start_time = lap.start_time
         #lift_start_pos = Lap.objects.filter(activity=activity_instance, lap_index=lap.lap_index-1).first().end_position if lap.lap_index > 1 else None
-        lift_rides, includes_downhill = get_aerialways(lift_start_pos, lift_end_pos)
-        if includes_downhill:
-            logger.warning(f"Parsing {activity_id}: Downhill connection found for Lap: {lap.lap_index}")
+        lift_rides, flagged, flagged_reason = get_aerialways(lift_start_pos, lift_end_pos)
+        if flagged:
+            logger.warning(f"Parsing {activity_id}: Downhill connection found for Lap: {lap.lap_index}, flagging activity {activity_instance.id}")
+            activity_instance.flagged = True
+            if activity_instance.flagged_reason:
+                activity_instance.flagged_reason += f"\n{flagged_reason}"
+            else:
+                activity_instance.flagged_reason = flagged_reason
+            activity_instance.save()
         for lift_ride in lift_rides:
             lift = LiftRide.objects.create(lap=lap, aerialway=lift_ride, timestamp=lift_start_time)
             lift_start_time = lift_start_time + timedelta(minutes=lift.aerialway.aerialway_duration if lift.aerialway.aerialway_duration else 1)
             logger.info(f"Created LiftRide for Lap: {lap.lap_index} with lift {lift_ride.name if lift_ride else 'unnamed'}")
+
+    calc_vertical_activity(activity_instance, activity_streams["altitude"].data, update=True)
 
     logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")
     # TODO: 

@@ -12,6 +12,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+
         if options['action'] == 'print':
             print_activities()
         elif options['action']:
