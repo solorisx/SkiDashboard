@@ -11,6 +11,7 @@
             <th>OSM ID</th>
             <th>Vertical</th>
             <th>Distance (km)</th>
+            <th>Number of laps</th>
             <th>Number of lift rides</th>
             <th>Strava</th>
             <th>Created on</th>
@@ -42,8 +43,9 @@
                 {% endif %}
 
                 <td>{{ activity.total_descent|round_to:0 }}</td>
-                <td>{{ activity.total_distance|divide:1000|round_to:2 }} </td>
-                <td>{{ activity.get_num_lift_rides }}</td>
+                <td>{{ activity.total_distance_km }} </td>
+                <td>{{ activity.num_laps }}</td>
+                <td>{{ activity.num_lift_rides }}</td>
                 <td>{% if activity.get_strava_url %}
                     <a href="{{ activity.get_strava_url }}" target="_blank">View on Strava</a>
                 {% endif %}

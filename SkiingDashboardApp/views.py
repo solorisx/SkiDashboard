@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Count, Avg, Min, Max, F
+from django.db.models.functions import Round
 from django.http import HttpResponse
 from .models import Activity, LiftRide
 from SkiingDashboard.core.activity_parser import parse_strava_activity, parse_strava_activities
@@ -10,6 +11,17 @@ def hello_world(request):
 def activity_list(request):
     """Show all activities."""
     activities = Activity.objects.filter(user=request.user).order_by("-timestamp")
+
+    activities = ( 
+        activities
+        .select_related("ski_area", "ski_area_boundary")
+        .annotate(
+            num_laps=Count("laps"),
+            num_lift_rides=Count("laps__lift_rides"),
+            total_distance_km=Round(F("total_distance")/1000, 2),
+        )
+    )
+
     return render(request, "activities/activity_list.html", {"activities": activities})
 
 def activity_detail(request, activity_id):
