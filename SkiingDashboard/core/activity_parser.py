@@ -1,10 +1,11 @@
 import heapq
 import logging
 import time
-from datetime import timedelta
+from datetime import timedelta, datetime
 from fitparse import FitFile
 from SkiingDashboardApp.activity_models import Activity, Lap, Record, LiftRide
 from SkiingDashboardApp.osm_models import Node, Way, Aerialway, SkiArea, Station
+from SkiingDashboardApp.user_models import UserProfile
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point
 from django.db.models import F
@@ -13,7 +14,7 @@ from django.db.models import Exists, OuterRef, Subquery
 import numpy as np
 
 
-from .strava_interface import load_activity, load_activity_streams, load_activity_laps
+from .strava_interface import load_activities, load_activity, load_activity_streams, load_activity_laps
 
 # Get an instance of a logger
 logger = logging.getLogger('SkiingDashboard')
@@ -651,5 +652,18 @@ def parse_strava_activity(user, activity_id, update=False):
     # TODO: 
     #   - create line geom
 
+def parse_strava_activities(user, update=False):
+    
+    max_strava_sync = UserProfile.objects.get(user=user).max_strava_sync
+    if max_strava_sync == -1:
+        after = None
+    else:
+        after = datetime.now() - timedelta(days=max_strava_sync)
+    
+    activities = load_activities(user, after=after)
 
+    for activity in activities:
+        if activity.type == 'AlpineSki':
+            activity_id = activity
+            parse_strava_activity(user, activity_id, update=update)
 
