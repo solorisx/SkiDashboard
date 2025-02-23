@@ -16,7 +16,13 @@ def init_networks(request):
         return
     
 
-    topcard, _ = SkiAreaNetwork.objects.get_or_create(name="Topcard", season_pass_price=1300)
+    topcard, created = SkiAreaNetwork.objects.get_or_create(name="Topcard", season_pass_price=1300)
+    if not created:
+        logger.warning("Topcard network already exists, resetting members.")
+        topcard.members.clear()
+
+    # TODO: use json to load ski areas
+    
     topcard_areas = ["Laax", "Arosa Lenzerheide", "Davos Klosters", "Parsenn", "Jakobshorn", "Rinerhorn", "Madrisa"]
     topcard_addon = ["Titlis", "Adelboden-Lenk", "Jungfrau Ski Region", "Aletsch Arena"]
 
@@ -87,6 +93,9 @@ def init_networks(request):
             logger.warning(f"Could not find ski area boundary {area}")        
 
 
-    # TODO: Add Tirol Snowcard areas
+    # TODO: add Tirol Snow Card with tsc_areas.json
+    
+
+
 
     logger.info("Ski area networks initialized.")
