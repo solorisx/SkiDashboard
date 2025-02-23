@@ -6,6 +6,7 @@ from django.db.models.functions import Round
 from django.http import HttpResponse
 from .models import Activity, LiftRide
 from SkiingDashboard.core.activity_parser import parse_strava_activity, parse_strava_activities
+from SkiingDashboard.core.skiarea_manager import init_networks
 
 logger = logging.getLogger('SkiingDashboard')
 
@@ -14,6 +15,11 @@ def hello_world(request):
 
 def home(request):
     return render(request, "home.html")
+
+def initialize_ski_area_networks(request):
+    init_networks(request)
+    return HttpResponse("Ski area networks initialized.")
+
 
 def activity_list(request):
     """Show all activities."""
