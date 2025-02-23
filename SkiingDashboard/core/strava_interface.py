@@ -53,15 +53,15 @@ def get_access_token(user):
     app = token.app
 
     # Refresh token if it's close to expiring
-    if token.expires_at < UTC.localize(datetime.now()) + timedelta(minutes=5):
+    if token.expires_at < UTC.localize(datetime.now()) + timedelta(minutes=30):
         return refresh_strava_token(user, token, app)
 
     return token.token
 
-def load_activities(User, after=None):
+def load_activities(User, before=None, after=None):
     access_token = get_access_token(User)
     client = Client(access_token)
-    activities = client.get_activities(after=after)
+    activities = client.get_activities(before=before, after=after)
     return activities
 
 def load_activity(User, activity_id):

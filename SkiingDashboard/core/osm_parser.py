@@ -170,7 +170,7 @@ def process_ways(handler):
                             'aerialway_duration': duration_to_minutes(tags.get('aerialway:duration')),
                             'aerialway_heating': 'heating' in tags and tags['aerialway:heating'] == 'yes',
                             'aerialway_occupancy': str_to_int(tags.get('aerialway:occupancy')),
-                            'name': tags.get('name')[0:255] if 'name' in tags else None,
+                            'name': tags.get('name')[0:255] if 'name' in tags else f"Unnamed aerialway {way['osm_id']}",
                         }
                     )
                     station_nodes = [node for node in node_instances if node.tags.get('aerialway') == 'station']

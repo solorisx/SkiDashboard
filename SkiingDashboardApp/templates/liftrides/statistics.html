@@ -1,41 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lift Rides Statistics</title>
-</head>
-<body>
-    <h1>Lift Ride Statistics {% if selected_year %} for {{ selected_year }} {% else %} (All Years) {% endif %}</h1>
+{% extends "liftrides/base.html" %}
 
-    <!-- Year Navigation -->
-    <nav>
-        <a href="{% url 'lift_ride_list_all' %}">All Years</a>
-        {% for year in years %}
-            <a href="{% url 'lift_ride_list_year' year=year %}">{{ year }}</a>
-        {% endfor %}
-    </nav>
+{% block header %}for {{ selected_year|default:"All Years" }}{% endblock %}
 
-    <!-- Lift Ride Statistics Table -->
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Aerialway</th>
-                <th>Total Rides</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for lift in lift_stats %}
-                <tr>
-                    <td>{{ lift.aerialway__name }}</td>
-                    <td>{{ lift.total_rides }}</td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="5">No data available.</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</body>
-</html>
+{% block navigation %}
+    <a href="{% url 'lift_ride_list_all' %}">All Years</a>
+    {% for year in years %}
+        <a href="{% url 'lift_ride_list_year' year=year %}">{{ year }}</a>
+    {% endfor %}
+{% endblock %}

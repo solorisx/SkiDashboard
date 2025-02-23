@@ -1,4 +1,7 @@
+{% extends 'base.html' %}
 {% load custom_filters %}
+
+{% block title %}All Activities{% endblock %}
 {% block content %}
     <h1>All Activities</h1>
     <table>
@@ -56,10 +59,16 @@
         {% endfor %}
     </table>
 
+    <form action="{% url 'sync_strava_all' %}" method="POST">
+        {% csrf_token %}
+        <button type="submit" style="background-color: red; color: white; padding: 10px; border: none; cursor: pointer;">
+            Sync Strava (all)
+        </button>
+    </form>
     <form action="{% url 'sync_strava' %}" method="POST">
         {% csrf_token %}
         <button type="submit" style="background-color: red; color: white; padding: 10px; border: none; cursor: pointer;">
-            Sync Strava
+            Sync Strava (last 90 days)
         </button>
     </form>
     <form action="{% url 'reprocess_all' %}" method="POST">
@@ -68,6 +77,12 @@
             Reprocess all activities and sync Strava
         </button>
     </form>
+    <form action="{% url 'reset_all' %}" method="POST">
+        {% csrf_token %}
+        <button type="submit" style="background-color: red; color: white; padding: 10px; border: none; cursor: pointer;">
+            Delete all activities
+        </button>
+    </form>    
 
 
 {% endblock %}

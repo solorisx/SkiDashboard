@@ -479,10 +479,10 @@ def split_activity(activity: Activity, activity_streams: dict):
     """
     logger.info(f"Splitting activity: {activity.id}")
     altitude = activity_streams["altitude"].data
-    chunk_size = 30
+    chunk_size = 15
     reduced_altitude = np.array([np.mean(altitude[(i-1)*chunk_size:i*chunk_size]) for i in range(1, int(len(altitude)/chunk_size))])
 
-    x = 10  # threshold ele difference
+    x = 25  # threshold ele difference
 
     # Find local maxima
     local_maxima = (reduced_altitude[1:-1] > reduced_altitude[:-2]) & (reduced_altitude[1:-1] > reduced_altitude[2:]) & \
@@ -511,13 +511,18 @@ def split_activity(activity: Activity, activity_streams: dict):
     diffs = np.diff(altitude)
     asc = np.sum(diffs[diffs > 0])
     desc = np.sum(diffs[diffs < 0])
+    lap_data = []
     for i in range(len(turning_points) - 1):
         k = turning_points[i] * chunk_size + chunk_size // 2
         l = turning_points[i + 1] * chunk_size + chunk_size // 2
         lower = turning_points[i] * chunk_size
         upper = turning_points[i + 1] * chunk_size
         lap_diffs = diffs[lower:upper]
-        lap_data = {
+        if np.sum(lap_diffs[lap_diffs > 0]) > 100:
+            logger.debug(f"Skipping lap with ascent: {np.sum(lap_diffs[lap_diffs > 0])}")
+            logger.debug(f"from {get_osm_url(Point(latlng[k][1], latlng[k][0]))} to {get_osm_url(Point(latlng[l][1], latlng[l][0]))}")
+            continue
+        lap_data.append({
             "timestamp": activity.start_time + timedelta(seconds=time[k]),
             "start_time": activity.start_time + timedelta(seconds=time[k]),
             "end_time": activity.start_time + timedelta(seconds=time[l-1]),
@@ -530,8 +535,25 @@ def split_activity(activity: Activity, activity_streams: dict):
             "total_descent": np.sum(np.abs(lap_diffs[lap_diffs < 0])),
             "start_index_stream": k,
             "end_index_stream": l,
-        }
-        logger.debug(lap_data)
+        })
+        
+
+    logger.debug(f"Split activity into {len(lap_data)} laps before consolidation")
+    for i, lap in enumerate(lap_data):
+        if i == 0:
+            continue
+        if lap["total_distance"] < 250:
+            logger.debug(f"Skipping lap with distance: {lap['total_distance']}")
+            lap_data.pop(i)
+            # TODO: add to previous lap
+            continue
+        time_diff = lap["timestamp"] - lap_data[i-1]["timestamp"]
+        if time_diff < timedelta(minutes=3):
+            logger.debug(f"Skipping lap with timedelta: {time_diff}")
+            lap_data.pop(i)
+    logger.debug(f"Split activity into {len(lap_data)} laps after consolidation")
+
+    for i, lap_data in enumerate(lap_data):
         Lap.objects.update_or_create(lap_index=i+1, activity=activity, defaults=lap_data)
         
 def calc_vertical_lap(lap: Lap, altitude_stream, update=True):
@@ -586,7 +608,7 @@ def parse_strava_activity(user, activity_id, update=False):
     logger.debug(f"Activity {activity_id} exists: {exists}")
 
     if not update and exists:
-        logger.warning(f"Strava activity {activity_id} already exists in the database.")
+        logger.info(f"Strava activity {activity_id} already exists in the database.")
         return
     
     activity = load_activity(user, activity_id)
@@ -665,9 +687,10 @@ def parse_strava_activity(user, activity_id, update=False):
         logger.info(f'{"Created" if created else "Updated"} Lap: {lap_instance.lap_index}')
 
     logger.debug(f"Number of laps: {activity_instance.laps.count()}")
-    if activity_instance.laps.count() == 1:
-    # no auto pause used
-    # TODO: add logic to split activity into laps
+    if activity_instance.laps.count() == 1 or \
+        (activity_instance.laps.count() > 30 and \
+        activity_instance.timestamp < datetime(year=2019, month=12, day=31)):
+    # no auto pause used or old activities with bad lap data
         activity_instance.laps.all().delete()
         split_activity(activity_instance, activity_streams)
 
@@ -706,13 +729,16 @@ def parse_strava_activity(user, activity_id, update=False):
 
     logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")
 
-def parse_strava_activities(user, update=False):
+def parse_strava_activities(user, all=False, update=False):
     
-    max_strava_sync = UserProfile.objects.get(user=user).max_strava_sync
-    if max_strava_sync == -1:
-        after = None
+    if all:
+        max_strava_sync = UserProfile.objects.get(user=user).max_strava_sync
+        if max_strava_sync == -1:
+            after = None
+        else:
+            after = datetime.now() - timedelta(days=max_strava_sync)
     else:
-        after = datetime.now() - timedelta(days=max_strava_sync)
+        after = datetime.now() - timedelta(days=90)
     
     activities = load_activities(user, after=after)
 

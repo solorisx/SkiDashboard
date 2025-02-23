@@ -1,0 +1,10 @@
+{% extends "liftrides/base.html" %}
+
+{% block header %}for {{ selected_season|default:"All Seasons" }}{% endblock %}
+
+{% block navigation %}
+    <a href="{% url 'lift_ride_list_season_all' %}">All Seasons</a>
+    {% for season in seasons %}
+        <a href="{% url 'lift_ride_list_season' season=season %}">{{ season }}</a>
+    {% endfor %}
+{% endblock %}
