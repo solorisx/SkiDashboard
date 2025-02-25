@@ -478,65 +478,6 @@ def split_activity(activity: Activity, activity_streams: dict):
     """
     Splits a single activity into multiple laps based on the activity streams.
     """
-    # logger.info(f"Splitting activity: {activity.id}")
-    # altitude = activity_streams["altitude"].data
-    # chunk_size = 15
-    # reduced_altitude = np.array([np.mean(altitude[(i-1)*chunk_size:i*chunk_size]) for i in range(1, int(len(altitude)/chunk_size))])
-
-    # x = 25  # threshold ele difference
-
-    # # Find local maxima
-    # local_maxima = (reduced_altitude[1:-1] > reduced_altitude[:-2]) & (reduced_altitude[1:-1] > reduced_altitude[2:]) & \
-    #             ((reduced_altitude[1:-1] - reduced_altitude[:-2] >= x) | (reduced_altitude[1:-1] - reduced_altitude[2:] >= x))
-
-    # # Find local minima
-    # local_minima = (reduced_altitude[1:-1] < reduced_altitude[:-2]) & (reduced_altitude[1:-1] < reduced_altitude[2:]) & \
-    #             ((reduced_altitude[:-2] - reduced_altitude[1:-1] >= x) | (reduced_altitude[2:] - reduced_altitude[1:-1] >= x))
-
-    # # Combine indices and adjust for offset
-    # turning_points = np.where(local_maxima | local_minima)[0] + 1
-
-    # latlng = activity_streams["latlng"].data
-    # dist = activity_streams["distance"].data
-    # time = activity_streams["time"].data
-
-    # logger.debug(f"Number of turning points: {len(turning_points)}")
-    # for j in turning_points:
-    #     i = j * chunk_size
-    #     i = j * chunk_size + chunk_size // 2
-    #     logger.debug(f"Turning point: {latlng[i]}")
-    #     logger.debug(f"OSM URL: {get_osm_url(Point(latlng[i][1], latlng[i][0]))}")
-    #     logger.debug(f"Distance: {dist[i]}")
-
-    # # Split activity into laps
-    # diffs = np.diff(altitude)
-    # asc = np.sum(diffs[diffs > 0])
-    # desc = np.sum(diffs[diffs < 0])
-    # lap_data = []
-    # for i in range(len(turning_points) - 1):
-    #     k = turning_points[i] * chunk_size + chunk_size // 2
-    #     l = turning_points[i + 1] * chunk_size + chunk_size // 2
-    #     lower = turning_points[i] * chunk_size
-    #     upper = turning_points[i + 1] * chunk_size
-    #     lap_diffs = diffs[lower:upper]
-    #     if np.sum(lap_diffs[lap_diffs > 0]) > 100:
-    #         logger.debug(f"Skipping lap with ascent: {np.sum(lap_diffs[lap_diffs > 0])}")
-    #         logger.debug(f"from {get_osm_url(Point(latlng[k][1], latlng[k][0]))} to {get_osm_url(Point(latlng[l][1], latlng[l][0]))}")
-    #         continue
-    #     lap_data.append({
-    #         "timestamp": activity.start_time + timedelta(seconds=time[k]),
-    #         "start_time": activity.start_time + timedelta(seconds=time[k]),
-    #         "end_time": activity.start_time + timedelta(seconds=time[l-1]),
-    #         "start_position": Point(latlng[k][1], latlng[k][0]),
-    #         "end_position": Point(latlng[l][1], latlng[l][0]),
-    #         "total_elapsed_time": timedelta(seconds=time[l] - time[k]),
-    #         "total_timer_time": timedelta(time[l] - time[k]),
-    #         "total_distance": dist[l] - dist[k],
-    #         "total_ascent": np.sum(lap_diffs[lap_diffs > 0]),
-    #         "total_descent": np.sum(np.abs(lap_diffs[lap_diffs < 0])),
-    #         "start_index_stream": k,
-    #         "end_index_stream": l,
-    #     })
 
     lap_data = []
 
