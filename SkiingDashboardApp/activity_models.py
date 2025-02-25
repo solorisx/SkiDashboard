@@ -1,5 +1,7 @@
 from django.contrib.gis.db import models
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from .osm_models import Aerialway, SkiArea, SkiAreaBoundary
 
 class Activity(models.Model):
@@ -28,6 +30,11 @@ class Activity(models.Model):
     max_heart_rate = models.PositiveIntegerField(null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True)
+    object_id = models.PositiveIntegerField(null=True)
+    ski_area_main = GenericForeignKey('content_type', 'object_id')
+
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
     ski_area_boundary = models.ForeignKey(SkiAreaBoundary, on_delete=models.PROTECT, null=True)
     flagged = models.BooleanField(default=False)

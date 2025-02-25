@@ -2,7 +2,10 @@ from django.contrib.gis.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from djmoney.models.fields import MoneyField
-from .osm_models import SkiArea, SkiAreaBoundary
+from .osm_models import SkiArea, SkiAreaBoundary, Way
+from django.db import models
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 class ValidDuring(models.TextChoices):
     winter = 'winter', 'Winter'

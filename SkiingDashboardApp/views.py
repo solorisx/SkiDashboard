@@ -28,6 +28,7 @@ def activity_list(request):
     activities = ( 
         activities
         .select_related("ski_area", "ski_area_boundary")
+        .prefetch_related("ski_area_main")
         .annotate(
             num_laps=Count("laps"),
             num_lift_rides=Count("laps__lift_rides"),

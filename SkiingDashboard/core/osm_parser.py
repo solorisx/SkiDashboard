@@ -216,7 +216,7 @@ def process_ways(handler):
     logger.info("Finished processing ways")
     
 def process_areas(handler):
-    logger.info("Starting to process ways")
+    logger.info("Starting to process areas")
     for area_data in handler.areas:
         try:
             with transaction.atomic():
@@ -227,7 +227,7 @@ def process_areas(handler):
                     way = Way.objects.create(osm_id=area_data['osm_id'], tags=area_data.get('tags', {}))
                     logger.debug(f"Created way {area_data['osm_id']} for area {name} with tags {area_data.get('tags', {})}")
 
-                    area, created = SkiAreaBoundary.objects.update_or_create(
+                    _, created = SkiAreaBoundary.objects.update_or_create(
                         way=Way.objects.filter(osm_id=area_data['osm_id']).first(),
                         defaults={
                             'geom': area_data['geom'],
@@ -242,37 +242,8 @@ def process_areas(handler):
         except Exception as e:
             logger.error(f"Error processing area {area_data['osm_id']}: {e}")
 
-    # for way in handler.ways:
-    #     logger.debug(f"Processing way {way['osm_id']}")
-    #     tags=way.get('tags', {})
-    #     nodes=way.get('nodes', [])
-    #     landuse=tags.get('landuse', None)
-    #     if landuse == 'winter_sports':
-    #         logger.debug(f"Area {way['osm_id']} found")
-    #         wkb = wkbfab.create_multipolygon(way)
-    #         logger.debug(f"Area {way['osm_id']} has Polygon {wkb}")
+    logger.info("Finished processing areas")
 
-
-            # try:
-            #     with transaction.atomic():
-            #         area, created = SkiAreaBoundary.objects.update_or_create(
-            #             osm_id=way['osm_id'],
-            #             defaults={
-            #                 'geom': way['geom'],
-            #                 'name': way['tags'].get('name') or f"Unnamed area {way['osm_id']}"
-            #             }
-            #         )
-            #         logger.debug(f"{'Created' if created else 'Updated'} ski area boundary: {way['osm_id']}")
-
-            #         # Associate aerialway and pistes with this ski area boundary
-            #         # TODO
-
-            # except Exception as e:
-            #     logger.error(f"Error processing area {way['osm_id']}, {way}: {e}")
-
-
-
-    logger.info("Finished processing ways")
 
 def process_relations(handler):
         logger.info("Starting to process relations")

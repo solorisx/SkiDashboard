@@ -94,16 +94,42 @@ class PisteSegment(models.Model):
     def __str__(self):
         return f"Piste Segment {self.piste.way.osm_id} - {self.geom.length}"
 
+
+class AbstractSkiArea(models.Model):
+    name = models.CharField(max_length=255, null=True)
+    geom = models.MultiPolygonField(null=True, blank=True)
+    
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return f"Ski Area {self.name}"
+    
+    def get_osm_id(self):
+        if hasattr(self, 'osm_id'):
+            return self.osm_id
+        elif hasattr(self, 'way'):
+            return self.way.osm_id
+        else:
+            return None
+    
+    def get_osm_url(self):
+        return f"https://www.openstreetmap.org/relation/{self.osm_id}"   
+    
+
 # SkiArea Model
-class SkiArea(models.Model):
+class SkiArea(AbstractSkiArea):
     osm_id = models.BigIntegerField(unique=True)
-    name = models.CharField(max_length=255)
+    #name = models.CharField(max_length=255)
     ways = models.ManyToManyField(Way, related_name='ski_areas')
     url = models.URLField(blank=True, null=True)
     wikipedia = models.CharField(max_length=255, blank=True, null=True)
     tags = models.JSONField(default=dict)
-    created_on = models.DateTimeField(auto_now_add=True)
-    modified_on = models.DateTimeField(auto_now=True)
+    #created_on = models.DateTimeField(auto_now_add=True)
+    #modified_on = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Ski Area {self.name}"
@@ -112,15 +138,19 @@ class SkiArea(models.Model):
         return f"https://www.openstreetmap.org/relation/{self.osm_id}"
     
 
-class SkiAreaBoundary(models.Model):
-    way = models.OneToOneField(Way, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255, blank=True, null=True)
-    geom = models.MultiPolygonField(null=True, blank=True) 
-    created_on = models.DateTimeField(auto_now_add=True)
-    modified_on = models.DateTimeField(auto_now=True)
+class SkiAreaBoundary(AbstractSkiArea):
+    way = models.OneToOneField(Way, on_delete=models.CASCADE, related_name="ski_area_boundary")  # Added explicit related_name
+    ways = models.ManyToManyField(Way, related_name='ski_area_boundaries')
+    #name = models.CharField(max_length=255, blank=True, null=True)
+    #geom = models.MultiPolygonField(null=True, blank=True) 
+    #created_on = models.DateTimeField(auto_now_add=True)
+    #modified_on = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Ski Area Boundary {self.way.osm_id}"
     
     def get_osm_url(self):
         return self.way.get_osm_url()
+    
+
+ 

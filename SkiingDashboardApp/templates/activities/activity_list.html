@@ -12,6 +12,8 @@
             <th>OSM ID</th>
             <th>Ski Area Boundary</th>
             <th>OSM ID</th>
+            <th>Ski Area Main</th>
+            <th>OSM ID</th>            
             <th>Vertical</th>
             <th>Distance (km)</th>
             <th>Number of laps</th>
@@ -40,6 +42,13 @@
                 {% if activity.ski_area_boundary %}
                     <td>{{ activity.ski_area_boundary.name }}</td>
                     <td> <a href="{{ activity.ski_area_boundary.get_osm_url }}" target="_blank"> {{ activity.ski_area_boundary.way.osm_id}}</a> </td>
+                {% else %}
+                    <td></td>
+                    <td></td>
+                {% endif %}
+                {% if activity.ski_area_main %}
+                    <td>{{ activity.ski_area_main.name }}</td>
+                    <td> <a href="{{ activity.ski_area_main.get_osm_url }}" target="_blank"> {{ activity.ski_area_main.get_osm_id}}</a> </td>
                 {% else %}
                     <td></td>
                     <td></td>
