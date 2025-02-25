@@ -1,12 +1,13 @@
 from datetime import datetime
 import logging
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Count, Avg, Min, Max, F
 from django.db.models.functions import Round
 from django.http import HttpResponse
 from .models import Activity, LiftRide
 from SkiingDashboard.core.activity_parser import parse_strava_activity, parse_strava_activities
 from SkiingDashboard.core.skiarea_manager import init_networks
+from SkiingDashboard.cost.forms.forms import CostForm
 
 logger = logging.getLogger('SkiingDashboard')
 
@@ -23,6 +24,35 @@ def initialize_ski_area_networks(request):
 
 def activity_list(request):
     """Show all activities."""
+
+    logger.debug(f"Request method: {request.method}")
+    if request.method == 'POST':
+        if 'dflt_cst' in request.POST:
+            pk = request.POST.get('dflt_cst')
+            logger.debug(f"Activity ID: {pk}")
+            activity = Activity.objects.get(id=pk)
+            logger.debug(f"Activity: {activity}")
+            activity = Activity.objects.get(id=pk, user=request.user)
+            cost = activity.ski_area_main.daypass_price
+            if cost:
+                activity.cost = cost
+                activity.save()
+            else:
+                logger.debug(f"No default cost set for ski area {activity.ski_area_main.name}.")
+                activity.cost = 75
+                activity.save()
+        if 'set_cst' in request.POST:
+            pk = request.POST.get('set_cst')
+            activity = Activity.objects.get(pk=pk, user=request.user)
+            form = CostForm(request.POST, activity)
+            logger.debug(f"Form: {form}")
+            if form.is_valid():
+                form.save()
+            else:
+                logger.debug(f"Form is invalid.")
+                return HttpResponse("Invalid form.")
+        return redirect('activity_list')
+
     activities = Activity.objects.filter(user=request.user).order_by("-timestamp")
 
     activities = ( 

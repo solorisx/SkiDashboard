@@ -1,4 +1,5 @@
 from django.contrib.gis.db import models
+from djmoney.models.fields import MoneyField
 
 # Basic OSM Node Model
 class Node(models.Model):
@@ -98,6 +99,9 @@ class PisteSegment(models.Model):
 class AbstractSkiArea(models.Model):
     name = models.CharField(max_length=255, null=True)
     geom = models.MultiPolygonField(null=True, blank=True)
+
+    daypass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency='CHF')
+    seasonpass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency='CHF')
     
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)

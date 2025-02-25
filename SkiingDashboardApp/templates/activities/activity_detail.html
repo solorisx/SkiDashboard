@@ -10,17 +10,13 @@
             <th>Distance</th>
             <th>Descent</th>
             <th>Duration</th>
-            <th>Speed</th>
-            <th>Max Speed</th>
         </tr>
         {% for lap in laps %}
         <tr>
             <td>Lap {{ lap.lap_index }}</td>
-            <td>Distance: {{ lap.total_distance|round_to:2 }}m</td>
-            <td>Descent: {{ lap.total_descent|round_to:0 }}m</td>
-            <td>Duration: {{ lap.duration }}</td>
-            <td>Speed: {{ lap.avg_speed|round_to:2 }} km/h</td>
-            <td>Max Speed: {{ lap.max_speed|round_to:2 }} km/h</td>
+            <td>{{ lap.total_distance|round_to:2 }}m</td>
+            <td>{{ lap.total_descent|round_to:0 }}m</td>
+            <td>{{ lap.total_elapsed_time }}</td>
         </tr>
             {% empty %}
             <tr><td>No laps recorded</td></tr>

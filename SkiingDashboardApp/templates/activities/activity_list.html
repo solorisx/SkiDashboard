@@ -17,6 +17,8 @@
             <th>Strava</th>
             <th>Created on</th>
             <th>Modified on</th>
+            <th>Cost</th>
+            <th>Value</th>
         </tr>
         {% for activity in activities %}
             <tr>
@@ -46,6 +48,17 @@
                 </td>
                 <td>{{ activity.created_on }}</td>
                 <td>{{ activity.modified_on }}</td>
+                <td>{{ activity.cost.amount }}</td>
+                <td>{{ activity.cost.currency }}</td>
+                <td>
+                    <form action="{% url 'activity_list' %}" method="POST">
+                        {% csrf_token %}
+                        <button name="dflt_cst" value="{{ activity.id }}" class="btn btn-primary">
+                            Set default cost
+                        </button>
+                    </form>
+                </td>
+
             </tr>
         {% endfor %}
     </table>

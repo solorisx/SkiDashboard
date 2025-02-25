@@ -2,6 +2,7 @@ from django.contrib.gis.db import models
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from djmoney.models.fields import MoneyField
 from .osm_models import Aerialway, SkiArea, SkiAreaBoundary
 
 class Activity(models.Model):
@@ -37,9 +38,9 @@ class Activity(models.Model):
 
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
     ski_area_boundary = models.ForeignKey(SkiAreaBoundary, on_delete=models.PROTECT, null=True)
-    flagged = models.BooleanField(default=False)
-    flagged_reason = models.TextField(blank=True, null=True)
-    reviewed = models.BooleanField(default=False)
+
+    cost = MoneyField(max_digits=10, decimal_places=2, default_currency='CHF', null=True)
+    value = MoneyField(max_digits=10, decimal_places=2, default_currency='CHF', null=True)
 
     def get_strava_url(self):
         return f"https://www.strava.com/activities/{self.strava_id}" if self.strava_id else None
