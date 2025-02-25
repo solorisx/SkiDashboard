@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Activities by skiing area{% endblock %}
+{% block content %}
+
+{% include 'season-navigation.html' %}
+
+    <h1>Activities by skiing area</h1>
+    <table class="table table-striped table-hover">
+        <tr>
+            <th>Ski Area</th>
+            <th>Number of Activities</th>
+            <th>Total Vertical</th>
+            <th>Total Distance (km)</th>
+            <th>Total Number of Laps</th>
+            <th>Total Number of Lift Rides</th>
+            <th>Total Cost</th>
+            <th>Total Value</th>
+        </tr>
+        {% for ski_area in ski_areas %}
+            <tr>
+                <td>
+                    <a href="">
+                    {{ ski_area.ski_area__name }}
+                    </a>
+                </td>
+                <td>{{ ski_area.num_act }}</td>
+                <td>{{ ski_area.sum_descent }}</td>
+                <td>{{ ski_area.total_distance_km }} </td>
+                <td>{{ ski_area.total_num_laps }}</td>
+                <td>{{ ski_area.total_num_lift_rides }}</td>
+                <td>{{ ski_area.total_cost }}</td>
+                <td>{{ ski_area.total_value }}</td>
+            </tr>
+        {% endfor %}
+        <tr>
+            <td><strong>Total</strong></td>
+            <td>{{ activities.num_act }}</td>
+            <td>{{ activities.sum_descent }}</td>
+            <td>{{ activities.total_distance_km }} </td>
+            <td>{{ activities.total_num_laps }}</td>
+            <td>{{ activities.total_num_lift_rides }}</td>
+            <td>{{ activities.total_cost }}</td>
+            <td>{{ activities.total_value }}</td>
+        </tr>
+    </table>
+
+    <a href="{% url 'activity_list' %}">Back to Activities</a>
+
+
+{% endblock %}

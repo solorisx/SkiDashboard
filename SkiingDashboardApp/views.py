@@ -1,7 +1,7 @@
 from datetime import datetime
 import logging
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db.models import Count, Avg, Min, Max, F
+from django.db.models import Count, Avg, Min, Max, F, Sum
 from django.db.models.functions import Round
 from django.http import HttpResponse
 from .models import Activity, LiftRide
@@ -176,4 +176,103 @@ def lift_ride_list_season(request, season=None):
         'seasons': seasons
     }
 
-    return render(request, "liftrides/statistics_season.html", context)    
+    return render(request, "liftrides/statistics_season.html", context)
+
+
+def cost_detail(request, season=None):
+    activities = Activity.objects.filter(user=request.user)
+    context = {
+        'activities': activities,
+        'sum_cost': activities.aggregate(Sum('cost'))['cost__sum'], 
+        'sum_value': activities.aggregate(Sum('value'))['value__sum'],
+        'avg_cost': activities.aggregate(Avg('cost'))['cost__avg'],
+    }
+
+    return render(request, "cost/cost_detail.html", context)
+
+def cost_detail_network(request, season=None):
+    activities = Activity.objects.filter(user=request.user)
+
+    networks = activities.ski_area_main.values('network').annotate(
+        total_cost=Sum('cost'),
+        total_value=Sum('value'),
+        avg_cost=Avg('cost'),
+    ).order_by('-total_cost')
+
+    context = {
+        'activities': activities,
+        'networks': networks,
+        'sum_cost': activities.aggregate(Sum('cost'))['cost__sum'], 
+        'sum_value': activities.aggregate(Sum('value'))['value__sum'],
+        'avg_cost': activities.aggregate(Avg('cost'))['cost__avg'],
+    }
+
+    return render(request, "cost/cost_detail_network.html", context)
+
+
+def activity_list_skiarea(request, season=None):
+
+
+    activities = Activity.objects.filter(user=request.user).order_by("-timestamp")
+
+    # TODO: create function for getting seasons (also for liftrides)
+    rides = LiftRide.objects.filter(lap__activity__user=request.user)
+    years = set(rides.dates("lap__activity__timestamp", "year", order="DESC"))
+    years = [y.year for y in years]
+    years.sort(reverse=True)
+    logger.debug(f"Years: {years}")
+
+    if years:
+        if not rides.filter(lap__activity__timestamp__lte=datetime(years[-1], 6, 30)):
+            years.pop(len(years)-1)
+
+    seasons = [f"{y-1}-{y}" for y in years]    
+
+    if season:
+        try:
+            year1, year2 = map(int, season.split("-"))
+        except ValueError:
+            return HttpResponse("Invalid season format. Use 'YYYY-YYYY'.")
+        if year1 >= year2:
+            year1, year2 = year2, year1
+        start_date = datetime(year1, 7, 1)
+        end_date = datetime(year2, 6, 30)
+        activities = activities.filter(timestamp__range=(start_date, end_date))
+
+
+
+
+    # TODO: use ski_area_main
+    ski_areas = activities.values('ski_area__name').annotate(
+        total_cost=Sum('cost'),
+        total_value=Sum('value'),
+        sum_descent=Sum('total_descent'),
+        total_distance_km=Sum('total_distance')/1000,
+        # total_num_laps=Count('laps'),
+        # total_num_lift_rides=Count('laps__lift_rides),'),
+        avg_cost=Avg('cost'),
+        num_act=Count('id', distinct=True),
+    ).order_by('-num_act')
+
+
+    activities = activities.aggregate(
+        total_cost=Sum('cost'),
+        total_value=Sum('value'),
+        sum_descent=Sum('total_descent'),
+        total_distance_km=Sum('total_distance')/1000,
+        #total_num_laps=Count('laps'),
+        #total_num_lift_rides=Count('laps__lift_rides'),
+        avg_cost=Avg('cost'),
+        num_act=Count('id', distinct=True),     
+    )
+
+
+    context = {
+        'activities': activities,
+        'ski_areas': ski_areas,
+        'seasons': seasons,
+    }
+
+
+    return render(request, "activities/skiarea/skiarea_list.html", context)
+
