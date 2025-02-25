@@ -48,16 +48,44 @@
                 </td>
                 <td>{{ activity.created_on }}</td>
                 <td>{{ activity.modified_on }}</td>
-                <td>{{ activity.cost.amount }}</td>
-                <td>{{ activity.cost.currency }}</td>
+
+                <!-- Editable Value Form 
                 <td>
-                    <form action="{% url 'activity_list' %}" method="POST">
+                    <form action="{% url 'activity_list' %}" method="POST" class="d-flex">
                         {% csrf_token %}
-                        <button name="dflt_cst" value="{{ activity.id }}" class="btn btn-primary">
-                            Set default cost
+                        {{ form.as_p }}
+                        <button type="submit" name="set_cst" value="{{ activity.id }}" class="btn btn-danger btn-sm">
+                            Save Value
                         </button>
                     </form>
                 </td>
+                -->
+
+                <!-- Editable Cost & Currency Form -->
+                <td>
+                    <form action="{% url 'activity_list' %}" method="POST" class="d-flex">
+                        {% csrf_token %}
+                        <input type="number" step="0.01" name="cost_0" value="{{ activity.cost.amount }}" class="form-control" style="width: 80px;">
+                </td>
+                <td>
+                        <select name="cost_1" class="form-control" style="width: 80px;">
+                            <option value="CHF" {% if activity.cost.currency == "CHF" %}selected{% endif %}>CHF</option>
+                            <option value="USD" {% if activity.cost.currency == "USD" %}selected{% endif %}>USD</option>
+                            <option value="EUR" {% if activity.cost.currency == "EUR" %}selected{% endif %}>EUR</option>
+                        </select>
+                </td>
+                <td>
+                        <button type="submit" name="set_cst" value="{{ activity.id }}" class="btn btn-danger btn-sm">
+                            Save Cost
+                        </button>
+                </td>
+                <td>                
+                        <button type="submit" name="dflt_cst" value="{{ activity.id }}" class="btn btn-primary btn-sm">
+                            Set Default Cost
+                        </button>
+                    </form>
+                </td>
+            
 
             </tr>
         {% endfor %}

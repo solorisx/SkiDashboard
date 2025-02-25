@@ -44,8 +44,7 @@ def activity_list(request):
         if 'set_cst' in request.POST:
             pk = request.POST.get('set_cst')
             activity = Activity.objects.get(pk=pk, user=request.user)
-            form = CostForm(request.POST, activity)
-            logger.debug(f"Form: {form}")
+            form = CostForm(request.POST, instance=activity)
             if form.is_valid():
                 form.save()
             else:
@@ -54,7 +53,7 @@ def activity_list(request):
         return redirect('activity_list')
 
     activities = Activity.objects.filter(user=request.user).order_by("-timestamp")
-
+    
     activities = ( 
         activities
         .select_related("ski_area", "ski_area_boundary")
