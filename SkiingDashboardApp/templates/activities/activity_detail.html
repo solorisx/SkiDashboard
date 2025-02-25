@@ -33,6 +33,7 @@
             <th>Lap</th>
             <th>Lift</th>
             <th>Aerialway</th>
+            <th>Direction</th>
             <th>Timestamp</th>
         </tr>
         {% for lift_ride in lift_rides %}
@@ -40,6 +41,7 @@
             <td>{{ lift_ride.lap.lap_index }}</td>
             <td>{{ lift_ride.lift.name }}</td>
             <td>{{ lift_ride.aerialway.name }}</td>
+            <td>{% if lift_ride.uphill %} uphill {% elif lift_ride.uphill == False %} downhill {% else %} unknown {% endif %}</td>
             <td>{{ lift_ride.timestamp }}</td>
         {% empty %}
             <td>No lift rides recorded</td>

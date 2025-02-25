@@ -33,7 +33,7 @@ class Station(models.Model):
     node = models.OneToOneField(Node, on_delete=models.CASCADE, related_name="station")
     name = models.CharField(max_length=255, blank=True, null=True)
     station = models.CharField(max_length=255, blank=True, null=True)
-    altitude = models.FloatField(null=True, blank=True)
+    altitude = models.FloatField(default=0, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 

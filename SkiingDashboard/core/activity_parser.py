@@ -105,7 +105,6 @@ def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bo
         logger.debug(aerialways.query)
         logger.debug(aerialways[:100])
 
-        #aerialways = aerialways.annotate(distance=Distance("way__nodes__node__geom", point))
     else:
         aerialways = aerialways.annotate(distance=Distance("station_nodes__node__geom", point))
     
@@ -186,7 +185,17 @@ def find_direct_lift(start: Point, end: Point):
         )
     ).first()  # Fetch the first matching aerialway
 
-    return direct_lift
+    uphill = None
+    if direct_lift:
+        start_station = start_stations.first()
+        end_station = end_stations.first()
+        uphill = (start_station.station == "bottom" and end_station.station == "top") \
+                  or (min(start_station.altitude, end_station.altitude > 0) and start_station.altitude < end_station.altitude)
+        downhill = (start_station.station == "top" and end_station.station == "bottom") \
+                    or (min(start_station.altitude, end_station.altitude > 0) and start_station.altitude > end_station.altitude)
+        if not uphill and not downhill:
+            uphill = None
+    return direct_lift, uphill
 
 
 def build_lift_graph(start: Point, max_area: int = 20_000, max_distance: int = 500):
@@ -264,9 +273,6 @@ def dijkstra(start_nodes, end_nodes, graph):
     return []  # No path found
 
 def get_aerialways(start: Point, end: Point = None):
-
-    flagged = False
-    flagged_reason = None
     
     if start is None or end is None:
         if start is None:
@@ -274,13 +280,13 @@ def get_aerialways(start: Point, end: Point = None):
         if end is None:
             aerialway = get_closest_aerialway(start)
         if aerialway:
-            return [aerialway], flagged, flagged_reason
+            return [(aerialway,None)]
         else:
-            return [], flagged, flagged_reason
+            return []
         
-    direct_lift = find_direct_lift(start, end)
+    direct_lift, uphill = find_direct_lift(start, end)
     if direct_lift:
-        return [direct_lift], flagged, flagged_reason
+        return [(direct_lift, uphill)]
 
     # Find all nearby stations for start and end
     max_distance = 250
@@ -328,21 +334,17 @@ def get_aerialways(start: Point, end: Point = None):
         # use closer distance as we are using all nodes including waypoints
         if not lift: 
             logger.debug("No valid stations found, trying to find aerialway with all nodes")
-            lift = get_closest_aerialway(start, max_distance=100, use_nodes=True)
+            lift = get_closest_aerialway(start, max_distance=100, use_nodes=True), None
 
         if not lift:
             logger.debug("No valid stations found, trying to find aerialway with all nodes")
-            lift = get_closest_aerialway(end, max_distance=100, use_nodes=True)
+            lift = get_closest_aerialway(end, max_distance=100, use_nodes=True), None
         
         if lift:
-            flagged = True
-            flagged_reason = "No valid stations found, using closest aerialway"
-            return [lift], flagged, flagged_reason
+            return [(lift,None)]
         
         else:
-            flagged = True
-            flagged_reason = "No valid stations found"
-            return [], flagged, flagged_reason  # No valid stations found
+            return []  # No valid stations found
 
     graph = build_lift_graph(start)
 
@@ -370,14 +372,15 @@ def get_aerialways(start: Point, end: Point = None):
 
         logger.debug(connection if connection else "No connection found")
 
-        if connection and connection not in aerialway_path:
-            if (station_a.altitude and station_b.altitude and station_b.altitude - station_a.altitude < -100) or station_a.station == "top" or station_b.station == "bottom":
-                logger.debug(f"Potential downhill connection found: {station_a} -> {station_b}")
-                flagged = True
-                flagged_reason = "Downhill connection found"
-            aerialway_path.append(connection)
+        uphill = None
+        if connection:
+            if (station_a.altitude > 0 and station_b.altitude > 0 and station_b.altitude - station_a.altitude < 0) or station_a.station == "top" or station_b.station == "bottom":
+                uphill = False
+            elif (station_a.altitude > 0 and station_b.altitude > 0 and station_b.altitude - station_a.altitude > 0) or station_a.station == "bottom" or station_b.station == "top":
+                uphill = True
+            aerialway_path.append((connection, uphill))
 
-    return aerialway_path, flagged, flagged_reason
+    return aerialway_path
 
 def parse_fit_file(file_path):
     start_time = time.time()
@@ -661,17 +664,9 @@ def parse_strava_activity(user, activity_id, update=False):
             lift_start_pos = None
             lift_start_time = lap.start_time
         #lift_start_pos = Lap.objects.filter(activity=activity_instance, lap_index=lap.lap_index-1).first().end_position if lap.lap_index > 1 else None
-        lift_rides, flagged, flagged_reason = get_aerialways(lift_start_pos, lift_end_pos)
-        if flagged:
-            logger.warning(f"Parsing {activity_id}: Downhill connection found for Lap: {lap.lap_index}, flagging activity {activity_instance.id}")
-            activity_instance.flagged = True
-            if activity_instance.flagged_reason:
-                activity_instance.flagged_reason += f"\n{flagged_reason}"
-            else:
-                activity_instance.flagged_reason = flagged_reason
-            activity_instance.save()
-        for lift_ride in lift_rides:
-            lift = LiftRide.objects.create(lap=lap, aerialway=lift_ride, timestamp=lift_start_time)
+        lift_rides = get_aerialways(lift_start_pos, lift_end_pos)
+        for (lift_ride, uphill) in lift_rides:
+            lift = LiftRide.objects.create(lap=lap, aerialway=lift_ride, uphill=uphill if True else False, timestamp=lift_start_time)
             lift_start_time = lift_start_time + timedelta(minutes=lift.aerialway.aerialway_duration if lift.aerialway.aerialway_duration else 1)
             logger.info(f"Created LiftRide for Lap: {lap.lap_index} with lift {lift_ride.name if lift_ride else 'unnamed'}")
 

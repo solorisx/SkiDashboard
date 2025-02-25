@@ -88,5 +88,6 @@ class Record(models.Model):
 class LiftRide(models.Model):
     lap = models.ForeignKey(Lap, on_delete=models.CASCADE)
     aerialway = models.ForeignKey(Aerialway, on_delete=models.PROTECT)
+    uphill = models.BooleanField(null=True)
     timestamp = models.DateTimeField()
 
