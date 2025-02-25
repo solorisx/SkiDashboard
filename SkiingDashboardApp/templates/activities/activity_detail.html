@@ -1,25 +1,50 @@
 {% extends 'base.html' %}
 {% load custom_filters %}
 {% block content %}
-    <h1>{{ activity.name }} - {{ activity.timestamp }}</h1>
+    <h1>{{ activity.name }} - {{ activity.timestamp }} - {{activity.ski_area_main.name}}</h1>
     
     <h2>Laps</h2>
-    <ul>
+    <table class="table table-striped table-hover">
+        <tr>
+            <th>Lap</th>
+            <th>Distance</th>
+            <th>Descent</th>
+            <th>Duration</th>
+            <th>Speed</th>
+            <th>Max Speed</th>
+        </tr>
         {% for lap in laps %}
-            <li>Lap {{ lap.lap_index }} - Distance: {{ lap.total_distance|round_to:2 }}m</li>
-        {% empty %}
-            <li>No laps recorded</li>
+        <tr>
+            <td>Lap {{ lap.lap_index }}</td>
+            <td>Distance: {{ lap.total_distance|round_to:2 }}m</td>
+            <td>Descent: {{ lap.total_descent|round_to:0 }}m</td>
+            <td>Duration: {{ lap.duration }}</td>
+            <td>Speed: {{ lap.avg_speed|round_to:2 }} km/h</td>
+            <td>Max Speed: {{ lap.max_speed|round_to:2 }} km/h</td>
+        </tr>
+            {% empty %}
+            <tr><td>No laps recorded</td></tr>
         {% endfor %}
-    </ul>
+    </table>
 
     <h2>Lift Rides</h2>
-    <ul>
+    <table class="table table-striped table-hover">
+        <tr>
+            <th>Lap</th>
+            <th>Lift</th>
+            <th>Aerialway</th>
+            <th>Timestamp</th>
+        </tr>
         {% for lift_ride in lift_rides %}
-            <li>{{ lift_ride.aerialway.name }} at {{ lift_ride.timestamp }} during lap {{ lift_ride.lap.lap_index }}</li>
+        <tr>
+            <td>{{ lift_ride.lap.lap_index }}</td>
+            <td>{{ lift_ride.lift.name }}</td>
+            <td>{{ lift_ride.aerialway.name }}</td>
+            <td>{{ lift_ride.timestamp }}</td>
         {% empty %}
-            <li>No lift rides recorded</li>
+            <td>No lift rides recorded</td>
         {% endfor %}
-    </ul>
+    </table>
 
     <form action="{% url 'reprocess_activity' activity.id %}" method="POST">
         {% csrf_token %}
