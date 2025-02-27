@@ -11,6 +11,7 @@ from SkiingDashboard.core.skiarea_manager import init_networks
 from SkiingDashboard.cost.forms.forms import CostForm
 from django.db.models import Count, OuterRef, Subquery
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 
 logger = logging.getLogger('SkiingDashboard')
 
@@ -58,7 +59,7 @@ def hello_world(request):
 def home(request):
     return render(request, "home.html")
 
-
+@staff_member_required
 def initialize_ski_area_networks(request):
     init_networks(request)
     return HttpResponse("Ski area networks initialized.")
@@ -109,6 +110,8 @@ def activity_list(request):
 
     return render(request, "activities/activity_list.html", {"activities": activities})
 
+
+@login_required
 def activity_detail(request, activity_id):
     """Show details of a single activity, including laps and lift rides."""
     activity = get_object_or_404(Activity, id=activity_id, user=request.user)
@@ -125,6 +128,7 @@ def activity_detail(request, activity_id):
         },
     )
 
+@login_required
 def reprocess_activity(request, activity_id):
     """Reprocess an activity to update its laps and lift rides."""
     activity = get_object_or_404(Activity, id=activity_id, user=request.user)
@@ -135,6 +139,7 @@ def reprocess_activity(request, activity_id):
         return HttpResponse(f"Activity {activity_id} has no Strava ID.")
 
 
+@staff_member_required
 def sync_strava_all(request):
     try:
         parse_strava_activities(user=request.user, all=True, update=False)
@@ -143,13 +148,15 @@ def sync_strava_all(request):
         return HttpResponse(f"Error syncing Strava activities: {e}")
 
 
+@login_required
 def sync_strava(request):
     try:
         parse_strava_activities(user=request.user, all=False, update=False)
         return HttpResponse("Strava activities synced.")
     except Exception as e:
         return HttpResponse(f"Error syncing Strava activities: {e}")
-    
+
+@staff_member_required    
 def sync_reprocess_all(request):
     try:
         parse_strava_activities(user=request.user, update=True)
@@ -157,10 +164,13 @@ def sync_reprocess_all(request):
     except Exception as e:
         return HttpResponse(f"Error syncing Strava activities: {e}")
     
+@staff_member_required    
 def reset_all(request):
     Activity.objects.filter(user=request.user).delete()
     return HttpResponse("All activities deleted.")
-    
+
+
+@login_required    
 def lift_ride_list(request, year=None):
     """Show all lift rides."""
 
@@ -184,6 +194,8 @@ def lift_ride_list(request, year=None):
 
     return render(request, "liftrides/statistics.html", context)
 
+
+@login_required
 def lift_ride_list_season(request, season=None):
     rides = LiftRide.objects.filter(lap__activity__user=request.user)
     years = set(rides.dates("lap__activity__timestamp", "year", order="DESC"))
@@ -221,6 +233,7 @@ def lift_ride_list_season(request, season=None):
     return render(request, "liftrides/statistics_season.html", context)
 
 
+@login_required
 def cost_detail(request, season=None):
     activities = Activity.objects.filter(user=request.user)
     context = {
@@ -232,6 +245,8 @@ def cost_detail(request, season=None):
 
     return render(request, "cost/cost_detail.html", context)
 
+
+@login_required
 def cost_detail_network(request, season=None):
     activities = Activity.objects.filter(user=request.user)
 
@@ -252,23 +267,8 @@ def cost_detail_network(request, season=None):
     return render(request, "cost/cost_detail_network.html", context)
 
 
+@login_required
 def activity_list_skiarea(request, season=None):
-
-
-    # activities = Activity.objects.filter(user=request.user).order_by("-timestamp")
-
-    # # TODO: create function for getting seasons (also for liftrides)
-    # rides = LiftRide.objects.filter(lap__activity__user=request.user)
-    # years = set(rides.dates("lap__activity__timestamp", "year", order="DESC"))
-    # years = [y.year for y in years]
-    # years.sort(reverse=True)
-    # logger.debug(f"Years: {years}")
-
-    # if years:
-    #     if not rides.filter(lap__activity__timestamp__lte=datetime(years[-1], 6, 30)):
-    #         years.pop(len(years)-1)
-
-    # seasons = [f"{y-1}-{y}" for y in years]    
 
     filter = get_filter_query(request, season)  
     activities = Activity.objects.filter(filter, user=request.user).order_by("-timestamp")
@@ -325,6 +325,7 @@ def activity_list_skiarea(request, season=None):
     return render(request, "activities/skiarea/skiarea_list.html", context)
 
 
+@login_required
 def activity_list_skiarea_detail(request, skiarea_id, season=None):
     skiarea = get_object_or_404(SkiArea, id=skiarea_id)
     filter = get_filter_query(request, season)
@@ -366,6 +367,3 @@ def activity_list_skiarea_detail(request, skiarea_id, season=None):
     }
 
     return render(request, "activities/skiarea/skiarea_detail.html", context)
-
-
-
