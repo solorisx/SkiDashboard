@@ -29,6 +29,8 @@ class Activity(models.Model):
     first_lap_index = models.PositiveIntegerField(null=True)
     avg_heart_rate = models.PositiveIntegerField(null=True)
     max_heart_rate = models.PositiveIntegerField(null=True)
+    num_laps = models.PositiveIntegerField(null=True)
+    num_lift_rides = models.PositiveIntegerField(null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 

@@ -227,14 +227,30 @@ def process_areas(handler):
                     way = Way.objects.create(osm_id=area_data['osm_id'], tags=area_data.get('tags', {}))
                     logger.debug(f"Created way {area_data['osm_id']} for area {name} with tags {area_data.get('tags', {})}")
 
-                    _, created = SkiAreaBoundary.objects.update_or_create(
-                        way=Way.objects.filter(osm_id=area_data['osm_id']).first(),
-                        defaults={
-                            'geom': area_data['geom'],
-                            'name': area_data['name'] or f"Unnamed area {area_data['osm_id']}"
-                        }
-                    )
-                    logger.debug(f"{'Created' if created else 'Updated'} ski area boundary: {area_data['osm_id']}")
+                _, created = SkiAreaBoundary.objects.update_or_create(
+                    way=way,
+                    defaults={
+                        'geom': area_data['geom'],
+                        'name': area_data['name'] or f"Unnamed area {area_data['osm_id']}"
+                    }
+                )
+                logger.debug(f"{'Created' if created else 'Updated'} ski area boundary: {area_data['osm_id']}")
+
+
+                _, created = SkiArea.objects.update_or_create(
+                    osm_id=way.osm_id,
+                    way=way,
+                    defaults={
+                        'geom': area_data['geom'],
+                        'name': area_data['name'] or f"Unnamed area {area_data['osm_id']}",
+                        'osm_type': 'area',
+                        'tags': area_data.get('tags', {})
+                    }
+                )
+                logger.debug(f"{'Created' if created else 'Updated'} ski area: {area_data['osm_id']}")
+
+
+
 
                     # Associate aerialway and pistes with this ski area boundary
                     # TODO

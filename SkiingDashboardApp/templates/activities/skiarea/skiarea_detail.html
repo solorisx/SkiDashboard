@@ -1,0 +1,78 @@
+{% extends '../../base/base.html' %}
+{% load custom_filters %}
+
+{% block title %}Activities by skiing area{% endblock %}
+{% block content %}
+
+{% include '../../base/season-navigation.html' %}
+
+
+<h2>All Activities in {{ skiarea.name }}</h2>
+
+
+<table class="table table-striped table-hover">
+    <tr>
+        <th>Name</th>
+        <th>Timestamp</th>
+        <th>Ski Area</th>
+        <th>OSM ID</th>            
+        <th>Vertical</th>
+        <th>Distance (km)</th>
+        <th>Number of laps</th>
+        <th>Number of lift rides</th>
+        <th>Number of unique lift rides</th>
+        <th>Strava</th>
+    </tr>
+    {% for activity in activities %}
+        <tr>
+            <td>
+                <a href="{% url 'activity_detail' activity.id %}">
+                {{ activity.name }}
+                </a>
+            </td>
+            <td>{{ activity.timestamp }}</td>
+            
+
+            {% if activity.ski_area %}
+                <td>{{ activity.ski_area.name }}</td>
+                <td> <a href="{{ activity.ski_area.get_osm_url }}" target="_blank"> {{ activity.ski_area.get_osm_id}}</a> </td>
+            {% else %}
+                <td></td>
+                <td></td>
+            {% endif %}
+
+            <td>{{ activity.total_descent|round_to:0 }}</td>
+            <td>{{ activity.total_distance_km }} </td>
+            <td>{{ activity.num_laps }}</td>
+            <td>{{ activity.num_lift_rides }}</td>
+            <td>{{ activiy.num_distinct_lift_rides }}</td>
+            <td>{% if activity.get_strava_url %}
+                <a href="{{ activity.get_strava_url }}" target="_blank">View on Strava</a>
+            {% endif %}
+            </td>
+            
+        
+
+        </tr>
+        {% endfor %}
+</table>
+
+
+
+<table> 
+    <th>Lift name</th>
+    <th>Number of rides</th>
+    {% for lift in aerialways %}
+        <tr>
+            <td>{{ lift.name }}</td>
+            <td>{{ lift.num_rides }}</td>
+        </tr>
+    {% endfor %}
+
+
+</table>
+
+
+
+
+{% endblock %}

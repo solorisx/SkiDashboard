@@ -47,6 +47,7 @@ class Station(models.Model):
 # Aerialway Model
 class Aerialway(models.Model):
     way = models.OneToOneField(Way, on_delete=models.CASCADE, null=True)
+    geom = models.LineStringField(null=True, blank=True)
     aerialway = models.CharField(max_length=255)
     aerialway_bubble = models.BooleanField(default=False)
     aerialway_capacity = models.IntegerField(blank=True, null=True)
@@ -126,20 +127,28 @@ class AbstractSkiArea(models.Model):
 
 # SkiArea Model
 class SkiArea(AbstractSkiArea):
-    osm_id = models.BigIntegerField(unique=True)
-    #name = models.CharField(max_length=255)
+    osm_id = models.BigIntegerField(unique=True) # osm_id of relation or of boundary way of area
+    osm_type = models.CharField(max_length=255, blank=True, null=True)
+    name = models.CharField(max_length=255, null=True)
+    geom = models.MultiPolygonField(null=True, blank=True)
     ways = models.ManyToManyField(Way, related_name='ski_areas')
+    way = models.OneToOneField(Way, on_delete=models.CASCADE, related_name="boundary", null=True)
     url = models.URLField(blank=True, null=True)
     wikipedia = models.CharField(max_length=255, blank=True, null=True)
     tags = models.JSONField(default=dict)
-    #created_on = models.DateTimeField(auto_now_add=True)
-    #modified_on = models.DateTimeField(auto_now=True)
+    daypass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency='CHF')
+    seasonpass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency='CHF')
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Ski Area {self.name}"
     
     def get_osm_url(self):
-        return f"https://www.openstreetmap.org/relation/{self.osm_id}"
+        if self.osm_id:
+            return f"https://www.openstreetmap.org/relation/{self.osm_id}"
+        else:
+            return self.way.get_osm_url()
     
 
 class SkiAreaBoundary(AbstractSkiArea):
@@ -155,6 +164,9 @@ class SkiAreaBoundary(AbstractSkiArea):
     
     def get_osm_url(self):
         return self.way.get_osm_url()
+    
+
+
     
 
  

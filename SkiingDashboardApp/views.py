@@ -1,27 +1,69 @@
 from datetime import datetime
 import logging
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db.models import Count, Avg, Min, Max, F, Sum
+from django.db.models import Count, Avg, Min, Max, F, Sum, Q
 from django.db.models.functions import Round
+from django.db import models
 from django.http import HttpResponse
-from .models import Activity, LiftRide
+from .models import Activity, LiftRide, SkiArea, Aerialway
 from SkiingDashboard.core.activity_parser import parse_strava_activity, parse_strava_activities
 from SkiingDashboard.core.skiarea_manager import init_networks
 from SkiingDashboard.cost.forms.forms import CostForm
+from django.db.models import Count, OuterRef, Subquery
+from django.contrib.auth.decorators import login_required
 
 logger = logging.getLogger('SkiingDashboard')
+
+def get_badge(progress):
+    if progress < 25:
+        return "⛷"
+    elif progress < 50:
+        return "👏"
+    elif progress < 75:
+        return "🤩"
+    else:
+        return "🥳"
+
+def get_seasons(user):
+    activities = Activity.objects.filter(user=user)
+    years = set(activities.dates("timestamp", "year", order="DESC"))
+    years = [y.year for y in years]
+    years.sort(reverse=True)
+    if years:
+        if not activities.filter(timestamp__lte=datetime(years[-1], 6, 30)):
+            years.pop(len(years)-1)
+    seasons = [f"{y-1}-{y}" for y in years]
+    return seasons 
+
+
+def get_filter_query(request, season):
+    filter = Q()
+    if season:
+        try:
+            year1, year2 = map(int, season.split("-"))
+        except ValueError:
+            return HttpResponse("Invalid season format. Use 'YYYY-YYYY'.")
+        if year1 >= year2:
+            year1, year2 = year2, year1
+        start_date = datetime(year1, 7, 1)
+        end_date = datetime(year2, 6, 30)
+        filter = Q(timestamp__range=(start_date, end_date))  
+    return filter
+
 
 def hello_world(request):
     return HttpResponse("Hello, World!")
 
+
 def home(request):
     return render(request, "home.html")
+
 
 def initialize_ski_area_networks(request):
     init_networks(request)
     return HttpResponse("Ski area networks initialized.")
 
-
+@login_required
 def activity_list(request):
     """Show all activities."""
 
@@ -59,8 +101,8 @@ def activity_list(request):
         .select_related("ski_area", "ski_area_boundary")
         .prefetch_related("ski_area_main")
         .annotate(
-            num_laps=Count("laps"),
-            num_lift_rides=Count("laps__lift_rides"),
+            
+            
             total_distance_km=Round(F("total_distance")/1000, 2),
         )
     )
@@ -154,7 +196,7 @@ def lift_ride_list_season(request, season=None):
             years.pop(len(years)-1)
 
     seasons = [f"{y-1}-{y}" for y in years]
-    logger.debug(f"Seasons: {seasons}")
+
     if season:
         try:
             year1, year2 = map(int, season.split("-"))
@@ -213,47 +255,50 @@ def cost_detail_network(request, season=None):
 def activity_list_skiarea(request, season=None):
 
 
-    activities = Activity.objects.filter(user=request.user).order_by("-timestamp")
+    # activities = Activity.objects.filter(user=request.user).order_by("-timestamp")
 
-    # TODO: create function for getting seasons (also for liftrides)
-    rides = LiftRide.objects.filter(lap__activity__user=request.user)
-    years = set(rides.dates("lap__activity__timestamp", "year", order="DESC"))
-    years = [y.year for y in years]
-    years.sort(reverse=True)
-    logger.debug(f"Years: {years}")
+    # # TODO: create function for getting seasons (also for liftrides)
+    # rides = LiftRide.objects.filter(lap__activity__user=request.user)
+    # years = set(rides.dates("lap__activity__timestamp", "year", order="DESC"))
+    # years = [y.year for y in years]
+    # years.sort(reverse=True)
+    # logger.debug(f"Years: {years}")
 
-    if years:
-        if not rides.filter(lap__activity__timestamp__lte=datetime(years[-1], 6, 30)):
-            years.pop(len(years)-1)
+    # if years:
+    #     if not rides.filter(lap__activity__timestamp__lte=datetime(years[-1], 6, 30)):
+    #         years.pop(len(years)-1)
 
-    seasons = [f"{y-1}-{y}" for y in years]    
+    # seasons = [f"{y-1}-{y}" for y in years]    
 
-    if season:
-        try:
-            year1, year2 = map(int, season.split("-"))
-        except ValueError:
-            return HttpResponse("Invalid season format. Use 'YYYY-YYYY'.")
-        if year1 >= year2:
-            year1, year2 = year2, year1
-        start_date = datetime(year1, 7, 1)
-        end_date = datetime(year2, 6, 30)
-        activities = activities.filter(timestamp__range=(start_date, end_date))
+    filter = get_filter_query(request, season)  
+    activities = Activity.objects.filter(filter, user=request.user).order_by("-timestamp")
+    seasons = get_seasons(user=request.user)
 
-
-
-
-    # TODO: use ski_area_main
     ski_areas = activities.values('ski_area__name').annotate(
-        total_cost=Sum('cost'),
-        total_value=Sum('value'),
+        num_act=Count('ski_area__name'),
+        ski_area_id=F('ski_area__id'),
         sum_descent=Sum('total_descent'),
         total_distance_km=Sum('total_distance')/1000,
-        # total_num_laps=Count('laps'),
-        # total_num_lift_rides=Count('laps__lift_rides),'),
-        avg_cost=Avg('cost'),
-        num_act=Count('id', distinct=True),
+        total_num_laps=Sum('num_laps'),
+        total_num_lift_rides=Sum('num_lift_rides'),
+        # num_unique_liftrides=Count('laps__lift_rides__aerialway', distinct=True)        
     ).order_by('-num_act')
 
+    for ski_area in ski_areas:
+        ski_area['total_num_dist_rides'] = LiftRide.objects.filter(
+            filter, lap__activity__user=request.user, lap__activity__ski_area__id=ski_area['ski_area_id']
+        ).values('aerialway').distinct().count()
+
+    for ski_area in ski_areas:
+        skiarea = SkiArea.objects.get(id=ski_area['ski_area_id'])
+        if skiarea.geom:
+            aerialways = Aerialway.objects.filter(station_nodes__node__geom__within=skiarea.geom).distinct()
+            ski_area['total_num_area_rides'] = aerialways.count()
+        else:
+            ski_area['total_num_area_rides'] = Aerialway.objects.filter(way__in=skiarea.ways).distinct().count()
+        progress = ski_area['total_num_dist_rides'] / ski_area['total_num_area_rides'] * 100
+        ski_area['progress'] = round(progress, 1)
+        ski_area['badge'] = get_badge(progress)
 
     activities = activities.aggregate(
         total_cost=Sum('cost'),
@@ -263,9 +308,12 @@ def activity_list_skiarea(request, season=None):
         #total_num_laps=Count('laps'),
         #total_num_lift_rides=Count('laps__lift_rides'),
         avg_cost=Avg('cost'),
-        num_act=Count('id', distinct=True),     
+        num_act=Count('id', distinct=True),
+        total_num_laps=Sum('num_laps'),
+        total_num_lift_rides=Sum('num_lift_rides'),
     )
 
+    activities['total_num_unique_liftrides'] = 0 # TODO
 
     context = {
         'activities': activities,
@@ -275,4 +323,49 @@ def activity_list_skiarea(request, season=None):
 
 
     return render(request, "activities/skiarea/skiarea_list.html", context)
+
+
+def activity_list_skiarea_detail(request, skiarea_id, season=None):
+    skiarea = get_object_or_404(SkiArea, id=skiarea_id)
+    filter = get_filter_query(request, season)
+    activities = Activity.objects.filter(filter, user=request.user, ski_area=skiarea).order_by("-timestamp")
+    seasons = get_seasons(request.user)
+    total_activities = activities.aggregate(
+        sum_descent=Sum('total_descent'),
+        total_distance_km=Sum('total_distance')/1000,
+        total_num_laps=Count('laps'),
+        num_act=Count('id'),
+    )
+    total_activities['total_num_lift_rides'] = sum(
+        lap.lift_rides.count() for activity in activities for lap in activity.laps.all()
+    )
+    
+    if skiarea.geom:
+        aerialways = Aerialway.objects.filter(station_nodes__node__geom__within=skiarea.geom).distinct() # TODO: create geom for way and check if way is within skiarea.geom
+    else:
+        aerialways = Aerialway.objects.filter(way__in=skiarea.ways).distinct()
+    
+    # Subquery to count lift rides per Aerialway
+    lift_rides_count = LiftRide.objects.filter(
+        filter,
+        aerialway=OuterRef("pk"),
+    ).values("aerialway").annotate(num_rides=Count("id")).values("num_rides")
+
+    # Annotate the aerialways queryset with the lift ride count
+    aerialways = aerialways.annotate(
+        num_rides=Subquery(lift_rides_count, output_field=models.IntegerField())
+    )
+
+    context = {
+        'skiarea': skiarea,
+        'activities': activities,
+        'total_activities': total_activities,
+        'aerialways': aerialways,
+        'seasons': seasons,
+
+    }
+
+    return render(request, "activities/skiarea/skiarea_detail.html", context)
+
+
 

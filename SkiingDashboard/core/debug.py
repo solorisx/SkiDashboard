@@ -9,6 +9,8 @@ logger = logging.getLogger('SkiingDashboard')
 
 def test_strava():
     user = User.objects.get(username='admin')
+    parse_strava_activity(user, 13450947648, update=True)
+    return
     #activities = load_activities(user, after=datetime.now() - timedelta(days=90))
     activities = load_activities(user)
     #Activity.objects.filter(user=user).delete()

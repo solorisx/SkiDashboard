@@ -1,10 +1,10 @@
-{% extends 'base.html' %}
+{% extends '../../base/base.html' %}
 {% load custom_filters %}
 
 {% block title %}Activities by skiing area{% endblock %}
 {% block content %}
 
-{% include 'season-navigation.html' %}
+{% include '../../base/season-navigation.html' %}
 
     <h1>Activities by skiing area</h1>
     <table class="table table-striped table-hover">
@@ -15,13 +15,14 @@
             <th>Total Distance (km)</th>
             <th>Total Number of Laps</th>
             <th>Total Number of Lift Rides</th>
-            <th>Total Cost</th>
-            <th>Total Value</th>
+            <th>Total Unique Lift Rides</th>
+            <th>Total Lift Rides Area</th>
+            <th>Progress</th>
         </tr>
         {% for ski_area in ski_areas %}
             <tr>
                 <td>
-                    <a href="">
+                    <a href="{% url 'skiarea_detail' ski_area.ski_area_id %}">
                     {{ ski_area.ski_area__name }}
                     </a>
                 </td>
@@ -30,8 +31,10 @@
                 <td>{{ ski_area.total_distance_km }} </td>
                 <td>{{ ski_area.total_num_laps }}</td>
                 <td>{{ ski_area.total_num_lift_rides }}</td>
-                <td>{{ ski_area.total_cost }}</td>
-                <td>{{ ski_area.total_value }}</td>
+                <td>{{ ski_area.total_num_dist_rides }}</td>
+                <td>{{ ski_area.total_num_area_rides }}</td>
+                <td>{{ ski_area.progress }}</td>
+                <td>{{ ski_area.badge }}</td>
             </tr>
         {% endfor %}
         <tr>
@@ -41,8 +44,8 @@
             <td>{{ activities.total_distance_km }} </td>
             <td>{{ activities.total_num_laps }}</td>
             <td>{{ activities.total_num_lift_rides }}</td>
-            <td>{{ activities.total_cost }}</td>
-            <td>{{ activities.total_value }}</td>
+            <td>{{ activities.total_num_dist_rides }}</td>
+            <td>{{ activities.total_num_area_rides }}</td>
         </tr>
     </table>
 

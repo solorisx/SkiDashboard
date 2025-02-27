@@ -9,7 +9,7 @@ from SkiingDashboardApp.osm_models import Node, Way, Aerialway, SkiArea, Station
 from SkiingDashboardApp.user_models import UserProfile
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point, LineString
-from django.db.models import F
+from django.db.models import F, Count
 from django.contrib.gis.db.models.functions import Distance
 from django.db.models import Exists, OuterRef, Subquery
 import numpy as np
@@ -69,7 +69,33 @@ def get_ski_area_boundary(point, buffer=0):
 
     return ski_area_boundary
 
-def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False, use_nodes=False):
+
+def get_ski_area(point, buffer=0):
+    """
+    Finds the ski area containing the given point.
+    If buffer > 0, it expands the search to ski areas within the buffered distance.
+    
+    :param point: A GeoDjango Point object (longitude, latitude)
+    :param buffer: Optional buffer distance in meters
+    :return: SkiArea object or None if no match found
+    """
+    
+    ski_areas = SkiArea.objects.filter(geom__isnull=False)
+    
+    if buffer > 0:
+        # Find ski areas where the point is within a buffered geometry
+        ski_area_boundary = ski_areas.filter(geom__dwithin=(point, buffer)).annotate(
+            distance=Distance("geom", point)
+        ).order_by("distance").first()
+    else:
+        # Find the ski area that directly contains the point
+        ski_area_boundary = ski_areas.filter(geom__contains=point).first()
+
+    return ski_area_boundary
+
+
+
+def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bottom_only=False, top_only=False, use_nodes=False) -> list[Aerialway]:
 
     logger.debug(f"Finding closest aerialways to {point} (in_ski_area={in_ski_area}, max_distance={max_distance}, bottom_only={bottom_only}, top_only={top_only}, use_nodes={use_nodes})")
     logger.debug(f"OSM URL: {get_osm_url(point)}")
@@ -195,6 +221,7 @@ def find_direct_lift(start: Point, end: Point):
                     or (min(start_station.altitude, end_station.altitude > 0) and start_station.altitude > end_station.altitude)
         if not uphill and not downhill:
             uphill = None
+    logger.debug(f"Direct lift: {direct_lift}, uphill: {uphill}")
     return direct_lift, uphill
 
 
@@ -272,15 +299,16 @@ def dijkstra(start_nodes, end_nodes, graph):
     logger.warning("No path found in %s seconds", time.time() - startTime)
     return []  # No path found
 
-def get_aerialways(start: Point, end: Point = None):
+def get_aerialways(start: Point, end: Point = None) -> list[tuple[Aerialway, bool]]:
     
+    uphill = True
     if start is None or end is None:
         if start is None:
             aerialway = get_closest_aerialway(end)
         if end is None:
             aerialway = get_closest_aerialway(start)
         if aerialway:
-            return [(aerialway,None)]
+            return [(aerialway,uphill)]
         else:
             return []
         
@@ -334,19 +362,21 @@ def get_aerialways(start: Point, end: Point = None):
         # use closer distance as we are using all nodes including waypoints
         if not lift: 
             logger.debug("No valid stations found, trying to find aerialway with all nodes")
-            lift = get_closest_aerialway(start, max_distance=100, use_nodes=True), None
+            lift = get_closest_aerialway(start, max_distance=100, use_nodes=True)
 
         if not lift:
             logger.debug("No valid stations found, trying to find aerialway with all nodes")
-            lift = get_closest_aerialway(end, max_distance=100, use_nodes=True), None
+            lift = get_closest_aerialway(end, max_distance=100, use_nodes=True)
         
+        logger.debug(lift) 
         if lift:
-            return [(lift,None)]
+            return [(lift,uphill)]
         
         else:
             return []  # No valid stations found
 
     graph = build_lift_graph(start)
+    logger.debug("graph built")
 
     # Get the shortest station path from multiple start and end stations
     station_path = dijkstra(start_stations, end_stations, graph)
@@ -372,7 +402,7 @@ def get_aerialways(start: Point, end: Point = None):
 
         logger.debug(connection if connection else "No connection found")
 
-        uphill = None
+        uphill = True
         if connection:
             if (station_a.altitude > 0 and station_b.altitude > 0 and station_b.altitude - station_a.altitude < 0) or station_a.station == "top" or station_b.station == "bottom":
                 uphill = False
@@ -380,6 +410,7 @@ def get_aerialways(start: Point, end: Point = None):
                 uphill = True
             aerialway_path.append((connection, uphill))
 
+    logger.debug(f"Aerialway path: {aerialway_path}")
     return aerialway_path
 
 def parse_fit_file(file_path):
@@ -572,25 +603,36 @@ def parse_strava_activity(user, activity_id, update=False):
     start_point = Point(lon, lat)
     activity_laps = load_activity_laps(user, activity_id)
     start_lift = get_closest_aerialway(start_point, in_ski_area=True, max_distance=2000)
-    if start_lift:
-        logger.debug(f"Found start lift: {start_lift.name}")
-        skiarea = SkiArea.objects.filter(ways=start_lift.way).first()
-    else:
-        skiarea = None
-        logger.warning(f"No start lift found for activity: {activity_id}")
+    # if start_lift:
+    #     logger.debug(f"Found start lift: {start_lift.name}")
+    #     skiarea = SkiArea.objects.filter(ways=start_lift.way).first()
+    # else:
+    #     skiarea = None
+    #     logger.warning(f"No start lift found for activity: {activity_id}")
 
-    try:
-        boundary_time = time.time()
-        ski_area_boundary = get_ski_area_boundary(start_point)
-        logger.debug(f"Found ski area boundary: {ski_area_boundary} in {time.time() - boundary_time:.4f} seconds")
-    except Exception as e:
-        logger.error(f"Error getting ski area boundary: {e}")
-        ski_area_boundary = None
+    # try:
+    #     boundary_time = time.time()
+    #     ski_area_boundary = get_ski_area_boundary(start_point)
+    #     logger.debug(f"Found ski area boundary: {ski_area_boundary} in {time.time() - boundary_time:.4f} seconds")
+    # except Exception as e:
+    #     logger.error(f"Error getting ski area boundary: {e}")
+    #     ski_area_boundary = None
+
+    ski_area = get_ski_area(start_point)
+    logger.debug(f"Main ski area: {ski_area}, {ski_area.osm_type}")
+
+    if not ski_area:
+        logger.warning(f"No ski area found for activity: {activity_id}, searching relations")
+        if start_lift:
+            ski_area = SkiArea.objects.filter(ways=start_lift.way).first()
+            logger.debug(f"Found ski area from relation: {ski_area}")
+        else:
+            logger.warning(f"No start lift found for activity: {activity_id}")
 
     logger.debug(f"Loaded Strava activity: {activity_id}")
 
-    skiarea_main = ski_area_boundary if ski_area_boundary else skiarea if skiarea else None
-    logger.debug(f"Main ski area: {skiarea_main}")
+    #skiarea_main = ski_area_boundary if ski_area_boundary else skiarea if skiarea else None
+
     activity_data = {
         "name": activity.name,
         "type": activity.type,
@@ -609,9 +651,9 @@ def parse_strava_activity(user, activity_id, update=False):
         "max_heart_rate": activity.max_heartrate,
         "user": user,
         "start_position": start_point,
-        "ski_area": skiarea if skiarea else None,
-        "ski_area_boundary": ski_area_boundary if ski_area_boundary else None,
-        "ski_area_main": skiarea_main
+        "ski_area": ski_area if ski_area else None,
+        # "ski_area_boundary": ski_area_boundary if ski_area_boundary else None,
+        # "ski_area_main": skiarea_main
     }
 
     activity_instance, created = Activity.objects.update_or_create(strava_id=activity_id, defaults=activity_data)
@@ -666,7 +708,12 @@ def parse_strava_activity(user, activity_id, update=False):
         #lift_start_pos = Lap.objects.filter(activity=activity_instance, lap_index=lap.lap_index-1).first().end_position if lap.lap_index > 1 else None
         lift_rides = get_aerialways(lift_start_pos, lift_end_pos)
         for (lift_ride, uphill) in lift_rides:
-            lift = LiftRide.objects.create(lap=lap, aerialway=lift_ride, uphill=uphill if True else False, timestamp=lift_start_time)
+            logger.debug(lift_rides)
+
+            logger.debug(f"Found lift ride: {lift_ride if lift_ride else 'unnamed'}")
+            logger.debug(f"Uphill: {uphill}")
+            logger.debug(f"lap: {lap}, lift_ride: {lift_ride}, uphill: {uphill}, timestamp: {lift_start_time}")
+            lift, _ = LiftRide.objects.update_or_create(lap=lap, aerialway=lift_ride, uphill=uphill if True else False, timestamp=lift_start_time)
             lift_start_time = lift_start_time + timedelta(minutes=lift.aerialway.aerialway_duration if lift.aerialway.aerialway_duration else 1)
             logger.info(f"Created LiftRide for Lap: {lap.lap_index} with lift {lift_ride.name if lift_ride else 'unnamed'}")
 
@@ -675,6 +722,10 @@ def parse_strava_activity(user, activity_id, update=False):
     calc_line_geom(activity_instance)
 
     calc_ridden_segments(activity_instance)
+
+    activity_instance.num_laps = activity_instance.laps.count()
+    activity_instance.num_lift_rides = activity_instance.laps.aggregate(total_lift_rides=Count('lift_rides'))['total_lift_rides']
+    activity_instance.save()
 
     logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")
 
