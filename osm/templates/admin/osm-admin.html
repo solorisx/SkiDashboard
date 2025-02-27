@@ -1,0 +1,19 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Admin Sync Actions</h1>
+
+<h2>Sync select OSM Data over API</h2>
+<form action="{% url 'admin:sync-osm-api' %}" method="POST" class="form">
+    {% csrf_token %}
+    {{ form1.as_p }}
+    <button type="submit" class="button">Sync OSM</button>
+</form>
+
+<h2>Sync complete OSM Data with file download</h2>
+<form action="{% url 'admin:sync-osm-file' %}" method="post" class="form">
+    {% csrf_token %}
+    {{ form2.as_p }}
+    <button type="submit" class="button">Sync Custom OSM</button>
+</form>
+
+{% endblock %}

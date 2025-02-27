@@ -13,7 +13,8 @@ def load_osm():
     dest = 'planet_pistes-osmium.osm'
     dest_compressed = 'planet_pistes.osm.gz'
     dest_state = 'planet_pistes-state.txt'
-    
+    updated = False
+
     # Download the state file
     state_response = requests.get(state_url, stream=True)
     if state_response.status_code == 200:
@@ -44,10 +45,16 @@ def load_osm():
                 with open(dest_state, 'w') as f:
                     f.write(new_state)
                 
+                updated = True
                 logging.info(f'File downloaded and extracted to {dest}, file timestamp {new_state}')
             else:
+                updated = False
                 logging.error(f'Failed to download file, status code: {response.status_code}')
         else:
+            updated = False
             logging.info('File is up to date. No download needed.')
     else:
+        updated = False
         logging.error(f'Failed to download state file, status code: {state_response.status_code}')
+
+    return updated

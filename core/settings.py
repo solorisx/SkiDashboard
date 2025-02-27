@@ -13,18 +13,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-import logging
 
-logger = logging.getLogger('core')
 load_dotenv()
-logger.debug("Loaded .env file")
-logger.debug(f"DATABASE_NAME: {os.getenv('DATABASE_NAME')}")
-logger.debug(f"DATABASE_USER: {os.getenv('DATABASE_USER')}")
-logger.debug(f"DATABASE_PASSWORD: {os.getenv('DATABASE_PASSWORD')}")
-logger.debug(f"DATABASE_HOST: {os.getenv('DATABASE_HOST')}")
-logger.debug(f"DATABASE_PORT: {os.getenv('DATABASE_PORT')}")
-logger.debug(f"STRAVA_CLIENT_ID: {os.getenv('STRAVA_CLIENT_ID')}")
-logger.debug(f"STRAVA_CLIENT_SECRET: {os.getenv('STRAVA_CLIENT_SECRET')}")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

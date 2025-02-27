@@ -585,7 +585,7 @@ def calc_ridden_segments(activity: Activity):
     # TODO: implement
     pass
 
-def parse_strava_activity(user, activity_id, update=False):
+def sync_strava_activity(user, activity_id, update=False):
     start_time = time.time()
     logger.info(f"Starting to parse Strava activity: {activity_id} for user: {user.username}, update: {update}")
     
@@ -597,6 +597,14 @@ def parse_strava_activity(user, activity_id, update=False):
         return
     
     activity = load_activity(user, activity_id)
+    if not activity:
+        logger.error(f"Strava activity {activity_id} not found")
+        raise ValueError(f"Strava activity {activity_id} not found")
+    
+    if not activity.type == 'AlpineSki':
+        logger.warning(f"Strava activity {activity_id} is not an AlpineSki activity.")
+        raise ValueError(f"Strava activity {activity_id} is not an AlpineSki activity.")
+
     activity_streams = load_activity_streams(user, activity_id)
         
     lat, lon = activity_streams["latlng"].data[0]
@@ -746,7 +754,7 @@ def parse_strava_activities(user, all=False, update=False):
         if activity.type == 'AlpineSki':
             try:
                 activity_id = activity.id
-                parse_strava_activity(user, activity_id, update=update)
+                sync_strava_activity(user, activity_id, update=update)
             except Exception as e:
                 logger.error(f"Error parsing Strava activity {activity_id}: {e}")
                 continue

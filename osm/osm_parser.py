@@ -2,12 +2,12 @@ import osmium
 import osmium.geom
 import logging
 import time
-from SkiingDashboardApp.osm_models import Way, Node, Aerialway, Piste, SkiArea, Station, SkiAreaBoundary
+from .models import Way, Node, Aerialway, Piste, SkiArea, Station, SkiAreaBoundary
 from django.db import transaction
 from django.db.models import Q
 
 # Get an instance of a logger
-logger = logging.getLogger('SkiingDashboard')
+logger = logging.getLogger('core')
 wkbfab = osmium.geom.WKBFactory()
 
 class OSMHandler(osmium.SimpleHandler):

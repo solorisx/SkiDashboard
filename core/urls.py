@@ -21,6 +21,7 @@ from . import views
 
 urlpatterns = [
     path('', views.home, name="home"),
+    path('', include('activities.urls')),
     path('init_networks/', views.initialize_ski_area_networks, name="init_networks"),    
     path('admin/', admin.site.urls),
     path('hello/', views.hello_world),

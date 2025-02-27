@@ -7,7 +7,7 @@ from django.db import models
 from django.http import HttpResponse
 from activities.models import Activity, LiftRide
 from osm.models import SkiArea, Aerialway
-from .core.activity_parser import parse_strava_activity, parse_strava_activities
+from activities.activity_parser import sync_strava_activity, parse_strava_activities
 from .core.skiarea_manager import init_networks
 from cost.forms import CostForm
 from django.db.models import Count, OuterRef, Subquery
@@ -139,7 +139,7 @@ def reprocess_activity(request, activity_id):
     """Reprocess an activity to update its laps and lift rides."""
     activity = get_object_or_404(Activity, id=activity_id, user=request.user)
     if activity.strava_id:
-        parse_strava_activity(user=request.user, activity_id=activity.strava_id, update=True)
+        sync_strava_activity(user=request.user, activity_id=activity.strava_id, update=True)
         return HttpResponse(f"Activity {activity_id} reprocessed.")
     else:
         return HttpResponse(f"Activity {activity_id} has no Strava ID.")

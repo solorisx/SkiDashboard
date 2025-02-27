@@ -1,0 +1,14 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Admin Sync Actions</h1>
+
+<h2>Sync Strava Activity</h2>
+<form action="{% url 'admin:sync-strava' %}" method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="button">Sync Strava</button>
+</form>
+
+
+
+{% endblock %}
