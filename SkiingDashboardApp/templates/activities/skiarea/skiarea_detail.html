@@ -45,7 +45,9 @@
             <td>{{ activity.total_distance_km }} </td>
             <td>{{ activity.num_laps }}</td>
             <td>{{ activity.num_lift_rides }}</td>
-            <td>{{ activiy.num_distinct_lift_rides }}</td>
+            <td>{{ activity.num_distinct_lift_rides }}</td>
+            <td>{{ activity.progress }}</td>
+            <td>{{ activity.badge }}</td>
             <td>{% if activity.get_strava_url %}
                 <a href="{{ activity.get_strava_url }}" target="_blank">View on Strava</a>
             {% endif %}

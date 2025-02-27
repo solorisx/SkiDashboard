@@ -37,6 +37,10 @@ def get_seasons(user):
     return seasons 
 
 
+def get_unique_lift_rides(activity):
+    return activity.laps.lift_rides.values('aerialway').distinct().count()
+
+
 def get_filter_query(request, season):
     filter = Q()
     if season:
@@ -277,8 +281,8 @@ def activity_list_skiarea(request, season=None):
     ski_areas = activities.values('ski_area__name').annotate(
         num_act=Count('ski_area__name'),
         ski_area_id=F('ski_area__id'),
-        sum_descent=Sum('total_descent'),
-        total_distance_km=Sum('total_distance')/1000,
+        sum_descent=Round(Sum('total_descent'),2),
+        total_distance_km=Round((Sum('total_distance')/1000),2),
         total_num_laps=Sum('num_laps'),
         total_num_lift_rides=Sum('num_lift_rides'),
         # num_unique_liftrides=Count('laps__lift_rides__aerialway', distinct=True)        
@@ -303,17 +307,23 @@ def activity_list_skiarea(request, season=None):
     activities = activities.aggregate(
         total_cost=Sum('cost'),
         total_value=Sum('value'),
-        sum_descent=Sum('total_descent'),
-        total_distance_km=Sum('total_distance')/1000,
-        #total_num_laps=Count('laps'),
-        #total_num_lift_rides=Count('laps__lift_rides'),
+        sum_descent=Round(Sum('total_descent'),2),
+        total_distance_km=Round(Sum(F("total_distance"))/1000, 2),
         avg_cost=Avg('cost'),
         num_act=Count('id', distinct=True),
         total_num_laps=Sum('num_laps'),
         total_num_lift_rides=Sum('num_lift_rides'),
     )
 
-    activities['total_num_unique_liftrides'] = 0 # TODO
+    num_unique_rides = 0
+    num_area_rides = 0
+    for ski_area in ski_areas:
+        num_unique_rides += ski_area['total_num_dist_rides']
+        num_area_rides += ski_area['total_num_area_rides']
+    activities['total_num_dist_rides'] = num_unique_rides
+    activities['total_num_area_rides'] = num_area_rides
+    activities['progress'] = round(num_unique_rides * 100.0 / num_area_rides , 1)
+    activities['badge'] = get_badge(activities['progress'])
 
     context = {
         'activities': activities,
@@ -330,6 +340,18 @@ def activity_list_skiarea_detail(request, skiarea_id, season=None):
     skiarea = get_object_or_404(SkiArea, id=skiarea_id)
     filter = get_filter_query(request, season)
     activities = Activity.objects.filter(filter, user=request.user, ski_area=skiarea).order_by("-timestamp")
+    activities = activities.annotate(
+        total_distance_km=Round(F("total_distance")/1000, 2),
+        num_distinct_lift_rides=Count('laps__lift_rides__id', distinct=True),
+    )
+    
+    for activity in activities:
+        for lap in activity.laps.all():
+            for lift_ride in lap.lift_rides.all():
+                logger.debug(f"Lift: {lift_ride.aerialway}")
+            
+        logger.debug(f"Activity: {activity}, {activity.num_distinct_lift_rides}")
+
     seasons = get_seasons(request.user)
     total_activities = activities.aggregate(
         sum_descent=Sum('total_descent'),
@@ -356,6 +378,19 @@ def activity_list_skiarea_detail(request, skiarea_id, season=None):
     aerialways = aerialways.annotate(
         num_rides=Subquery(lift_rides_count, output_field=models.IntegerField())
     )
+
+    num_area_rides = aerialways.count()
+    logger.debug(f"Num area rides: {num_area_rides}")
+    activities = activities.annotate(
+        progress=Round(F("num_distinct_lift_rides") * 100.0 / num_area_rides, 1),
+    )
+
+    for activity in activities:
+        activity.badge = get_badge(activity.progress)
+        logger.debug(f"Activity: {activity}, {activity.progress}")
+    # activities = activities.annotate(
+    #     badge = get_badge(F("progress"))
+    # )
 
     context = {
         'skiarea': skiarea,
