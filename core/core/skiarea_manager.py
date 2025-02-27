@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 from django.contrib.contenttypes.models import ContentType
 from djmoney.models.fields import MoneyField
-from SkiingDashboardApp.models import SkiArea, SkiAreaBoundary, SkiAreaNetwork, SkiAreaNetworkMember
+from osm.models import SkiArea, SkiAreaBoundary, SkiAreaNetwork, SkiAreaNetworkMember
 
 logger = logging.getLogger('SkiingDashboard')
 

@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from datetime import datetime, timedelta
 from pytz import UTC
 
-from SkiingDashboardApp.osm_models import Way, Node, Aerialway, Piste, SkiArea
+from osm.models import Way, Node, Aerialway, Piste, SkiArea
 from django.db import transaction
 from django.db.models import Q
 import logging

@@ -5,10 +5,11 @@ from django.db.models import Count, Avg, Min, Max, F, Sum, Q
 from django.db.models.functions import Round
 from django.db import models
 from django.http import HttpResponse
-from .models import Activity, LiftRide, SkiArea, Aerialway
-from SkiingDashboard.core.activity_parser import parse_strava_activity, parse_strava_activities
-from SkiingDashboard.core.skiarea_manager import init_networks
-from SkiingDashboard.cost.forms.forms import CostForm
+from activities.models import Activity, LiftRide
+from osm.models import SkiArea, Aerialway
+from .core.activity_parser import parse_strava_activity, parse_strava_activities
+from .core.skiarea_manager import init_networks
+from cost.forms import CostForm
 from django.db.models import Count, OuterRef, Subquery
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required

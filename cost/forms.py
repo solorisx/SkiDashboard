@@ -1,6 +1,6 @@
 from django import forms
 from djmoney.forms.fields import MoneyField
-from SkiingDashboardApp.models import Activity
+from activities.models import Activity
 
 class CostForm(forms.ModelForm):
     class Meta:

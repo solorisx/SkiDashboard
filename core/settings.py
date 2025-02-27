@@ -51,12 +51,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.strava',
-    'SkiingDashboard',
-    'SkiingDashboardApp',
+    'core',
+    'activities',
+    'osm',
+    'cost'
 ]
 
 MIDDLEWARE = [
@@ -70,7 +73,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',   
 ]
 
-ROOT_URLCONF = 'SkiingDashboard.urls'
+ROOT_URLCONF = 'core.urls'
 
 SOCIALACCOUNT_STORE_TOKENS = True
 
@@ -90,7 +93,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'SkiingDashboard.wsgi.application'
+WSGI_APPLICATION = 'core.wsgi.application'
 
 
 # Database
@@ -150,7 +153,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Logging
 
-LOG_DIR = 'SkiingDashboard/logs'
+LOG_DIR = 'core/logs'
 
 print("Initializing LOGGING in settings.py - if you see this more than once use 'runserver --noreload'")
 LOGGING = {
@@ -227,7 +230,7 @@ LOGGING = {
             'handlers': ['console', 'django_file', 'django_file_info', 'django_file_warn'],
             'level': 'DEBUG',
         },
-        'SkiingDashboard': {
+        'core': {
             'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
             'level': 'DEBUG',
             'propagate': True,

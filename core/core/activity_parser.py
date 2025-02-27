@@ -4,9 +4,9 @@ import time
 from datetime import timedelta, datetime
 from fitparse import FitFile
 import polyline
-from SkiingDashboardApp.activity_models import Activity, Lap, Record, LiftRide
-from SkiingDashboardApp.osm_models import Node, Way, Aerialway, SkiArea, Station, SkiAreaBoundary
-from SkiingDashboardApp.user_models import UserProfile
+from activities.models import Activity, Lap, Record, LiftRide
+from osm.models import Node, Way, Aerialway, SkiArea, Station, SkiAreaBoundary
+from core.models import UserProfile
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point, LineString
 from django.db.models import F, Count

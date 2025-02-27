@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from SkiingDashboardApp import views
+from . import views
 
 
 urlpatterns = [
@@ -42,7 +42,4 @@ urlpatterns = [
     path("liftrides/all/", views.lift_ride_list, name="lift_ride_list_all"),
     path("liftrides/<int:year>/", views.lift_ride_list, name="lift_ride_list_year"),
     path("liftrides/<str:season>", views.lift_ride_list_season, name="lift_ride_list_season"),
-
-
-    #path("admin/sync_osm/", views.sync_osm, name="sync_osm"),
 ]
