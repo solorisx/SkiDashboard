@@ -11,3 +11,4 @@ class StravaSyncForm(forms.Form):
         label="User",
         widget=forms.Select(attrs={"class": "form-control"})
     )
+    update = forms.BooleanField(label="Update Existing Activity", required=False, widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))

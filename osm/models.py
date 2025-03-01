@@ -141,7 +141,7 @@ class AbstractSkiArea(models.Model):
 # SkiArea Model
 class SkiArea(AbstractSkiArea):
     osm_id = models.BigIntegerField(unique=True) # osm_id of relation or of boundary way of area
-    osm_type = models.CharField(max_length=255, blank=True, null=True)
+    osm_type = models.TextChoices('osm_type', 'relation area')
     name = models.CharField(max_length=255, null=True)
     geom = models.MultiPolygonField(null=True, blank=True)
     ways = models.ManyToManyField(Way, related_name='ski_areas')
@@ -158,10 +158,12 @@ class SkiArea(AbstractSkiArea):
         return f"Ski Area {self.name}"
     
     def get_osm_url(self):
-        if self.osm_id:
+        if self.osm_type == 'relation':
             return f"https://www.openstreetmap.org/relation/{self.osm_id}"
+        elif self.osm_type == 'area' or self.way:
+            return f"https://www.openstreetmap.org/way/{self.osm_id}"
         else:
-            return self.way.get_osm_url()
+            return None
     
 
 class SkiAreaBoundary(AbstractSkiArea):

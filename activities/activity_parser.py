@@ -225,10 +225,7 @@ def find_direct_lift(start: Point, end: Point):
     if direct_lift:
         start_station = start_stations.first()
         end_station = end_stations.first()
-        downhill = (start_station.station == "top" and end_station.station == "bottom") \
-                    or (start_station.altitude > end_station.altitude if start_station.altitude and end_station.altitude else False)
-        if downhill:
-            uphill = False
+        uphill = not (start_station.station == "top" and end_station.station == "bottom")
     logger.debug(f"Direct lift: {direct_lift}, uphill: {uphill}")
     return direct_lift, uphill
 
@@ -412,10 +409,8 @@ def get_aerialways(start: Point, end: Point = None) -> list[tuple[Aerialway, boo
 
         uphill = True
         if connection:
-            if (station_a.altitude > 0 and station_b.altitude > 0 and station_b.altitude - station_a.altitude < 0) or station_a.station == "top" or station_b.station == "bottom":
+            if station_a.station == "top" or station_b.station == "bottom":
                 uphill = False
-            elif (station_a.altitude > 0 and station_b.altitude > 0 and station_b.altitude - station_a.altitude > 0) or station_a.station == "bottom" or station_b.station == "top":
-                uphill = True
             aerialway_path.append((connection, uphill))
 
     logger.debug(f"Aerialway path: {aerialway_path}")
@@ -769,7 +764,7 @@ def parse_strava_activities(user, all=False, update=False):
                 activity = sync_strava_activity(user, activity_id, update=update)
                 assign_badges(activity)
             except Exception as e:
-                logger.error(f"Error parsing Strava activity {activity_id}: {e}")
+                logger.error(f"Error parsing Strava activity {activity_id} (activity {activity.id if activity else 'does not exist in the database'}): {e}")
                 continue
 
 def parse_strava_activity(user, activity_id, update=False):

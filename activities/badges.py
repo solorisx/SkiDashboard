@@ -1,3 +1,4 @@
+from datetime import timedelta
 from .models import Activity, Badge, ActivityBadge
 
 def assign_badges(activity: Activity):
@@ -33,10 +34,9 @@ def assign_badges(activity: Activity):
         ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on':activity.start_time})
         ActivityBadge.objects.filter(badge=badge, activity__user=activity.user).exclude(activity=activity).delete()
 
-    
-    # 2 days in a row
-    # 3 days in a row
-    # 4 days in a row
-    # 5 days in a row
-    # 6 days in a row
-    # 7 days in a row
+    for i in range(1, 8):
+        if Activity.objects.filter(user=activity.user, ski_area=activity.ski_area, start_time__date=activity.start_time.date() - timedelta(days=i)).exists():
+            badge, _ = Badge.objects.get_or_create(name=f'{i+1} days in a row in a Ski Area', defaults={'description': f'You visited the same ski area {i+1} days in a row!', 'icon': f'fa-solid fa-medal'})
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on':activity.start_time})
+        else:
+            break

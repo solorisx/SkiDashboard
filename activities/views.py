@@ -40,8 +40,9 @@ def sync_strava_admin(request):
                 return redirect("sync_strava_admin")
             strava_activity_id = form.cleaned_data["strava_activity_id"]
             user = form.cleaned_data["user"]
+            update = form.cleaned_data["update"]
             try:
-                sync_strava_activity(user, strava_activity_id)
+                sync_strava_activity(user, strava_activity_id, update)
                 messages.success(request, f"Successfully synced Strava activity {strava_activity_id} for {user}.")
             except Exception as e:
                 messages.error(request, f"Error syncing Strava activity: {e}")
