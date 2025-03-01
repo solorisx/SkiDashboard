@@ -45,6 +45,9 @@ class Activity(models.Model):
     cost = MoneyField(max_digits=10, decimal_places=2, default_currency='CHF', null=True)
     value = MoneyField(max_digits=10, decimal_places=2, default_currency='CHF', null=True)
 
+    def __str__(self):
+        return f"{self.name}"
+
     def get_strava_url(self):
         return f"https://www.strava.com/activities/{self.strava_id}" if self.strava_id else None
     
@@ -98,3 +101,27 @@ class LiftRide(models.Model):
     uphill = models.BooleanField(null=True)
     timestamp = models.DateTimeField()
 
+
+class Badge(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    icon = models.CharField(max_length=100, null=True, default='fa-solid fa-medal')
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+class ActivityBadge(models.Model):
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='badges')
+    badge = models.ForeignKey(Badge, on_delete=models.CASCADE)
+    achieved_on = models.DateTimeField(null=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('activity', 'badge')
+
+    def __str__(self):
+        return f"{self.activity} - {self.badge}"

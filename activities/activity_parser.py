@@ -14,12 +14,22 @@ from django.contrib.gis.db.models.functions import Distance
 from django.db.models import Exists, OuterRef, Subquery
 import numpy as np
 from .utils import get_turning_points
+from .badges import assign_badges
 
 
 from .strava_interface import load_activities, load_activity, load_activity_streams, load_activity_laps
 
 # Get an instance of a logger
-logger = logging.getLogger('SkiingDashboard')
+logger = logging.getLogger('core')
+
+
+def apply_exceptions(aerialway: Aerialway):
+    
+    # replace Parsennhüttenbahn with Totalp - next to each other
+    if aerialway.way.osm_id == 29258980:
+        return Aerialway.objects.get(way__osm_id = 20011874)
+
+    return aerialway
 
 def get_osm_url(point):
     return f"https://www.openstreetmap.org/?mlat={point.y}&mlon={point.x}#map=17/{point.y}/{point.x}"
@@ -211,16 +221,14 @@ def find_direct_lift(start: Point, end: Point):
         )
     ).first()  # Fetch the first matching aerialway
 
-    uphill = None
+    uphill = True
     if direct_lift:
         start_station = start_stations.first()
         end_station = end_stations.first()
-        uphill = (start_station.station == "bottom" and end_station.station == "top") \
-                  or (min(start_station.altitude, end_station.altitude > 0) and start_station.altitude < end_station.altitude)
         downhill = (start_station.station == "top" and end_station.station == "bottom") \
-                    or (min(start_station.altitude, end_station.altitude > 0) and start_station.altitude > end_station.altitude)
-        if not uphill and not downhill:
-            uphill = None
+                    or (start_station.altitude > end_station.altitude if start_station.altitude and end_station.altitude else False)
+        if downhill:
+            uphill = False
     logger.debug(f"Direct lift: {direct_lift}, uphill: {uphill}")
     return direct_lift, uphill
 
@@ -721,6 +729,7 @@ def sync_strava_activity(user, activity_id, update=False):
             logger.debug(f"Found lift ride: {lift_ride if lift_ride else 'unnamed'}")
             logger.debug(f"Uphill: {uphill}")
             logger.debug(f"lap: {lap}, lift_ride: {lift_ride}, uphill: {uphill}, timestamp: {lift_start_time}")
+            lift_ride = apply_exceptions(lift_ride)
             lift, _ = LiftRide.objects.update_or_create(lap=lap, aerialway=lift_ride, uphill=uphill if True else False, timestamp=lift_start_time)
             lift_start_time = lift_start_time + timedelta(minutes=lift.aerialway.aerialway_duration if lift.aerialway.aerialway_duration else 1)
             logger.info(f"Created LiftRide for Lap: {lap.lap_index} with lift {lift_ride.name if lift_ride else 'unnamed'}")
@@ -736,6 +745,9 @@ def sync_strava_activity(user, activity_id, update=False):
     activity_instance.save()
 
     logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")
+
+    return activity_instance
+
 
 def parse_strava_activities(user, all=False, update=False):
     
@@ -754,7 +766,12 @@ def parse_strava_activities(user, all=False, update=False):
         if activity.type == 'AlpineSki':
             try:
                 activity_id = activity.id
-                sync_strava_activity(user, activity_id, update=update)
+                activity = sync_strava_activity(user, activity_id, update=update)
+                assign_badges(activity)
             except Exception as e:
                 logger.error(f"Error parsing Strava activity {activity_id}: {e}")
                 continue
+
+def parse_strava_activity(user, activity_id, update=False):
+    activity = sync_strava_activity(user, activity_id, update=update)
+    assign_badges(activity)

@@ -16,8 +16,7 @@
             <th>Strava</th>
             <th>Created on</th>
             <th>Modified on</th>
-            <th>Cost</th>
-            <th>Value</th>
+            <th>Badges</th>
         </tr>
         {% for activity in activities %}
             <tr>
@@ -50,7 +49,7 @@
 
 
 
-                <!-- Editable Cost & Currency Form -->
+                <!-- Editable Cost & Currency Form 
                 <td>
                     <form action="{% url 'activity_list' %}" method="POST" class="d-flex">
                         {% csrf_token %}
@@ -90,7 +89,13 @@
                         </button>
                     </form>
                 </td>
-                
+                -->
+
+                <td>
+                    {% for badge in activity.badges.all %}
+                        <i class="{{ badge.badge.icon }}"></i>
+                    {% endfor %}
+                </td>
             
 
             </tr>

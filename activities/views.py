@@ -19,15 +19,14 @@ from django.db import models
 from django.http import HttpResponse
 from activities.models import Activity, LiftRide
 from osm.models import SkiArea, Aerialway
-from activities.activity_parser import sync_strava_activity, parse_strava_activities
 from cost.forms import CostForm
 from django.db.models import Count, OuterRef, Subquery
 
 from .models import Activity
 from .forms import StravaSyncForm
-from .activity_parser import sync_strava_activity
+from .activity_parser import sync_strava_activity, parse_strava_activities, parse_strava_activity
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('core')
 
 @staff_member_required
 def sync_strava_admin(request):
@@ -152,12 +151,13 @@ def activity_list(request):
     
     activities = ( 
         activities
-        .select_related("ski_area", "ski_area_boundary")
-        .prefetch_related("ski_area_main")
+        .select_related("ski_area")
+        .prefetch_related("badges")
         .annotate(
             
             
             total_distance_km=Round(F("total_distance")/1000, 2),
+            
         )
     )
 
@@ -178,6 +178,7 @@ def activity_detail(request, activity_id):
             "activity": activity,
             "laps": laps,
             "lift_rides": lift_rides,
+            "badges": activity.badges.all(),
         },
     )
 
@@ -186,7 +187,7 @@ def reprocess_activity(request, activity_id):
     """Reprocess an activity to update its laps and lift rides."""
     activity = get_object_or_404(Activity, id=activity_id, user=request.user)
     if activity.strava_id:
-        sync_strava_activity(user=request.user, activity_id=activity.strava_id, update=True)
+        parse_strava_activity(user=request.user, activity_id=activity.strava_id, update=True)
         return HttpResponse(f"Activity {activity_id} reprocessed.")
     else:
         return HttpResponse(f"Activity {activity_id} has no Strava ID.")
