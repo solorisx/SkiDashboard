@@ -34,9 +34,16 @@ def assign_badges(activity: Activity):
         ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on':activity.start_time})
         ActivityBadge.objects.filter(badge=badge, activity__user=activity.user).exclude(activity=activity).delete()
 
-    for i in range(1, 8):
-        if Activity.objects.filter(user=activity.user, ski_area=activity.ski_area, start_time__date=activity.start_time.date() - timedelta(days=i)).exists():
-            badge, _ = Badge.objects.get_or_create(name=f'{i+1} days in a row in a Ski Area', defaults={'description': f'You visited the same ski area {i+1} days in a row!', 'icon': f'fa-solid fa-medal'})
-            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on':activity.start_time})
-        else:
-            break
+    # x days in a row in a ski area
+    i = 1
+    while Activity.objects.filter(user=activity.user, ski_area=activity.ski_area, start_time__date=activity.start_time.date() - timedelta(days=i)).exists():
+        i += 1
+    badge, _ = Badge.objects.get_or_create(name=f'{i+1} days in a row in a Ski Area', defaults={'description': f'You visited the same ski area {i+1} days in a row!', 'icon': f'fa-solid fa-medal'})
+    ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on':activity.start_time})
+
+    # x days in a row
+    i = 1
+    while Activity.objects.filter(user=activity.user, start_time__date=activity.start_time.date() - timedelta(days=i)).exists():
+        i += 1
+    badge, _ = Badge.objects.get_or_create(name=f'{i+1} days in a row', defaults={'description': f'You skied {i+1} days in a row!', 'icon': f'fa-light fa-medal'})
+    ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on':activity.start_time})

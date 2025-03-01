@@ -64,7 +64,7 @@ def sync_strava(request):
 @staff_member_required    
 def sync_reprocess_all(request):
     try:
-        parse_strava_activities(user=request.user, update=True)
+        parse_strava_activities(user=request.user, update=True, all=True)
         return HttpResponse("Strava activities synced and reprocessed.")
     except Exception as e:
         return HttpResponse(f"Error syncing Strava activities: {e}")
@@ -75,16 +75,6 @@ def reset_all(request):
     Activity.objects.filter(user=request.user).delete()
     return HttpResponse("All activities deleted.")
 
-
-def get_badge(progress):
-    if progress < 25:
-        return "⛷"
-    elif progress < 50:
-        return "👏"
-    elif progress < 75:
-        return "🤩"
-    else:
-        return "🥳"
 
 def get_seasons(user):
     activities = Activity.objects.filter(user=user)
