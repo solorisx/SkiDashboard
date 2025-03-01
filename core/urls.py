@@ -24,9 +24,8 @@ urlpatterns = [
     path('activities/', include('activities.urls')),
     path('init_networks/', views.initialize_ski_area_networks, name="init_networks"),    
     path('admin/', admin.site.urls),
-    path('hello/', views.hello_world),
     path('home/', views.home, name="home"),
     path('accounts/', include('allauth.urls')),
-    path('cost/', include('cost.urls')),
+    # path('cost/', include('cost.urls')),
     path("osm/", include('osm.urls')),
 ]
