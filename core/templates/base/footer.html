@@ -1,0 +1,13 @@
+<footer class="bg-dark text-light py-4">
+    <div class="container text-center">
+        <p class="mb-2">&copy; 2024 Your Website. All rights reserved.</p>
+        <nav class="d-flex justify-content-center gap-3">
+            <a href="{% url 'account_login' %}" class="text-light text-decoration-none">Login</a>
+            <a href="{% url 'account_signup' %}" class="text-light text-decoration-none">Sign Up</a>
+            <a href="{% url 'account_logout' %}" class="text-light text-decoration-none">Logout</a>
+            <a href="{% url 'account_reset_password' %}" class="text-light text-decoration-none">Reset Password</a>
+            <a href="{% url 'account_change_password' %}" class="text-light text-decoration-none">Change Password</a>
+            <a href="{% url 'account_email' %}" class="text-light text-decoration-none">Manage Email</a>
+        </nav>
+    </div>
+</footer>

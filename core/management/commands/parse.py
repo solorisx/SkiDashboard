@@ -1,7 +1,6 @@
 import os
 from django.core.management.base import BaseCommand, CommandError
-from SkiingDashboard.core.activity_parser import parse_fit_file
-from SkiingDashboard.core.osm_parser import parse_osm_file
+from osm.osm_parser import parse_osm_file
 
 class Command(BaseCommand):
     help = 'Parses the provided FIT or OSM file'
@@ -19,12 +18,7 @@ class Command(BaseCommand):
         
         scope = [options['nodes'], options['ways'], options['relations'], options['areas']]
 
-        if ext == '.fit':
-            if any(scope):
-                raise CommandError('Cannot specify scope with a FIT file')
-            parse_fit_file(file)
-            self.stdout.write(self.style.SUCCESS('Successfully parsed "%s"' % file))
-        elif ext == '.osm':
+        if ext == '.osm':
             if not any(scope):
                 scope = [True, True, True, True]
             parse_osm_file(file, scope)

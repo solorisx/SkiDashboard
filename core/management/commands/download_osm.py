@@ -1,4 +1,4 @@
-from SkiingDashboard.core.osm_downloader import load_osm
+from osm.osm_downloader import load_osm
 from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):

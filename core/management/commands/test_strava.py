@@ -1,6 +1,6 @@
 import os
 from django.core.management.base import BaseCommand, CommandError
-from SkiingDashboard.core.debug import test_strava, print_activities, test_strava_activity
+from core.debug import test_strava, print_activities, test_strava_activity
 
 class Command(BaseCommand):
     help = 'Tests the Strava interface'

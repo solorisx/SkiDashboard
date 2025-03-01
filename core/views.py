@@ -17,51 +17,7 @@ import os
 
 logger = logging.getLogger(__name__)
 
-def get_badge(progress):
-    if progress < 25:
-        return "⛷"
-    elif progress < 50:
-        return "👏"
-    elif progress < 75:
-        return "🤩"
-    else:
-        return "🥳"
-
-def get_seasons(user):
-    activities = Activity.objects.filter(user=user)
-    years = set(activities.dates("timestamp", "year", order="DESC"))
-    years = [y.year for y in years]
-    years.sort(reverse=True)
-    if years:
-        if not activities.filter(timestamp__lte=datetime(years[-1], 6, 30)):
-            years.pop(len(years)-1)
-    seasons = [f"{y-1}-{y}" for y in years]
-    return seasons 
-
-
-def get_unique_lift_rides(activity):
-    return activity.laps.lift_rides.values('aerialway').distinct().count()
-
-
-def get_filter_query(request, season):
-    filter = Q()
-    if season:
-        try:
-            year1, year2 = map(int, season.split("-"))
-        except ValueError:
-            return HttpResponse("Invalid season format. Use 'YYYY-YYYY'.")
-        if year1 >= year2:
-            year1, year2 = year2, year1
-        start_date = datetime(year1, 7, 1)
-        end_date = datetime(year2, 6, 30)
-        filter = Q(timestamp__range=(start_date, end_date))  
-    return filter
-
-
-def hello_world(request):
-    return HttpResponse("Hello, World!")
-
-
+@login_required
 def home(request):
     return render(request, "home.html")
 
@@ -154,26 +110,7 @@ def sync_strava_all(request):
         return HttpResponse(f"Error syncing Strava activities: {e}")
 
 
-@login_required
-def sync_strava(request):
-    try:
-        parse_strava_activities(user=request.user, all=False, update=False)
-        return HttpResponse("Strava activities synced.")
-    except Exception as e:
-        return HttpResponse(f"Error syncing Strava activities: {e}")
 
-@staff_member_required    
-def sync_reprocess_all(request):
-    try:
-        parse_strava_activities(user=request.user, update=True)
-        return HttpResponse("Strava activities synced and reprocessed.")
-    except Exception as e:
-        return HttpResponse(f"Error syncing Strava activities: {e}")
-    
-@staff_member_required    
-def reset_all(request):
-    Activity.objects.filter(user=request.user).delete()
-    return HttpResponse("All activities deleted.")
 
 
 @login_required    
