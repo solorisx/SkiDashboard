@@ -20,7 +20,7 @@ from . import views
 
 
 urlpatterns = [
-    path('', views.home, name="home"),
+    path('', views.landing, name="landing"),
     path('activities/', include('activities.urls')),
     path('init_networks/', views.initialize_ski_area_networks, name="init_networks"),    
     path('admin/', admin.site.urls),
