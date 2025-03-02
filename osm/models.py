@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.gis.geos import LineString
 from django.contrib.gis.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -32,7 +33,7 @@ class Node(models.Model):
 # Basic OSM Way Model
 class Way(models.Model):
     osm_id = models.BigIntegerField(unique=True)
-    nodes = models.ManyToManyField(Node)
+    nodes = models.ManyToManyField(Node, through='WayNode', related_name='ways')
     tags = models.JSONField(default=dict)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
@@ -42,7 +43,23 @@ class Way(models.Model):
     
     def get_osm_url(self):
         return f"https://www.openstreetmap.org/way/{self.osm_id}"
-    
+
+
+class WayNode(models.Model):
+    way = models.ForeignKey(Way, on_delete=models.CASCADE)
+    node = models.ForeignKey(Node, on_delete=models.CASCADE)
+    sequence = models.IntegerField(null=True, blank=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('way', 'node', 'sequence')
+        ordering = ['sequence']
+
+    def __str__(self):
+        return f"WayNode {self.way.osm_id} - {self.node.osm_id} - {self.sequence}"
+
+
 # Station Model
 class Station(models.Model):
     node = models.OneToOneField(Node, on_delete=models.CASCADE, related_name="station")
@@ -85,6 +102,7 @@ class Aerialway(models.Model):
 class Piste(models.Model):
     way = models.OneToOneField(Way, on_delete=models.CASCADE)
     geom = models.LineStringField(null=True, blank=True)
+    geom_updated_on = models.DateTimeField(null=True, blank=True)
     lit = models.BooleanField(default=False)
     name = models.CharField(max_length=255, blank=True, null=True)
     oneway = models.BooleanField(default=True)
@@ -92,8 +110,38 @@ class Piste(models.Model):
     piste_grooming = models.CharField(max_length=255, blank=True, null=True)
     piste_type = models.CharField(max_length=255, blank=True, null=True)
     ref = models.CharField(max_length=255, blank=True, null=True)
+    segments_generated = models.BooleanField(default=False)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+
+    def is_geom_outdated(self):
+        last_node_update = self.way.nodes.all().order_by('-modified_on').first().modified_on
+        return last_node_update > self.geom_updated_on
+    
+    def update_geometry(self):
+        nodes = self.way.nodes.all() # TODO: check ordering
+        if nodes:
+            self.geom = LineString(*[node.geom for node in nodes])
+            self.geom_updated_on = datetime.now()
+            self.save()
+            return self.geom
+        return None
+
+    def generate_segments(self, regenerate=False):
+        if self.segments_generated and not regenerate:
+            return self.segments.all()
+        if not self.geom:
+            self.update_geometry()
+        if self.geom:
+            segments = []
+            for i in range(0, len(self.geom.coords) - 1):
+                segment = LineString([self.geom.coords[i], self.geom.coords[i+1]])
+                segments.append(segment)
+                PisteSegment.objects.create(piste=self, geom=segment)
+            self.segments_generated = True
+            self.save()
+            return segments
+        return None
 
     def __str__(self):
         return f"Piste {self.way.osm_id} - {self.name}"
@@ -101,6 +149,7 @@ class Piste(models.Model):
     def get_osm_url(self):
         return self.way.get_osm_url()
     
+
 class PisteSegment(models.Model):
     piste = models.ForeignKey(Piste, on_delete=models.CASCADE, related_name='segments')
     geom = models.LineStringField(null=True, blank=True)

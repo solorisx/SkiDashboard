@@ -1,18 +1,22 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from .forms import OSMSyncForm, OSMFileSyncForm, SkiAreaNetworkForm
-from .osm_downloader import load_osm
-from .osm_parser import parse_osm_file
-from .models import SkiArea, SkiAreaNetwork, SkiAreaNetworkMember
-from django.shortcuts import render
+
+from .models import SkiArea, SkiAreaNetwork, SkiAreaNetworkMember, Way, Piste, PisteSegment
+from django.shortcuts import render, get_object_or_404
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
+from django.core.serializers import serialize
 from django.db.models import Q
 import logging
 from dal import autocomplete
 
+from .osm_downloader import load_osm
+from .osm_parser import parse_osm_file
+from .osm_interface import load_osm_data
 
-logger = logging.getLogger(__name__)
+
+logger = logging.getLogger('core')
 
 
 @staff_member_required
@@ -24,19 +28,19 @@ def sync_osm(request):
     
 
 @staff_member_required
-def sync_osm_api(self, request):
+def sync_osm_api(request):
     if request.method == "POST":
         form = OSMSyncForm(request.POST)
         if form.is_valid():
             osm_id = form.cleaned_data["osm_id"]
             osm_type = form.cleaned_data["osm_type"]
             try:
-                # TODO: Implement OSM API sync
+                load_osm_data(osm_id, osm_type)
                 raise NotImplementedError("OSM API sync not implemented.")
                 messages.success(request, f"Successfully loaded OSM data for {osm_type} {osm_id}.")
             except Exception as e:
                 messages.error(request, f"Error loading OSM data: {e}")
-            return redirect("admin:sync-osm")
+            return redirect("sync_osm")
     raise ValueError("Invalid request method or invalid form")
 
 
@@ -104,4 +108,20 @@ class SkiAreaNetworkAutocomplete(autocomplete.Select2QuerySetView):
         if self.q:
             qs = qs.filter(name__icontains=self.q)
 
-        return qs    
+        return qs
+    
+@login_required
+def map(request, osm_id):
+    way = get_object_or_404(Way, osm_id=osm_id)
+    piste = Piste.objects.filter(way=way).first()
+    node = piste.way.nodes.first().geom
+    piste.generate_segments()
+    logger.debug(f"Generated segments for piste {piste}, {piste.segments.count()} segments")
+    way_geojson = serialize("geojson", [piste], geometry_field="geom")
+    segments_geojson = serialize("geojson", PisteSegment.objects.filter(piste=piste), geometry_field="geom")
+
+    return render(request, "map.html", {
+        "osm_id": osm_id,
+        "way_geojson": way_geojson,
+        "segments_geojson": segments_geojson
+    })

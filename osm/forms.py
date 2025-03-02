@@ -11,7 +11,7 @@ years = range(this_year-5, this_year+5)
 class OSMSyncForm(forms.Form):
     osm_id = forms.CharField(label="OSM ID", widget=forms.TextInput(attrs={"class": "form-control"}))
     osm_type = forms.ChoiceField(
-        choices=[("Relation", "Relation"), ("Area", "Area")],
+        choices=[("Relation", "Relation"), ("Area", "Area"), ("Way", "Way"), ("Node", "Node")],
         label="OSM Type",
         widget=forms.Select(attrs={"class": "form-control"})
     )

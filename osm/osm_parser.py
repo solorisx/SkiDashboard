@@ -128,17 +128,74 @@ def process_ways(handler):
             nodes = Node.objects.filter(osm_id__in=node_ids)
             nodes_dict = {node.osm_id: node for node in nodes}
 
+            way_nodes_to_create = []
+            way_nodes_to_update = []
+
             with transaction.atomic():
                 for way_data in chunk:
                     way = ways_dict[way_data['osm_id']]
                     node_instances = [nodes_dict[node_id] for node_id in way_data['nodes'] if node_id in nodes_dict]
-                    way.nodes.set(node_instances)
+
+                    existing_way_nodes = {
+                        wn.node.osm_id: wn for wn in way.nodes.through.objects.filter(way=way)
+                    }
+
+                    logger.debug(f"Processing way {way.osm_id} with {len(node_instances)} nodes")
+                    logger.debug(existing_way_nodes)
+
+                    new_node_ids = set(way_data['nodes'])
+                    existing_node_ids = set([way_node.node.osm_id for way_node in existing_way_nodes.values()]
+)
+
+                    logger.debug(f"new_node_ids: {new_node_ids}")
+                    logger.debug(f"existing_node_ids {existing_node_ids}")
+
+                    # Identify WayNodes to delete (those that are no longer in way_data['nodes'])
+                    nodes_to_delete = existing_node_ids - new_node_ids
+
+                    logger.debug(f"nodes_to_delete: {nodes_to_delete}")
+
+                    way.nodes.through.objects.filter(way=way, node_id__in=nodes_to_delete).delete()
+                    if nodes_to_delete:
+                        logger.info(f"Deleted {len(nodes_to_delete)} WayNodes for way {way.osm_id}")
+                    else:
+                        logger.debug(f"No WayNodes to delete for way {way.osm_id}")
+
+                    # Process each node in the way
+                    for sequence, node_id in enumerate(way_data['nodes']):
+                        if node_id in nodes_dict:  # Ensure node exists
+                            if node_id in existing_node_ids:
+                                # Update existing WayNode sequence
+                                existing_way_nodes[node_id].sequence = sequence
+                                way_nodes_to_update.append(existing_way_nodes[node_id])
+                            else:
+                                # Create new WayNode instance
+                                way_nodes_to_create.append(
+                                    way.nodes.through(way=way, node=nodes_dict[node_id], sequence=sequence)
+                                )
+
+                logger.debug(f"way_nodes_to_create: {len(way_nodes_to_create)}")
+                logger.debug(f"way_nodes_to_update: {len(way_nodes_to_update)}")
+                
+                # Bulk create new WayNode instances
+                if way_nodes_to_create:
+                    way.nodes.through.objects.bulk_create(way_nodes_to_create)
+
+                # Bulk update existing WayNode instances
+                if way_nodes_to_update:
+                    way.nodes.through.objects.bulk_update(way_nodes_to_update, ["sequence"])
+
+                if way_nodes_to_create or nodes_to_delete:
+                    logger.warning(f"Processed added/deleted WayNodes for way {way.osm_id}")
+                    # TODO: Update geom
+
 
             logger.debug(f"Processed {min((i + 1) * chunk_size, len(handler.ways))} / {len(handler.ways)} ways")
             if i % 100 == 0:
                 logger.info(f"Processed {round(i * chunk_size / len(handler.ways) * 100, 2)}% ({i * chunk_size} / {len(handler.ways)} ways)")
         except Exception as e:
             logger.error(f"Error processing chunk {i} of ways: {e}")
+            raise e
     logger.info("Finished processing ways")
 
     logger.info("Starting to process aerialways and pistes")
@@ -326,3 +383,4 @@ def parse_osm_file(file_path, scope):
 
     total_duration = time.time() - start_time
     logger.info(f"Finished parsing OSM file: {file_path} in {total_duration:.4f} seconds")
+

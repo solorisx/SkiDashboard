@@ -8,6 +8,6 @@ urlpatterns = [
     path('admin/sync-osm-api/', views.sync_osm_api, name='sync-osm-api'),
     path('admin/sync-osm-file/', views.sync_osm_file, name='sync-osm-file'),
     path('admin/assign_network/', views.assign_skiarea_network, name='assign_network'),
-    path('skiarea-autocomplete/', SkiAreaAutocomplete.as_view(), name='skiarea-autocomplete',
-),
+    path('skiarea-autocomplete/', SkiAreaAutocomplete.as_view(), name='skiarea-autocomplete'),
+    path('map/<int:osm_id>/', views.map, name='map'),
 ]
