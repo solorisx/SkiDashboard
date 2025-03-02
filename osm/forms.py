@@ -48,3 +48,7 @@ class SkiAreaNetworkForm(forms.Form):
         widget=forms.SelectDateWidget(years=years, attrs={"class": "form-control"}),
         initial=datetime.today()
         )
+    
+
+class SegmentUpdateForm(forms.Form):
+    osm_id = forms.IntegerField(label="OSM ID", widget=forms.TextInput(attrs={"class": "form-control"}), required=False)

@@ -7,7 +7,7 @@ from django.db import transaction
 from django.db.models import Q
 
 # Get an instance of a logger
-logger = logging.getLogger('core')
+logger = logging.getLogger(__name__)
 wkbfab = osmium.geom.WKBFactory()
 
 class OSMHandler(osmium.SimpleHandler):
@@ -118,6 +118,8 @@ def process_ways(handler):
             way_objs = [Way(osm_id=way['osm_id'], tags=way.get('tags', {})) for way in chunk]
             Way.objects.bulk_create(way_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['tags'], unique_fields=['osm_id'])
 
+            logger.info(f"Created {len(way_objs)} ways")
+
             # Fetch the created ways to update nodes
             osm_ids = [way['osm_id'] for way in chunk]
             ways = Way.objects.filter(osm_id__in=osm_ids)
@@ -174,23 +176,21 @@ def process_ways(handler):
                                     way.nodes.through(way=way, node=nodes_dict[node_id], sequence=sequence)
                                 )
 
-                logger.debug(f"way_nodes_to_create: {len(way_nodes_to_create)}")
-                logger.debug(f"way_nodes_to_update: {len(way_nodes_to_update)}")
+                logger.info(f"{len(way_nodes_to_create)} WayNodes to create")
+                logger.info(f"{len(way_nodes_to_update)} WayNodes to update")
                 
                 # Bulk create new WayNode instances
                 if way_nodes_to_create:
-                    way.nodes.through.objects.bulk_create(way_nodes_to_create)
+                    way.nodes.through.objects.bulk_create(way_nodes_to_create, batch_size=chunk_size)
 
                 # Bulk update existing WayNode instances
                 if way_nodes_to_update:
-                    way.nodes.through.objects.bulk_update(way_nodes_to_update, ["sequence"])
+                    way.nodes.through.objects.bulk_update(way_nodes_to_update, ["sequence"], batch_size=chunk_size)
 
                 if way_nodes_to_create or nodes_to_delete:
                     logger.warning(f"Processed added/deleted WayNodes for way {way.osm_id}")
-                    # TODO: Update geom
 
-
-            logger.debug(f"Processed {min((i + 1) * chunk_size, len(handler.ways))} / {len(handler.ways)} ways")
+            logger.info(f"Processed {min((i + 1) * chunk_size, len(handler.ways))} / {len(handler.ways)} ways")
             if i % 100 == 0:
                 logger.info(f"Processed {round(i * chunk_size / len(handler.ways) * 100, 2)}% ({i * chunk_size} / {len(handler.ways)} ways)")
         except Exception as e:

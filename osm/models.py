@@ -125,6 +125,8 @@ class Piste(models.Model):
             bool: True if the last node update is more recent than the geometry update, False otherwise.
         """
         last_node_update = self.way.nodes.all().order_by('-modified_on').first().modified_on
+        if not last_node_update:
+            return False
         return last_node_update > self.geom_updated_on
     
     def update_geometry(self):
@@ -168,6 +170,7 @@ class Piste(models.Model):
             self.update_geometry()
         if self.geom:
             segments = []
+            PisteSegment.objects.filter(piste=self).delete()
             for i in range(0, len(self.geom.coords) - 1):
                 segment = LineString([self.geom.coords[i], self.geom.coords[i+1]])
                 segments.append(segment)

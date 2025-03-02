@@ -20,4 +20,5 @@ urlpatterns = [
     path("liftrides/all/", views.lift_ride_list, name="lift_ride_list_all"),
     path("liftrides/<int:year>/", views.lift_ride_list, name="lift_ride_list_year"),
     path("liftrides/<str:season>", views.lift_ride_list_season, name="lift_ride_list_season"),
+    path("map/<int:activity_id>/", views.segment_map, name="activity_map"),
 ]

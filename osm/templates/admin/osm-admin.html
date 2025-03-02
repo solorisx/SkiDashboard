@@ -29,4 +29,12 @@
     <button type="submit" class="button">Assign</button>
 </form>
 
+<h2>Update piste segments</h2>
+<form action="{% url 'update_segments' %}" method="post" class="form">
+    {% csrf_token %}
+    {{ form4.as_p }}
+    <button type="submit" class="button">Update</button>
+</form>
+
+
 {% endblock %}

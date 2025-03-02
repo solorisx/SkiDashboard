@@ -4,8 +4,8 @@ import time
 from datetime import timedelta, datetime
 from fitparse import FitFile
 import polyline
-from activities.models import Activity, Lap, Record, LiftRide
-from osm.models import Node, Way, Aerialway, SkiArea, Station, SkiAreaBoundary
+from activities.models import Activity, Lap, Record, LiftRide, ActivityPisteSegment
+from osm.models import Node, Way, Aerialway, SkiArea, Station, SkiAreaBoundary, PisteSegment
 from core.models import UserProfile
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point, LineString
@@ -126,7 +126,7 @@ def get_closest_aerialways(point: Point, in_ski_area=False, max_distance=250, bo
         logger.debug("Using all nodes to find closest aerialways")
         
         nearest_node_distance = (
-            Node.objects.filter(way__aerialway=OuterRef("pk"))  # Get nodes related to aerialway
+            Node.objects.filter(waynode__way__aerialway=OuterRef("pk"))  # Get nodes related to aerialway
             .annotate(distance=Distance("geom", point))  # Calculate distance to point
             .order_by("distance")  # Order by closest
             .values("distance")[:1]  # Take the closest node's distance
@@ -338,7 +338,7 @@ def get_aerialways(start: Point, end: Point = None) -> list[tuple[Aerialway, boo
 
             # Subquery to find the closest node from the aerialway's way to `end`
             nearest_node_distance = (
-                Node.objects.filter(way__aerialway=OuterRef("pk"))  # Get all nodes for each aerialway
+                Node.objects.filter(waynode__way__aerialway=OuterRef("pk"))  # Get all nodes for each aerialway
                 .annotate(distance=Distance("geom", end))  # Compute distance from node to `end`
                 .order_by("distance")  # Sort by closest node
                 .values("distance")[:1]  # Select the closest node distance
@@ -355,7 +355,7 @@ def get_aerialways(start: Point, end: Point = None) -> list[tuple[Aerialway, boo
 
             # Subquery to find the closest node from the aerialway's way to `start`
             nearest_node_distance = (
-                Node.objects.filter(way__aerialway=OuterRef("pk"))
+                Node.objects.filter(waynode__way__aerialway=OuterRef("pk"))
                 .annotate(distance=Distance("geom", start))
                 .order_by("distance")
                 .values("distance")[:1]
@@ -573,7 +573,15 @@ def calc_vertical_activity(activity: Activity, altitude_stream, update=True):
     activity.save()
 
 
-def calc_line_geom(activity: Activity):
+def calc_line_geom(activity: Activity, latlng_stream=None):
+    
+    if latlng_stream:
+        logger.debug(f"latlng stream: {latlng_stream[0:50]}")
+        swapped_coords = [(lon, lat) for lat, lon in latlng_stream]
+        activity.geom = LineString(swapped_coords)
+        activity.save()
+        return
+    
     if activity.polyline:
         coords = polyline.decode(activity.polyline)
     elif activity.summary_polyline:
@@ -581,12 +589,45 @@ def calc_line_geom(activity: Activity):
     else:
         logger.error(f"No polyline found for activity: {activity.id}")
         return
-    activity.geom = LineString(coords)
+
+    # Swap lat/lon to lon/lat
+    swapped_coords = [(lon, lat) for lat, lon in coords]
+
+    # Save as LineString with correct coordinate order
+    activity.geom = LineString(swapped_coords, srid=4326)
     activity.save()
 
+    logger.info(f"Saved geometry for activity {activity.id} with {len(swapped_coords)} points")
+
+
 def calc_ridden_segments(activity: Activity):
-    # TODO: implement
-    pass
+    start_time = time.time()
+    logger.info(f"Calculating segments for activity: {activity.strava_id}")
+
+    if not activity.geom:
+        calc_line_geom(activity)
+
+    buffer_width = 50 / 40000000 * 360 # roughly 50 meters
+    buffered_geom = activity.geom.buffer(buffer_width)
+    segments = PisteSegment.objects.filter(geom__coveredby=buffered_geom)
+    
+    for segment in segments:
+        logger.debug(f"Found segment: {segment}")
+
+    logger.info(f"Found {segments.count()} segments for activity: {activity.strava_id}")
+
+    # Delete old segment assignments to avoid duplicates
+    ActivityPisteSegment.objects.filter(activity=activity).delete()
+
+    # Create new ActivityPisteSegment relationships
+    activity_piste_segments = [
+        ActivityPisteSegment(activity=activity, piste_segment=segment) for segment in segments
+    ]
+    ActivityPisteSegment.objects.bulk_create(activity_piste_segments)
+
+    logger.info(f"Found {segments.count()} segments for activity: {activity.strava_id}")
+    logger.info(f"Calculated segments for activity: {activity.strava_id} in {time.time() - start_time:.4f} seconds")
+    
 
 def sync_strava_activity(user, activity_id, update=False):
     start_time = time.time()
@@ -609,7 +650,7 @@ def sync_strava_activity(user, activity_id, update=False):
         raise ValueError(f"Strava activity {activity_id} is not an AlpineSki activity.")
 
     activity_streams = load_activity_streams(user, activity_id)
-        
+
     lat, lon = activity_streams["latlng"].data[0]
     start_point = Point(lon, lat)
     activity_laps = load_activity_laps(user, activity_id)
@@ -630,7 +671,6 @@ def sync_strava_activity(user, activity_id, update=False):
     #     ski_area_boundary = None
 
     ski_area = get_ski_area(start_point)
-    logger.debug(f"Main ski area: {ski_area}, {ski_area.osm_type}")
 
     if not ski_area:
         logger.warning(f"No ski area found for activity: {activity_id}, searching relations")
@@ -728,10 +768,10 @@ def sync_strava_activity(user, activity_id, update=False):
             lift, _ = LiftRide.objects.update_or_create(lap=lap, aerialway=lift_ride, uphill=uphill if True else False, timestamp=lift_start_time)
             lift_start_time = lift_start_time + timedelta(minutes=lift.aerialway.aerialway_duration if lift.aerialway.aerialway_duration else 1)
             logger.info(f"Created LiftRide for Lap: {lap.lap_index} with lift {lift_ride.name if lift_ride else 'unnamed'}")
-
+   
     calc_vertical_activity(activity_instance, activity_streams["altitude"].data, update=True)
 
-    calc_line_geom(activity_instance)
+    calc_line_geom(activity_instance, activity_streams["latlng"].data)
 
     calc_ridden_segments(activity_instance)
 

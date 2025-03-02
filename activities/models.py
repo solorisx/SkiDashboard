@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from djmoney.models.fields import MoneyField
-from osm.models import Aerialway, SkiArea, SkiAreaBoundary
+from osm.models import Aerialway, SkiArea, SkiAreaBoundary, PisteSegment
 
 
 class Activity(models.Model):
@@ -120,3 +120,16 @@ class ActivityBadge(models.Model):
 
     def __str__(self):
         return f"{self.activity} - {self.badge}"
+    
+
+class ActivityPisteSegment(models.Model):
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='piste_segments')
+    piste_segment = models.ForeignKey(PisteSegment, on_delete=models.PROTECT) # TODO: Cascade or protect?
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('activity', 'piste_segment')
+
+    def __str__(self):
+        return f"{self.activity} - {self.piste_segment}"

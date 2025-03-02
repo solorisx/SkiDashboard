@@ -7,7 +7,7 @@ from .forms import SeasonPassForm, SeasonPass
 import logging
 from django.http import HttpResponseRedirect
 
-logger = logging.getLogger('core')
+logger = logging.getLogger(__name__)
 
 @login_required
 def cost_detail(request, season=None):

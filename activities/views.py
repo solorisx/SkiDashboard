@@ -8,7 +8,7 @@ from django.urls import path
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-
+from django.contrib.gis.geos import GEOSGeometry, LineString, Point
 from allauth.socialaccount.models import SocialAccount
 from datetime import datetime
 import logging
@@ -18,9 +18,10 @@ from django.db.models.functions import Round
 from django.db import models
 from django.http import HttpResponse
 from activities.models import Activity, LiftRide
-from osm.models import SkiArea, Aerialway
+from osm.models import SkiArea, Aerialway, PisteSegment
 from cost.forms import CostForm
 from django.db.models import Count, OuterRef, Subquery
+from django.core.serializers import serialize
 
 from .models import Activity
 from .forms import StravaSyncForm
@@ -389,3 +390,44 @@ def activity_list_skiarea_detail(request, skiarea_id, season=None):
     }
 
     return render(request, "activities/skiarea/skiarea_detail.html", context)
+
+
+def swap_coords(geom):
+    """ Swap lat/lon if needed (for GeoJSON compatibility). """
+    if geom.geom_type == "Point":
+        return Point(geom.y, geom.x, srid=4326)  # Swap X (lon) and Y (lat)
+    elif geom.geom_type == "LineString":
+        return LineString([(p[1], p[0]) for p in geom.coords], srid=4326)  # Swap all points
+    return geom
+
+def segment_map(request, activity_id):
+    activity = get_object_or_404(Activity, id=activity_id, user=request.user)
+
+    # Ensure activity geometry is in EPSG:4326
+    if activity.geom.srid != 4326:
+        activity.geom.transform(4326)
+
+    # Serialize activity geometry
+    way_geojson = serialize("geojson", [activity], geometry_field="geom")
+
+    # Get actual piste segment geometries
+    piste_segments = PisteSegment.objects.filter(
+        id__in=activity.piste_segments.values_list("piste_segment", flat=True)
+    )
+
+    # Ensure segment geometries are in EPSG:4326 and swap lat/lon
+    # for segment in piste_segments:
+    #     if segment.geom.srid != 4326:
+    #         segment.geom.transform(4326)
+    #     segment.geom = swap_coords(segment.geom)
+
+    # Serialize segment geometries
+    segments_geojson = serialize("geojson", piste_segments, geometry_field="geom")
+
+    return render(request, "segment_map.html", {
+        "activity_id": activity.strava_id,
+        "way_geojson": way_geojson,
+        "segments_geojson": segments_geojson,
+    })
+
+

@@ -237,6 +237,21 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+        'activities': {
+            'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'osm': {
+            'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'cost': {
+            'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     },
 }
 

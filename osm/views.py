@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .forms import OSMSyncForm, OSMFileSyncForm, SkiAreaNetworkForm
+from .forms import OSMSyncForm, OSMFileSyncForm, SkiAreaNetworkForm, SegmentUpdateForm
 
 from .models import SkiArea, SkiAreaNetwork, SkiAreaNetworkMember, Way, Piste, PisteSegment
 from django.shortcuts import render, get_object_or_404
@@ -15,17 +15,19 @@ from django.http import HttpResponseNotFound
 from .osm_downloader import load_osm
 from .osm_parser import parse_osm_file
 from .osm_interface import load_osm_data
+from .osm_segments import update_piste_segments
 
 
 logger = logging.getLogger('core')
 
 
 @staff_member_required
-def sync_osm(request):
+def sync_osm(request):    
     form1 = OSMSyncForm()
     form2 = OSMFileSyncForm()
     form3 = SkiAreaNetworkForm()
-    return render(request, "admin/osm-admin.html", {"form1": form1, "form2": form2, "form3": form3})
+    form4 = SegmentUpdateForm()
+    return render(request, "admin/osm-admin.html", {"form1": form1, "form2": form2, "form3": form3, "form4": form4})
     
 
 @staff_member_required
@@ -125,8 +127,6 @@ def map(request, osm_id):
         piste.generate_segments()
         logger.debug(f"Generated segments for piste {piste}")
     nodes = piste.way.nodes.all()
-    piste.generate_segments()
-    logger.debug(f"Generated segments for piste {piste}, {piste.segments.count()} segments")
     way_geojson = serialize("geojson", [piste], geometry_field="geom")
     segments_geojson = serialize("geojson", PisteSegment.objects.filter(piste=piste), geometry_field="geom")
     nodes_geojson = serialize("geojson", nodes, geometry_field="geom")
@@ -137,3 +137,13 @@ def map(request, osm_id):
         "segments_geojson": segments_geojson,
         "nodes_geojson": nodes_geojson
     })
+
+
+@staff_member_required
+def update_segments(request, osm_id=None):
+    try:
+        update_piste_segments(osm_id)
+        messages.success(request, f"Updated segments for piste {osm_id}")
+    except Exception as e:
+        messages.error(request, f"Error updating segments: {e}")
+    return redirect("sync_osm")
