@@ -115,11 +115,31 @@ class Piste(models.Model):
     modified_on = models.DateTimeField(auto_now=True)
 
     def is_geom_outdated(self):
+        """
+        Checks if the geometry is outdated based on the last node update.
+
+        This method compares the modification date of the most recently updated node
+        associated with the way to the date when the geometry was last updated.
+
+        Returns:
+            bool: True if the last node update is more recent than the geometry update, False otherwise.
+        """
         last_node_update = self.way.nodes.all().order_by('-modified_on').first().modified_on
         return last_node_update > self.geom_updated_on
     
     def update_geometry(self):
-        nodes = self.way.nodes.all() # TODO: check ordering
+        """
+        Updates the geometry of the way by creating a LineString from the ordered nodes.
+
+        This method retrieves all nodes associated with the way, orders them by their sequence,
+        and constructs a LineString geometry from these nodes. The geometry is then saved to the
+        instance along with the current timestamp.
+
+        Returns:
+            LineString: The updated geometry if nodes are present.
+            None: If no nodes are associated with the way.
+        """
+        nodes = self.way.nodes.all().order_by('waynode__sequence')
         if nodes:
             self.geom = LineString(*[node.geom for node in nodes])
             self.geom_updated_on = datetime.now()
@@ -128,9 +148,23 @@ class Piste(models.Model):
         return None
 
     def generate_segments(self, regenerate=False):
+        """
+        Generates segments for the current object based on its geometry.
+        If segments have already been generated and `regenerate` is False, 
+        it returns the existing segments. If the geometry is outdated or 
+        not present, it updates the geometry first. Then, it creates new 
+        segments from the geometry and saves them.
+        Args:
+            regenerate (bool): If True, regenerates the segments even if 
+                               they have already been generated. Defaults to False.
+        Returns:
+            list: A list of generated segments if geometry is present and valid.
+            None: If geometry is not present or valid.
+        """
+        
         if self.segments_generated and not regenerate:
             return self.segments.all()
-        if not self.geom:
+        if not self.geom or self.is_geom_outdated():
             self.update_geometry()
         if self.geom:
             segments = []

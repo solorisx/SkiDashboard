@@ -10,6 +10,7 @@ from django.core.serializers import serialize
 from django.db.models import Q
 import logging
 from dal import autocomplete
+from django.http import HttpResponseNotFound
 
 from .osm_downloader import load_osm
 from .osm_parser import parse_osm_file
@@ -114,6 +115,15 @@ class SkiAreaNetworkAutocomplete(autocomplete.Select2QuerySetView):
 def map(request, osm_id):
     way = get_object_or_404(Way, osm_id=osm_id)
     piste = Piste.objects.filter(way=way).first()
+    if not piste:
+        return HttpResponseNotFound(f"No piste found for way {way}")
+    if piste.is_geom_outdated:
+        piste.generate_segments(regenerate=True)
+        logger.debug(f"Updated geometry for piste {piste}")
+    if not piste.segments.all():
+        logger.debug(f"No segments for piste {piste}")
+        piste.generate_segments()
+        logger.debug(f"Generated segments for piste {piste}")
     node = piste.way.nodes.first().geom
     piste.generate_segments()
     logger.debug(f"Generated segments for piste {piste}, {piste.segments.count()} segments")

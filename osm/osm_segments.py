@@ -21,5 +21,3 @@ def update_segments():
                     logger.debug(f"Updated geometry and segments for piste {piste.id}")
                 else:
                     logger.debug(f"Geometry for piste {piste.id} is the same")
-
-    print("All segments updated")
