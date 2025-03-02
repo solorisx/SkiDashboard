@@ -1,19 +1,32 @@
 {% extends "admin/base_site.html" %}
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js"></script>
+
+{{ form.media }}
+
 {% block content %}
 <h1>Admin Sync Actions</h1>
 
 <h2>Sync select OSM Data over API</h2>
-<form action="{% url 'admin:sync-osm-api' %}" method="POST" class="form">
+<form action="{% url 'sync-osm-api' %}" method="POST" class="form">
     {% csrf_token %}
     {{ form1.as_p }}
     <button type="submit" class="button">Sync OSM</button>
 </form>
 
 <h2>Sync complete OSM Data with file download</h2>
-<form action="{% url 'admin:sync-osm-file' %}" method="post" class="form">
+<form action="{% url 'sync-osm-file' %}" method="post" class="form">
     {% csrf_token %}
     {{ form2.as_p }}
     <button type="submit" class="button">Sync Custom OSM</button>
+</form>
+
+<h2>Assign ski area network members</h2>
+<form action="{% url 'assign_network' %}" method="post" class="form">
+    {% csrf_token %}
+    {{ form3.as_p }}
+    <button type="submit" class="button">Assign</button>
 </form>
 
 {% endblock %}

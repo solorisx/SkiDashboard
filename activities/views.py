@@ -296,7 +296,7 @@ def activity_list_skiarea(request, season=None):
             ski_area['total_num_area_rides'] = Aerialway.objects.filter(way__in=skiarea.ways).distinct().count()
         progress = ski_area['total_num_dist_rides'] / ski_area['total_num_area_rides'] * 100 if ski_area['total_num_area_rides'] else 0
         ski_area['progress'] = round(progress, 1)
-        ski_area['badge'] = get_badge(progress)
+
 
     activities = activities.aggregate(
         total_cost=Sum('cost'),
@@ -317,7 +317,6 @@ def activity_list_skiarea(request, season=None):
     activities['total_num_dist_rides'] = num_unique_rides
     activities['total_num_area_rides'] = num_area_rides
     activities['progress'] = round(num_unique_rides * 100.0 / num_area_rides , 1) if num_area_rides else 0
-    activities['badge'] = get_badge(activities['progress'])
 
     context = {
         'activities': activities,
@@ -379,13 +378,6 @@ def activity_list_skiarea_detail(request, skiarea_id, season=None):
         activities = activities.annotate(
             progress=Round(F("num_distinct_lift_rides") * 100.0 / num_area_rides, 1),
         )
-
-    for activity in activities:
-        activity.badge = get_badge(activity.progress)
-        logger.debug(f"Activity: {activity}, {activity.progress}")
-    # activities = activities.annotate(
-    #     badge = get_badge(F("progress"))
-    # )
 
     context = {
         'skiarea': skiarea,

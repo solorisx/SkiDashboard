@@ -56,6 +56,8 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.strava',
+    'dal',
+    'dal_select2',
     'core',
     'activities',
     'osm',

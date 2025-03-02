@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from djmoney.models.fields import MoneyField
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from datetime import datetime
 
 
 
@@ -141,7 +142,6 @@ class AbstractSkiArea(models.Model):
 # SkiArea Model
 class SkiArea(AbstractSkiArea):
     osm_id = models.BigIntegerField(unique=True) # osm_id of relation or of boundary way of area
-    osm_type = models.TextChoices('osm_type', 'relation area')
     name = models.CharField(max_length=255, null=True)
     geom = models.MultiPolygonField(null=True, blank=True)
     ways = models.ManyToManyField(Way, related_name='ski_areas')
@@ -155,15 +155,13 @@ class SkiArea(AbstractSkiArea):
     modified_on = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Ski Area {self.name}"
+        return f"{self.name}"
     
     def get_osm_url(self):
-        if self.osm_type == 'relation':
-            return f"https://www.openstreetmap.org/relation/{self.osm_id}"
-        elif self.osm_type == 'area' or self.way:
+        if self.way:
             return f"https://www.openstreetmap.org/way/{self.osm_id}"
         else:
-            return None
+            return f"https://www.openstreetmap.org/relation/{self.osm_id}"
     
 
 class SkiAreaBoundary(AbstractSkiArea):
@@ -186,8 +184,9 @@ class SkiAreaNetwork(models.Model):
     def __str__(self):
         return f"Ski Area Network {self.name}"
     
+    
 class SkiAreaNetworkMember(models.Model):
-    ski_area_network = models.ForeignKey(SkiAreaNetwork, on_delete=models.CASCADE)
+    ski_area_network = models.ForeignKey(SkiAreaNetwork, on_delete=models.CASCADE, related_name='members')
     member = models.ForeignKey(SkiArea, on_delete=models.CASCADE)
     valid_from = models.DateField(null=True)
     valid_to = models.DateField(null=True)
@@ -198,3 +197,6 @@ class SkiAreaNetworkMember(models.Model):
 
     def __str__(self):
         return f"{self.ski_area_network.name} - {self.member.name} ({self.valid_from} - {self.valid_to})"
+    
+    class Meta:
+        unique_together = ('ski_area_network', 'member')

@@ -35,12 +35,7 @@ class Activity(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True)
-    object_id = models.PositiveIntegerField(null=True)
-    ski_area_main = GenericForeignKey('content_type', 'object_id')
-
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
-    ski_area_boundary = models.ForeignKey(SkiAreaBoundary, on_delete=models.PROTECT, null=True)
 
     cost = MoneyField(max_digits=10, decimal_places=2, default_currency='CHF', null=True)
     value = MoneyField(max_digits=10, decimal_places=2, default_currency='CHF', null=True)

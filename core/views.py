@@ -13,6 +13,7 @@ from cost.forms import CostForm
 from django.db.models import Count, OuterRef, Subquery
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
+from dal import autocomplete
 import os
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ def landing(request):
 @login_required
 def home(request):
     return render(request, "home.html")
+
 
 @staff_member_required
 def initialize_ski_area_networks(request):
