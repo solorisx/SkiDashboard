@@ -28,8 +28,6 @@
                 style: { color: "blue", weight: 3 }
             }).addTo(map);
 
-            console.log('hello');
-
             // Fit map to Way bounds
             map.fitBounds(wayLayer.getBounds());
         } else {
@@ -37,10 +35,19 @@
         }
 
         // Load Segments
-        //var segments = {{ segments_geojson|safe }};
-        // L.geoJSON(segments, {
-        //     style: { color: "red", weight: 2, dashArray: "5, 5" }
+        var segments = {{ segments_geojson|safe }};
+        L.geoJSON(segments, {
+            style: { color: "red", weight: 2, dashArray: "5, 5" }
+        }).addTo(map);
+
+        // Load Nodes
+        // var nodes = {{ nodes_geojson|safe }};
+        // L.geoJSON(nodes, {
+        //     pointToLayer: function (feature, latlng) {
+        //         return L.circleMarker(latlng, { radius: 5, color: "black" });
+        //     }
         // }).addTo(map);
+
     </script>
 </body>
 </html>

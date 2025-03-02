@@ -124,14 +124,16 @@ def map(request, osm_id):
         logger.debug(f"No segments for piste {piste}")
         piste.generate_segments()
         logger.debug(f"Generated segments for piste {piste}")
-    node = piste.way.nodes.first().geom
+    nodes = piste.way.nodes.all()
     piste.generate_segments()
     logger.debug(f"Generated segments for piste {piste}, {piste.segments.count()} segments")
     way_geojson = serialize("geojson", [piste], geometry_field="geom")
     segments_geojson = serialize("geojson", PisteSegment.objects.filter(piste=piste), geometry_field="geom")
+    nodes_geojson = serialize("geojson", nodes, geometry_field="geom")
 
     return render(request, "map.html", {
         "osm_id": osm_id,
         "way_geojson": way_geojson,
-        "segments_geojson": segments_geojson
+        "segments_geojson": segments_geojson,
+        "nodes_geojson": nodes_geojson
     })
