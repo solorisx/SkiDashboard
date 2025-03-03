@@ -14,6 +14,7 @@ from django.db.models import Count, OuterRef, Subquery
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from dal import autocomplete
+from activities.views import home_stats
 import os
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ def landing(request):
 
 @login_required
 def home(request):
-    return render(request, "home.html")
+    return home_stats(request)
 
 
 @staff_member_required

@@ -1,5 +1,6 @@
 import logging
 from .models import WayNode, Piste, PisteSegment
+from activities.activity_parser import parse_strava_activity
 
 logger = logging.getLogger('core')
 
@@ -23,8 +24,12 @@ def update_piste_segments(osm_id=None):
                 old_geom = piste.geom
                 new_geom = piste.update_geometry()
                 if old_geom != new_geom:
-                    # TODO: How to handle Activities that are associated with the piste?
+                    activities = PisteSegment.objects.filter(piste=piste).values("activity").distinct()
+                    logger.debug(f"Affected activities: {len(activities)}")
                     piste.generate_segments(regenerate=True)
                     logger.debug(f"Updated geometry and segments for piste {piste.id}")
+                    for activity in activities:
+                        parse_strava_activity(user=activity.user, activity_id=activity.strava_id, update=True)
+                        logger.info(f"Reprocessed activity {activity.strava_id} due to update of piste segments")
                 else:
                     logger.debug(f"Geometry for piste {piste.id} is the same")

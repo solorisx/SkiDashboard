@@ -1,1 +1,26 @@
 {% extends "base/base.html" %}
+
+{% block content %}
+
+<div class="container mt-5 text-center">
+    <h3 class="fw-bold">Welcome, {{ user.username }}! ⛷️</h3>
+    
+    <div class="mt-4 p-4 bg-light rounded shadow-sm">
+        <h1 class="text-primary fw-bold">Welcome to the Ski Dashboard</h1>
+        <p class="lead text-muted">Track your skiing activities, monitor your progress, and compare stats with other skiers.</p>
+        <p class="lead text-muted">Get started by clicking the <strong>“Activities”</strong> link in the navigation bar above.</p>
+    </div>
+
+    <div class="mt-5 p-4 bg-white rounded shadow-sm">
+        {% if total_stats %}
+            <h2 class="text-primary fw-bold">You've skied <span class="text-success">{{ total_stats.total_distance_km }} km</span> so far this season! 🎿</h2>
+            <h3 class="text-secondary">You've taken <span class="text-danger">{{ total_stats.total_num_lift_rides }}</span> lift rides.</h3>
+            <h3 class="text-secondary">Your favorite ski area this season is <span class="text-warning">{{ skiarea.name }}</span> with <strong>{{ count }}</strong> activities! 🏔️</h3>
+        {% else %}
+            <h2 class="text-primary fw-bold">You haven't recorded any activities yet! 📉</h2>
+            <p class="lead text-muted">Start tracking your skiing adventures to see your stats here.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

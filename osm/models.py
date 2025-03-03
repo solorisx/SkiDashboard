@@ -1,14 +1,12 @@
 from django.db import models
 from django.contrib.gis.geos import LineString
 from django.contrib.gis.db import models
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 from djmoney.models.fields import MoneyField
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
+from django.contrib.gis.geos.error import GEOSException
 from datetime import datetime
+import logging
 
-
+logger = logging.getLogger(__name__)
 
 class ValidDuring(models.TextChoices):
     winter = 'winter', 'Winter'
@@ -142,7 +140,7 @@ class Piste(models.Model):
             None: If no nodes are associated with the way.
         """
         nodes = self.way.nodes.all().order_by('waynode__sequence')
-        if nodes:
+        if len(nodes) > 1:
             self.geom = LineString(*[node.geom for node in nodes])
             self.geom_updated_on = datetime.now()
             self.save()
@@ -150,35 +148,40 @@ class Piste(models.Model):
         return None
 
     def generate_segments(self, regenerate=False):
-        """
-        Generates segments for the current object based on its geometry.
-        If segments have already been generated and `regenerate` is False, 
-        it returns the existing segments. If the geometry is outdated or 
-        not present, it updates the geometry first. Then, it creates new 
-        segments from the geometry and saves them.
-        Args:
-            regenerate (bool): If True, regenerates the segments even if 
-                               they have already been generated. Defaults to False.
-        Returns:
-            list: A list of generated segments if geometry is present and valid.
-            None: If geometry is not present or valid.
-        """
-        
-        if self.segments_generated and not regenerate:
-            return self.segments.all()
-        if not self.geom or self.is_geom_outdated():
-            self.update_geometry()
-        if self.geom:
-            segments = []
-            PisteSegment.objects.filter(piste=self).delete()
-            for i in range(0, len(self.geom.coords) - 1):
-                segment = LineString([self.geom.coords[i], self.geom.coords[i+1]])
+        if regenerate:
+            # Remove only the association, don't delete shared segments
+            self.segments.clear()  # This only removes the relationship, not the segment itself
+
+        segments = []
+        way_geom = self.geom
+
+        if not way_geom:
+            logger.debug(f"No geometry for piste {self.id}")
+            way_geom = self.update_geometry()
+            if not way_geom:
+                logger.warning(f"Could not generate geometry for piste {self.id} - skipping")
+                return segments
+            
+        if way_geom.geom_type == "LineString":
+            buffered_geom = way_geom.buffer(50 / 40000000 * 360)  # Buffer to avoid topology exceptions
+            existing_segment = PisteSegment.objects.filter(
+                geom__coveredby=buffered_geom
+            ).first()  # Find an existing segment, if any
+
+            if existing_segment:
+                self.segments.add(existing_segment)  # Link existing segment
+                logger.debug(f"Reused existing segment for piste {self.id}")
+            else:
+                segment = PisteSegment.objects.create(geom=way_geom)
+                self.segments.add(segment)  # Assign the new segment
                 segments.append(segment)
-                PisteSegment.objects.create(piste=self, geom=segment)
-            self.segments_generated = True
-            self.save()
-            return segments
-        return None
+
+        elif way_geom.geom_type == "MultiLineString":
+            logger.debug(f"MultiLineString for piste {self.id} - not supported yet")
+            pass
+
+        logger.debug(f"Generated {len(segments)} new segments for piste {self.id}")
+        return segments
 
     def __str__(self):
         return f"Piste {self.way.osm_id} - {self.name}"
@@ -188,13 +191,23 @@ class Piste(models.Model):
     
 
 class PisteSegment(models.Model):
-    piste = models.ForeignKey(Piste, on_delete=models.CASCADE, related_name='segments')
+    piste = models.ManyToManyField(Piste, related_name='segments')
     geom = models.LineStringField(null=True, blank=True)
+    length = models.FloatField(null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Piste Segment {self.piste.way.osm_id} - {self.geom.length}"
+    
+    def save(self, *args, **kwargs):
+        if self.geom:
+            try:
+                metric_geom = self.geom.transform(3857, clone=True)
+                self.length = metric_geom.length  # Get length in meters
+            except GEOSException:
+                self.length = None  # Handle invalid geometries
+        super().save(*args, **kwargs)
 
 
 class AbstractSkiArea(models.Model):

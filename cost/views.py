@@ -44,7 +44,7 @@ def cost_detail_network(request, season=None):
 
 
 @login_required
-def home(request):
+def cost_home(request):
 
     if request.method == 'POST':
         form = SeasonPassForm(request.POST)

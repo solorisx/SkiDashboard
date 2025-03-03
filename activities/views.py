@@ -4,6 +4,7 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import admin
+from django.core.paginator import Paginator
 from django.urls import path
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -153,7 +154,13 @@ def activity_list(request):
         )
     )
 
-    return render(request, "activities/activity_list.html", {"activities": activities})
+    paginator = Paginator(activities, 10)  # Show 10 activities per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'activities/activity_list.html', {'page_obj': page_obj})    
+
+    # return render(request, "activities/activity_list.html", {"activities": activities})
 
 
 @login_required
@@ -428,6 +435,31 @@ def segment_map(request, activity_id):
         "activity_id": activity.strava_id,
         "way_geojson": way_geojson,
         "segments_geojson": segments_geojson,
+    })
+
+
+def home_stats(request):
+    current_season_start = datetime(datetime.now().year, 7, 1) if datetime.now().month >= 7 else datetime(datetime.now().year-1, 7, 1)
+    activities = Activity.objects.filter(user=request.user, timestamp__gte=current_season_start)
+    skiarea = (
+        activities.values("ski_area")
+        .annotate(count=Count("ski_area"))
+        .order_by("-count")
+        .first()
+    )
+
+    logger.debug(f"Ski area: {skiarea}")
+
+    total_stats = activities.aggregate(
+        total_distance_km=Round(Sum(F("total_distance"))/1000, 2),
+        total_descent=Sum("total_descent"),
+        total_num_laps=Sum("num_laps"),
+        total_num_lift_rides=Sum("num_lift_rides"),
+    )
+    return render(request, "home.html", {
+        "skiarea": SkiArea.objects.get(id=skiarea["ski_area"]) if skiarea else None,
+        "count": skiarea["count"] if skiarea else 0,
+        "total_stats": total_stats,
     })
 
 
