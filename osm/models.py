@@ -6,7 +6,7 @@ from django.contrib.gis.geos.error import GEOSException
 from datetime import datetime
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('core')
 
 class ValidDuring(models.TextChoices):
     winter = 'winter', 'Winter'
@@ -147,10 +147,11 @@ class Piste(models.Model):
             return self.geom
         return None
 
+
     def generate_segments(self, regenerate=False):
         if regenerate:
             # Remove only the association, don't delete shared segments
-            self.segments.clear()  # This only removes the relationship, not the segment itself
+            self.segments.clear()
 
         segments = []
         way_geom = self.geom
@@ -161,27 +162,36 @@ class Piste(models.Model):
             if not way_geom:
                 logger.warning(f"Could not generate geometry for piste {self.id} - skipping")
                 return segments
-            
+
         if way_geom.geom_type == "LineString":
-            buffered_geom = way_geom.buffer(50 / 40000000 * 360)  # Buffer to avoid topology exceptions
-            existing_segment = PisteSegment.objects.filter(
-                geom__coveredby=buffered_geom
-            ).first()  # Find an existing segment, if any
+            segment_lines = [LineString(way_geom.coords[i], way_geom.coords[i + 1])
+                            for i in range(len(way_geom.coords) - 1)]
+        elif way_geom.geom_type == "MultiLineString":
+            segment_lines = [
+                LineString(line.coords[i], line.coords[i + 1])
+                for line in way_geom
+                for i in range(len(line.coords) - 1)
+            ]
+        else:
+            logger.warning(f"Unsupported geometry type {way_geom.geom_type} for piste {self.id}")
+            return segments
+
+        for segment_geom in segment_lines:
+            buffered_geom = segment_geom.buffer(width=10 / 40000000 * 360, quadsegs=1)  # Buffer to avoid topology exceptions
+            existing_segment = PisteSegment.objects.filter(geom__coveredby=buffered_geom).first()
 
             if existing_segment:
-                self.segments.add(existing_segment)  # Link existing segment
+                self.segments.add(existing_segment)
                 logger.debug(f"Reused existing segment for piste {self.id}")
             else:
-                segment = PisteSegment.objects.create(geom=way_geom)
-                self.segments.add(segment)  # Assign the new segment
+                segment = PisteSegment.objects.create(geom=segment_geom)
+                self.segments.add(segment)
                 segments.append(segment)
-
-        elif way_geom.geom_type == "MultiLineString":
-            logger.debug(f"MultiLineString for piste {self.id} - not supported yet")
-            pass
+                logger.debug(f"Created new segment for piste {self.id}")
 
         logger.debug(f"Generated {len(segments)} new segments for piste {self.id}")
         return segments
+
 
     def __str__(self):
         return f"Piste {self.way.osm_id} - {self.name}"
@@ -198,7 +208,7 @@ class PisteSegment(models.Model):
     modified_on = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Piste Segment {self.piste.way.osm_id} - {self.geom.length}"
+        return f"Piste Segment {self.id}"
     
     def save(self, *args, **kwargs):
         if self.geom:

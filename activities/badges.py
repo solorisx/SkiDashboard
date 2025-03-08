@@ -38,6 +38,7 @@ def assign_badges(activity: Activity):
     i = 1
     while Activity.objects.filter(user=activity.user, ski_area=activity.ski_area, start_time__date=activity.start_time.date() - timedelta(days=i)).exists():
         i += 1
+    if i > 1:
         badge, _ = Badge.objects.get_or_create(name=f'{i} days in a row in a Ski Area', defaults={'description': f'You visited the same ski area {i} days in a row!', 'icon': f'fa-solid fa-medal'})
         ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on':activity.start_time})
 
@@ -45,5 +46,6 @@ def assign_badges(activity: Activity):
     i = 1
     while Activity.objects.filter(user=activity.user, start_time__date=activity.start_time.date() - timedelta(days=i)).exists():
         i += 1
+    if i > 1:
         badge, _ = Badge.objects.get_or_create(name=f'{i} days in a row', defaults={'description': f'You skied {i} days in a row!', 'icon': f'fa-light fa-medal'})
         ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on':activity.start_time})

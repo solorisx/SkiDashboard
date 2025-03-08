@@ -625,6 +625,8 @@ def calc_ridden_segments(activity: Activity):
     ]
     ActivityPisteSegment.objects.bulk_create(activity_piste_segments)
 
+    # TODO: create warning if created segments are significantly shorter or longer than activity distance
+
     logger.info(f"Found {segments.count()} segments for activity: {activity.strava_id}")
     logger.info(f"Calculated segments for activity: {activity.strava_id} in {time.time() - start_time:.4f} seconds")
     
@@ -797,7 +799,7 @@ def parse_strava_activities(user, all=False, update=False):
     
     activities = load_activities(user, after=after)
 
-    for activity in activities:
+    for activity in activities:         # TODO: this line makes calls to Strava API -> check token
         if activity.type == 'AlpineSki':
             try:
                 activity_id = activity.id

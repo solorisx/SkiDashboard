@@ -251,6 +251,10 @@ def process_ways(handler):
 
                 # Handle Piste
                 elif 'piste:type' in tags:
+                    if way_obj.nodes.first() == way_obj.nodes.last():
+                        # TODO: add support for polygons
+                        logger.warning(f"Piste {way['osm_id']} has the same start and end node, probably a polygon - not supported")
+                        continue
                     Piste.objects.update_or_create(
                         way=way_obj,
                         defaults={
@@ -280,9 +284,9 @@ def process_areas(handler):
                 name = area_data['name'] or f"Unnamed area {area_data['osm_id']}"
                 way = Way.objects.filter(osm_id=area_data['osm_id']).first()
                 if way is None:
-                    logger.warning(f"Way {area_data['osm_id']} for area {name} does not exist")
+                    logger.info(f"Way {area_data['osm_id']} for area {name} does not exist")
                     way = Way.objects.create(osm_id=area_data['osm_id'], tags=area_data.get('tags', {}))
-                    logger.debug(f"Created way {area_data['osm_id']} for area {name} with tags {area_data.get('tags', {})}")
+                    logger.info(f"Created way {area_data['osm_id']} for area {name} with tags {area_data.get('tags', {})}")
 
                 _, created = SkiAreaBoundary.objects.update_or_create(
                     way=way,
@@ -300,7 +304,6 @@ def process_areas(handler):
                     defaults={
                         'geom': area_data['geom'],
                         'name': area_data['name'] or f"Unnamed area {area_data['osm_id']}",
-                        'osm_type': 'area',
                         'tags': area_data.get('tags', {})
                     }
                 )

@@ -139,6 +139,23 @@ def map(request, osm_id):
     })
 
 
+def segment_map(request, osm_id):
+    area = get_object_or_404(SkiArea, osm_id=osm_id)
+    segments = PisteSegment.objects.filter(geom__coveredby=area.geom)
+    pistes = Piste.objects.filter(geom__coveredby=area.geom)
+    boundary_geojson = serialize("geojson", [area], geometry_field="geom")
+    segments_geojson = serialize("geojson", segments, geometry_field="geom")
+    pistes_geojson = serialize("geojson", pistes, geometry_field="geom")
+
+    return render(request, "area_segment_map.html", {
+        "ski_area": area,
+        "osm_id": osm_id,
+        "pistes_geojson": pistes_geojson,
+        "segments_geojson": segments_geojson,
+        "boundary_geojson": boundary_geojson
+    })
+
+
 @staff_member_required
 def update_segments(request, osm_id=None):
     try:

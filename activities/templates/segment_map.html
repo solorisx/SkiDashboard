@@ -40,6 +40,16 @@
             style: { color: "red", weight: 2, dashArray: "5, 5" }
         }).addTo(map);
 
+
+        // Load Pistes
+        {% if piste_geojson %}
+        var pistes = {{ piste_geojson|safe }};
+        L.geoJSON(pistes, {
+            style: { color: "green", weight: 2, dashArray: "8, 8" }
+        }).addTo(map);
+        {% endif %}
+
+
     </script>
 </body>
 </html>

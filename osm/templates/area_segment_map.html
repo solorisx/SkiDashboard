@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map View for OSM ID {{ osm_id }}</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        #map { height: 500px; }
+    </style>
+</head>
+<body>
+    <h2>Map View for SkiArea Osm ID: {{ osm_id }}</h2>
+    <div id="map"></div>
+
+    <script>
+        var map = L.map('map').setView([47.005781, 10.302864], 15);  // Default to Rome, change dynamically later
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Load Way
+        var way = {{ boundary_geojson|safe }};
+        if (way.features.length > 0) {
+            var wayLayer = L.geoJSON(way, {
+                style: { color: "blue", weight: 3 }
+            }).addTo(map);
+
+            // Fit map to Way bounds
+            map.fitBounds(wayLayer.getBounds());
+        } else {
+            alert("No way found for OSM ID: {{ osm_id }}");
+        }
+
+        // Load Segments
+        var segments = {{ segments_geojson|safe }};
+        L.geoJSON(segments, {
+            style: { color: "red", weight: 2, dashArray: "5, 5" }
+        }).addTo(map);
+
+        // Load Pistes
+        {% if pistes_geojson %}
+        var pistes = {{ pistes_geojson|safe }};
+        L.geoJSON(segments, {
+            style: { color: "green", weight: 2, dashArray: "8, 8" }
+        }).addTo(map);
+        {% endif %}    
+
+        // Load Nodes
+        // var nodes = {{ nodes_geojson|safe }};
+        // L.geoJSON(nodes, {
+        //     pointToLayer: function (feature, latlng) {
+        //         return L.circleMarker(latlng, { radius: 5, color: "black" });
+        //     }
+        // }).addTo(map);
+
+    </script>
+</body>
+</html>

@@ -25,6 +25,7 @@ class TicketPrice(models.Model):
     price = MoneyField(max_digits=14, decimal_places=2, default_currency='CHF')
     valid_from = models.DateField()
     valid_until = models.DateField()
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

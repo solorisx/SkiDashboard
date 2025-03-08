@@ -19,7 +19,7 @@ from django.db.models.functions import Round
 from django.db import models
 from django.http import HttpResponse
 from activities.models import Activity, LiftRide
-from osm.models import SkiArea, Aerialway, PisteSegment
+from osm.models import SkiArea, Aerialway, PisteSegment, Piste
 from cost.forms import CostForm
 from django.db.models import Count, OuterRef, Subquery
 from django.core.serializers import serialize
@@ -428,13 +428,19 @@ def segment_map(request, activity_id):
     #         segment.geom.transform(4326)
     #     segment.geom = swap_coords(segment.geom)
 
+    skiarea = activity.ski_area
+    pistes = Piste.objects.filter(geom__coveredby=skiarea.geom)
+
+
     # Serialize segment geometries
     segments_geojson = serialize("geojson", piste_segments, geometry_field="geom")
+    piste_geojson = serialize("geojson", pistes, geometry_field="geom")
 
     return render(request, "segment_map.html", {
         "activity_id": activity.strava_id,
         "way_geojson": way_geojson,
         "segments_geojson": segments_geojson,
+        "piste_geojson": piste_geojson,
     })
 
 

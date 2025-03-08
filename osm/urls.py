@@ -11,4 +11,5 @@ urlpatterns = [
     path('admin/update_segments/', views.update_segments, name='update_segments'),
     path('skiarea-autocomplete/', SkiAreaAutocomplete.as_view(), name='skiarea-autocomplete'),
     path('map/<int:osm_id>/', views.map, name='map'),
+    path('segment-map/<int:osm_id>', views.segment_map, name='segment_map'),
 ]

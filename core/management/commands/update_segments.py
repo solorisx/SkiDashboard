@@ -12,7 +12,7 @@ class Command(BaseCommand):
     help = 'Updates all piste segments, takes about 2 hours'
 
     def add_arguments(self, parser):
-        parser.add_argument('reset', type=bool, default=False)
+        parser.add_argument('--reset', action='store_true', help='Reset all piste segments')
 
     def handle(self, *args, **options):
         if options['reset']:
