@@ -189,11 +189,11 @@ def activity_detail_strava(request, strava_id):
     return redirect("activity_detail", activity_id=activity.id)
 
 @login_required
-def reprocess_activity(request, activity_id):
+def reprocess_activity(request, activity_id, background=True):
     """Reprocess an activity to update its laps and lift rides."""
     activity = get_object_or_404(Activity, id=activity_id, user=request.user)
     if activity.strava_id:
-        parse_strava_activity(user=request.user, activity_id=activity.strava_id, update=True)
+        parse_strava_activity(user=request.user, activity_id=activity.strava_id, update=True, background=background)
         return HttpResponse(f"Activity {activity_id} reprocessed.")
     else:
         return HttpResponse(f"Activity {activity_id} has no Strava ID.")

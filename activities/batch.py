@@ -32,5 +32,8 @@ def parse_strava_activities(user, all=False, update=False):
                 continue
 
 
-def parse_strava_activity(user, activity_id, update=False):
-    sync_strava_activity_task.delay(user.id, activity_id, update)
+def parse_strava_activity(user, activity_id, update=False, background=True):
+    if background:
+        sync_strava_activity_task.delay(user.id, activity_id, update)
+    else:
+        sync_strava_activity_task(user.id, activity_id, update)

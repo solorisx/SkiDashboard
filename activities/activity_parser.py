@@ -740,16 +740,12 @@ def sync_strava_activity(user, activity_id, update=False):
         activity_instance.laps.all().delete()
         logger.info(f"Deleted existing laps for Activity: {activity_instance.id}")
 
-    cumulative_elapsed_time = timedelta(seconds=0)
-    activity_start = activity_instance.start_time
 
+    activity_start_time = activity_instance.start_time
     for lap in activity_laps:
-        start_time = activity_start + cumulative_elapsed_time
-        cumulative_elapsed_time += timedelta(seconds=lap.elapsed_time)
-        end_time = start_time + cumulative_elapsed_time    
         lap_data = {
-            "start_time": start_time,
-            "timestamp": start_time,
+            "start_time": activity_start_time + timedelta(seconds=activity_streams["time"].data[lap.start_index]),
+            "timestamp": activity_start_time + timedelta(seconds=activity_streams["time"].data[lap.start_index]),
             "total_elapsed_time": timedelta(seconds=lap.elapsed_time),
             "total_timer_time": timedelta(seconds=lap.moving_time),
             "total_distance": lap.distance,
@@ -762,9 +758,11 @@ def sync_strava_activity(user, activity_id, update=False):
             "max_heart_rate": lap.max_heartrate,
             "start_position": Point(activity_streams["latlng"].data[lap.start_index+5][1], activity_streams["latlng"].data[lap.start_index+5][0]),
             "end_position": Point(activity_streams["latlng"].data[lap.end_index-5][1], activity_streams["latlng"].data[lap.end_index-5][0]),
-            "end_time": end_time,
+            "end_time": activity_start_time + timedelta(seconds=activity_streams["time"].data[lap.end_index]),
         }
         lap_instance, created = Lap.objects.update_or_create(lap_index=lap.lap_index, activity=activity_instance, defaults=lap_data)
+
+        logger.debug(f"Lap data: {lap_data}")
         logger.info(f'{"Created" if created else "Updated"} Lap: {lap_instance.lap_index}')
 
     logger.debug(f"Number of laps: {activity_instance.laps.count()}")
