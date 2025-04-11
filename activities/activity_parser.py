@@ -15,6 +15,9 @@ from django.db.models import Exists, OuterRef, Subquery
 import numpy as np
 from .utils import get_turning_points
 from .badges import assign_badges
+from cost.prices import get_daypass_price
+from cost.seasonpass import has_seasonpass
+
 
 
 from .strava_interface import load_activities, load_activity, load_activity_streams, load_activity_laps
@@ -547,6 +550,27 @@ def split_activity(activity: Activity, activity_streams: dict):
         Lap.objects.update_or_create(lap_index=i+1, activity=activity, defaults=lap_data)
 
 
+def assign_cost(activity: Activity):
+    skiarea = activity.ski_area
+    if not skiarea:
+        logger.warning(f"No ski area found for activity, no cost assisgned: {activity.id}")
+        return
+    
+    user = activity.user
+    date = activity.start_time.date()
+    cost = get_daypass_price(skiarea, date, user)
+
+    seasonpass = has_seasonpass(user, skiarea, date)
+    if seasonpass:
+        logger.debug(f"User {user.username} has a season pass for ski area {skiarea.name}")
+        activity.cost = 0
+        activity.value = cost
+    else:
+        activity.cost = cost
+        activity.value = cost
+    activity.save()    
+
+
 def calc_vertical_lap(lap: Lap, altitude_stream, update=True):
     """
     Calculate the total ascent and descent for a lap.
@@ -716,24 +740,29 @@ def sync_strava_activity(user, activity_id, update=False):
         activity_instance.laps.all().delete()
         logger.info(f"Deleted existing laps for Activity: {activity_instance.id}")
 
+    cumulative_elapsed_time = timedelta(seconds=0)
+    activity_start = activity_instance.start_time
+
     for lap in activity_laps:
+        start_time = activity_start + cumulative_elapsed_time
+        cumulative_elapsed_time += timedelta(seconds=lap.elapsed_time)
+        end_time = start_time + cumulative_elapsed_time    
         lap_data = {
-            "start_time": lap.start_date_local, # TODO: add timezone
-            "timestamp": lap.start_date_local, # TODO: add timezone
+            "start_time": start_time,
+            "timestamp": start_time,
             "total_elapsed_time": timedelta(seconds=lap.elapsed_time),
             "total_timer_time": timedelta(seconds=lap.moving_time),
             "total_distance": lap.distance,
             "total_ascent": lap.total_elevation_gain,
             "start_index_stream": lap.start_index,
             "end_index_stream": lap.end_index,
-            # TODO: get total_descent from streams
             "avg_speed": lap.average_speed,
             "max_speed": lap.max_speed,
             "avg_heart_rate": lap.average_heartrate,
             "max_heart_rate": lap.max_heartrate,
             "start_position": Point(activity_streams["latlng"].data[lap.start_index+5][1], activity_streams["latlng"].data[lap.start_index+5][0]),
             "end_position": Point(activity_streams["latlng"].data[lap.end_index-5][1], activity_streams["latlng"].data[lap.end_index-5][0]),
-            "end_time": lap.start_date_local + timedelta(seconds=lap.elapsed_time),
+            "end_time": end_time,
         }
         lap_instance, created = Lap.objects.update_or_create(lap_index=lap.lap_index, activity=activity_instance, defaults=lap_data)
         logger.info(f'{"Created" if created else "Updated"} Lap: {lap_instance.lap_index}')
@@ -777,38 +806,20 @@ def sync_strava_activity(user, activity_id, update=False):
 
     calc_ridden_segments(activity_instance)
 
+    assign_cost(activity_instance)
+
     activity_instance.num_laps = activity_instance.laps.count()
     activity_instance.num_lift_rides = activity_instance.laps.aggregate(total_lift_rides=Count('lift_rides'))['total_lift_rides']
     activity_instance.save()
+
+    assign_badges(activity_instance)
+    logger.info(f"Assigned badges to activity {activity_instance.id}")
 
     logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")
 
     return activity_instance
 
-
-def parse_strava_activities(user, all=False, update=False):
     
-    if all:
-        max_strava_sync = UserProfile.objects.get(user=user).max_strava_sync
-        if max_strava_sync == -1:
-            after = None
-        else:
-            after = datetime.now() - timedelta(days=max_strava_sync)
-    else:
-        after = datetime.now() - timedelta(days=90)
-    
-    activities = load_activities(user, after=after)
 
-    for activity in activities:         # TODO: this line makes calls to Strava API -> check token
-        if activity.type == 'AlpineSki':
-            try:
-                activity_id = activity.id
-                activity = sync_strava_activity(user, activity_id, update=update)
-                assign_badges(activity)
-            except Exception as e:
-                logger.error(f"Error parsing Strava activity {activity_id} (activity {activity.id if activity else 'does not exist in the database'}): {e}")
-                continue
 
-def parse_strava_activity(user, activity_id, update=False):
-    activity = sync_strava_activity(user, activity_id, update=update)
-    assign_badges(activity)
+

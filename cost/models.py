@@ -4,19 +4,12 @@ from osm.models import SkiArea, SkiAreaNetwork
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from datetime import datetime
+from activities.models import Activity
+from django.utils.timezone import make_aware
+import logging
 
-
-class Transaction(models.Model):
-    amount = MoneyField(max_digits=14, decimal_places=2, default_currency='CHF')
-    description = models.CharField(max_length=255)
-    skiarea = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f'{self.amount} - {self.description}'
-    
+logger = logging.getLogger('core')
 
 class TicketPrice(models.Model):
     skiarea = models.ForeignKey(SkiArea, on_delete=models.CASCADE)
@@ -61,9 +54,37 @@ class SeasonPass(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+
+    def get_valid_activities(self, date_from: datetime, date_until: datetime):
+        """
+        Returns all activities within the valid period of this season pass.
+        Includes activities from the ski area and ski areas belonging to the ski area network.
+        """
+        start_date = max(self.valid_from, date_from.date())
+        end_date = min(self.valid_until, date_until.date())
+
+        # Fetch ski areas from SkiAreaNetworkMember, considering NULL valid_to as "no expiry"
+        ski_areas_in_network = SkiArea.objects.filter(
+            skiareanetworkmember__ski_area_network=self.skiarea_network
+        ).filter(
+            Q(skiareanetworkmember__valid_from__lte=self.valid_until) &  # Start date must be before season pass expiry
+            (Q(skiareanetworkmember__valid_to__gte=self.valid_from) | Q(skiareanetworkmember__valid_to__isnull=True))  # Valid if no expiry or within range
+        ).values_list("id", flat=True) if self.skiarea_network else []
+
+        return Activity.objects.filter(
+            user=self.user,
+            timestamp__range=(start_date, end_date),
+        ).filter(
+            ski_area=self.skiarea  # Activities from the primary ski area
+        ) | Activity.objects.filter(
+            user=self.user,
+            timestamp__range=(start_date, end_date),
+            ski_area_id__in=ski_areas_in_network  # Activities from ski areas in the network
+        )
+
     def __str__(self):
         return f'{self.user} - {self.skiarea}{self.skiarea_network} - {self.valid_from} - {self.valid_until}'
-    
+
     def clean(self):
         if self.skiarea and self.skiarea_network:
             raise ValidationError('A season pass must be for either a ski area or a ski area network, not both')

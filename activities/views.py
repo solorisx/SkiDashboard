@@ -23,10 +23,11 @@ from osm.models import SkiArea, Aerialway, PisteSegment, Piste
 from cost.forms import CostForm
 from django.db.models import Count, OuterRef, Subquery
 from django.core.serializers import serialize
-
+from cost.models import SeasonPass
 from .models import Activity
 from .forms import StravaSyncForm
-from .activity_parser import sync_strava_activity, parse_strava_activities, parse_strava_activity
+from .activity_parser import sync_strava_activity
+from .batch import parse_strava_activities, parse_strava_activity
 
 logger = logging.getLogger('core')
 
@@ -45,7 +46,7 @@ def sync_strava_admin(request):
             update = form.cleaned_data["update"]
             try:
                 sync_strava_activity(user, strava_activity_id, update)
-                messages.success(request, f"Successfully synced Strava activity {strava_activity_id} for {user}.")
+                messages.success(request, f"Successfully started sync Strava activity {strava_activity_id} for {user}.")
             except Exception as e:
                 messages.error(request, f"Error syncing Strava activity: {e}")
                 return redirect("sync_strava_admin")
@@ -58,7 +59,7 @@ def sync_strava_admin(request):
 def sync_strava(request):
     try:
         parse_strava_activities(user=request.user, all=False, update=False)
-        return HttpResponse("Strava activities synced.")
+        return HttpResponse("Strava activities sync started.")
     except Exception as e:
         return HttpResponse(f"Error syncing Strava activities: {e}")
 
@@ -67,7 +68,7 @@ def sync_strava(request):
 def sync_reprocess_all(request):
     try:
         parse_strava_activities(user=request.user, update=True, all=True)
-        return HttpResponse("Strava activities synced and reprocessed.")
+        return HttpResponse("Strava activities sync and reprocessing started")
     except Exception as e:
         return HttpResponse(f"Error syncing Strava activities: {e}")
     
@@ -180,6 +181,12 @@ def activity_detail(request, activity_id):
             "badges": activity.badges.all(),
         },
     )
+
+@login_required
+def activity_detail_strava(request, strava_id):
+    """Show details of a single activity from Strava."""
+    activity = get_object_or_404(Activity, strava_id=strava_id, user=request.user)
+    return redirect("activity_detail", activity_id=activity.id)
 
 @login_required
 def reprocess_activity(request, activity_id):
@@ -446,6 +453,7 @@ def segment_map(request, activity_id):
 
 def home_stats(request):
     current_season_start = datetime(datetime.now().year, 7, 1) if datetime.now().month >= 7 else datetime(datetime.now().year-1, 7, 1)
+    current_season_end = datetime(datetime.now().year+1, 6, 30) if datetime.now().month >= 7 else datetime(datetime.now().year, 6, 30)
     activities = Activity.objects.filter(user=request.user, timestamp__gte=current_season_start)
     skiarea = (
         activities.values("ski_area")
@@ -462,10 +470,28 @@ def home_stats(request):
         total_num_laps=Sum("num_laps"),
         total_num_lift_rides=Sum("num_lift_rides"),
     )
+
+    season_passes = SeasonPass.objects.filter(user=request.user, valid_from__lte=current_season_end, valid_until__gte=current_season_start)
+    for sp in season_passes:
+        logger.debug(f"Season pass: {sp}")
+        activities = sp.get_valid_activities(current_season_start, current_season_end)
+        logger.debug(f"Activities: {activities}")
+    
+    season_pass_stats = {}
+    if season_passes:
+        for sp in season_passes:
+            activities = sp.get_valid_activities(current_season_start, current_season_end)
+            if activities:
+                season_pass_stats[sp] = {'name': sp.skiarea.name if sp.skiarea else sp.skiarea_network, 'activities': activities.count(), 'total_savings': activities.aggregate(total_savings=Sum('value'))['total_savings']}
+    logger.debug(f"Season pass stats: {season_pass_stats}")
+
+
     return render(request, "home.html", {
+        "season": f"{current_season_start.year}-{current_season_end.year}",
         "skiarea": SkiArea.objects.get(id=skiarea["ski_area"]) if skiarea else None,
         "count": skiarea["count"] if skiarea else 0,
         "total_stats": total_stats,
+        "season_passes": season_pass_stats,
     })
 
 

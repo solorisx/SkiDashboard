@@ -7,7 +7,7 @@ from .forms import SeasonPassForm, SeasonPass
 import logging
 from django.http import HttpResponseRedirect
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('core')
 
 @login_required
 def cost_detail(request, season=None):
@@ -46,8 +46,11 @@ def cost_detail_network(request, season=None):
 @login_required
 def cost_home(request):
 
+    logger.debug(request)
+
     if request.method == 'POST':
         form = SeasonPassForm(request.POST)
+        logger.debug(form)
         if form.is_valid():
             pass_form = form.save(commit=False)
             pass_form.user = request.user

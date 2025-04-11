@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    beta_tester = models.BooleanField(default=False)
     language = models.CharField(max_length=10, default='en')
     timezone = models.CharField(max_length=50, default='UTC')
     metric_units = models.BooleanField(default=True)

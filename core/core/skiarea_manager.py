@@ -19,7 +19,7 @@ def init_networks(request):
     topcard, created = SkiAreaNetwork.objects.get_or_create(name="Topcard", season_pass_price=1300)
     if not created:
         logger.warning("Topcard network already exists, resetting members.")
-        topcard.members.clear()
+        topcard.members.all().delete()
 
     # TODO: use json to load ski areas
     
@@ -28,69 +28,39 @@ def init_networks(request):
 
     for area in topcard_areas:
         try:
-            skiarea = SkiArea.objects.get(name__icontains=area)
-            member, _ = SkiAreaNetworkMember.objects.get_or_create(
-                ski_area_network=topcard,
-                content_type=ContentType.objects.get_for_model(skiarea),
-                object_id=skiarea.id,
-                defaults={
-                    'valid_during': 'winter',
-                    'valid_from': datetime(2025, 11, 1),
-                    'max_days': 365,
-                }
-            )
-            logger.info(f"Added {area} to Topcard network.")
+            skiareas = SkiArea.objects.filter(name__icontains=area)
+            for skiarea in skiareas:
+                member, _ = SkiAreaNetworkMember.objects.get_or_create(
+                    member=skiarea,
+                    ski_area_network=topcard,
+                    defaults={
+                        'valid_during': 'winter',
+                        'valid_from': datetime(2024, 11, 1),
+                        'max_days': 365,
+                    }
+                )
+                logger.info(f"Added {area} to Topcard network.")
         except SkiArea.DoesNotExist:
             logger.warning(f"Could not find ski area {area}")
-
-        try:
-            skiarea_boundary = SkiAreaBoundary.objects.get(name__icontains=area)
-            member, _ = SkiAreaNetworkMember.objects.get_or_create(
-                ski_area_network=topcard,
-                content_type=ContentType.objects.get_for_model(skiarea_boundary),
-                object_id=skiarea_boundary.id,
-                defaults={
-                    'valid_during': 'winter',
-                    'valid_from': datetime(2025, 11, 1),
-                    'max_days': 365,
-                }
-            )
-            logger.info(f"Added {area} boundary to Topcard network.")
-        except SkiAreaBoundary.DoesNotExist:
-            logger.warning(f"Could not find ski area boundary {area}")
 
     for area in topcard_addon:
         try:
-            skiarea = SkiArea.objects.get(name__icontains=area)
-            member, _ = SkiAreaNetworkMember.objects.get_or_create(
-                ski_area_network=topcard,
-                content_type=ContentType.objects.get_for_model(skiarea),
-                object_id=skiarea.id,
-                defaults={
-                    'valid_during': 'winter',
-                    'valid_from': datetime(2025, 11, 1),
-                    'max_days': 4,
-                }
-            )
-            logger.info(f"Added {area} to Topcard network add-on. ({skiarea.name})")
+            skiareas = SkiArea.objects.filter(name__icontains=area)
+            for skiarea in skiareas:
+                member, _ = SkiAreaNetworkMember.objects.get_or_create(
+                    ski_area_network=topcard,
+                    member=skiarea,
+                    defaults={
+                        'valid_during': 'winter',
+                        'valid_from': datetime(2025, 11, 1),
+                        'max_days': 4,
+                    }
+                )
+                logger.info(f"Added {area} to Topcard network add-on. ({skiarea.name})")
         except SkiArea.DoesNotExist:
             logger.warning(f"Could not find ski area {area}")
 
-        try:
-            skiarea_boundary = SkiAreaBoundary.objects.get(name__icontains=area)
-            member, _ = SkiAreaNetworkMember.objects.get_or_create(
-                ski_area_network=topcard,
-                content_type=ContentType.objects.get_for_model(skiarea_boundary),
-                object_id=skiarea_boundary.id,
-                defaults={
-                    'valid_during': 'winter',
-                    'valid_from': datetime(2025, 11, 1),
-                    'max_days': 4,
-                }
-            )
-            logger.info(f"Added {area} boundary to Topcard network add-on. ({skiarea_boundary.name})")
-        except SkiAreaBoundary.DoesNotExist:
-            logger.warning(f"Could not find ski area boundary {area}")        
+           
 
 
     # TODO: add Tirol Snow Card with tsc_areas.json

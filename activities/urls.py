@@ -7,6 +7,7 @@ urlpatterns = [
     path("", views.activity_list, name="activity_list"),
     path("<int:activity_id>/", views.activity_detail, name="activity_detail"),
     path("<int:activity_id>/reprocess/", views.reprocess_activity, name="reprocess_activity"),
+    path("strava/<strava_id>/", views.activity_detail_strava, name="activity_detail_strava"),
     path("skiarea/<int:skiarea_id>/", views.activity_list_skiarea_detail, name="skiarea_detail"),
     path("skiarea/<int:skiarea_id>/<str:season>", views.activity_list_skiarea_detail, name="skiarea_detail_season"),    
     path("skiarea/", views.activity_list_skiarea, name="activity_list_skiarea"),

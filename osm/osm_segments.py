@@ -1,6 +1,6 @@
 import logging
 from .models import WayNode, Piste, PisteSegment
-from activities.activity_parser import parse_strava_activity
+from activities.batch import parse_strava_activity
 
 logger = logging.getLogger('core')
 
