@@ -568,7 +568,8 @@ def assign_cost(activity: Activity):
     else:
         activity.cost = cost
         activity.value = cost
-    activity.save()    
+    activity.save()
+    logger.info(f"Assigned cost {activity.cost} to activity {activity.id}")
 
 
 def calc_vertical_lap(lap: Lap, altitude_stream, update=True):

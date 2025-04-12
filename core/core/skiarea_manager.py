@@ -1,10 +1,11 @@
 from datetime import datetime
+import json
 import logging
 from django.contrib.contenttypes.models import ContentType
 from djmoney.models.fields import MoneyField
 from osm.models import SkiArea, SkiAreaBoundary, SkiAreaNetwork, SkiAreaNetworkMember
 
-logger = logging.getLogger('SkiingDashboard')
+logger = logging.getLogger('core')
 
 def init_networks(request):
     """
@@ -60,12 +61,30 @@ def init_networks(request):
         except SkiArea.DoesNotExist:
             logger.warning(f"Could not find ski area {area}")
 
-           
-
-
-    # TODO: add Tirol Snow Card with tsc_areas.json
     
+    tsc, created = SkiAreaNetwork.objects.get_or_create(name="Tirol Snowcard", season_pass_price=1000)
+    if not created:
+        logger.warning("Tirol Snowcard network already exists, resetting members.")
+        tsc.members.all().delete()
 
-
+    # load tsc.json
+    with open("osm/tsc.json", "r") as file:
+        tsc_areas = json.load(file)
+        for area in tsc_areas.get("elements"):
+            try:
+                skiareas = SkiArea.objects.filter(osm_id=area.get("id"))
+                for skiarea in skiareas:
+                    member, _ = SkiAreaNetworkMember.objects.get_or_create(
+                        ski_area_network=tsc,
+                        member=skiarea,
+                        defaults={
+                            'valid_during': 'winter',
+                            'valid_from': datetime(2024, 11, 1),
+                            'max_days': 365,
+                        }
+                    )
+                    logger.info(f"Added {area} to Tirol Snowcard network.")
+            except SkiArea.DoesNotExist:
+                logger.warning(f"Could not find ski area {area}")
 
     logger.info("Ski area networks initialized.")

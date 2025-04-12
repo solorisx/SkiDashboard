@@ -4,8 +4,6 @@ from datetime import date
 from django.contrib.auth.models import User
 from djmoney.money import Money
 import geopandas as gpd
-from shapely.geometry import Point
-import os
 import logging
 
 logger = logging.getLogger('core')
@@ -18,30 +16,24 @@ def get_fallback_daypass_price(skiarea: SkiArea, date: date):
     """
     Determines a fallback day pass price based on the ski area's location within a country shapefile.
     """
-    if skiarea.geom:
-        
-        try:
-        
-            ski_point = gpd.GeoSeries([skiarea.geom])  # Convert GeoDjango geometry to GeoSeries
+    
+    if not skiarea.country:
+        skiarea.set_country()
+    
+    if skiarea.country:
+        # Check if the ski area has a country set
+        country_name = skiarea.country.name
 
-            # Find the country that contains this ski area
-            country_match = world[world.contains(ski_point.iloc[0])]
-
-            if not country_match.empty:
-                country_name = country_match.iloc[0]['name']
-
-                # Assign fallback prices based on country
-                if country_name == 'Switzerland':
-                    return Money(75, 'CHF')
-                elif country_name in ('Austria', 'Germany', 'Italy', 'France'):
-                    return Money(60, 'EUR')
-                elif country_name == 'United States':
-                    return Money(100, 'USD')
-                elif country_name == 'Canada':
-                    return Money(100, 'CAD')
-        except Exception as e:
-            logger.error(f"Error determining fallback price for {skiarea.name}: {e}")
-            return None
+        # Assign fallback prices based on country
+        if country_name == 'Switzerland':
+            return Money(75, 'CHF')
+        elif country_name in ('Austria', 'Germany', 'Italy', 'France'):
+            return Money(60, 'EUR')
+        elif country_name == 'United States':
+            return Money(100, 'USD')
+        elif country_name == 'Canada':
+            return Money(100, 'CAD')
+        return None
 
     return None  # No country match
 

@@ -2,9 +2,11 @@ from django.db import models
 from django.contrib.gis.geos import LineString
 from django.contrib.gis.db import models
 from djmoney.models.fields import MoneyField
+from django_countries.fields import CountryField
 from django.contrib.gis.geos.error import GEOSException
 from datetime import datetime
 import logging
+from .osm_interface import get_osm_data, load_osm_data, get_country_code
 
 logger = logging.getLogger('core')
 
@@ -260,12 +262,23 @@ class SkiArea(AbstractSkiArea):
     tags = models.JSONField(default=dict)
     daypass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency='CHF')
     seasonpass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency='CHF')
+    country = CountryField(null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.name}"
     
+    def set_country(self, country=None):
+        if self.way:
+            country_code = get_country_code(self.way.osm_id, "Way")
+        else:
+            country_code = get_country_code(self.osm_id, "Relation")
+        if country_code:
+            self.country = country_code
+            self.save()
+    
+
     def get_osm_url(self):
         if self.way:
             return f"https://www.openstreetmap.org/way/{self.osm_id}"
