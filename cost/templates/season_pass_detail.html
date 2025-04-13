@@ -9,14 +9,13 @@
         <th>Name</th>
         <th>Timestamp</th>
         <th>Ski Area</th>
-        <th>OSM ID</th>            
+        <th>Cost</th>
+        <th>Value</th>      
         <th>Vertical</th>
         <th>Distance (km)</th>
         <th>Number of laps</th>
         <th>Number of lift rides</th>
         <th>Strava</th>
-        <th>Created on</th>
-        <th>Modified on</th>
  
     </tr>
     {% for activity in activities %}
@@ -31,11 +30,11 @@
 
             {% if activity.ski_area %}
                 <td>{{ activity.ski_area.name }}</td>
-                <td> <a href="{{ activity.ski_area.get_osm_url }}" target="_blank"> {{ activity.ski_area.get_osm_id}}</a> </td>
             {% else %}
                 <td></td>
-                <td></td>
             {% endif %}
+            <td>{{ activity.cost }}</td>
+            <td>{{ activity.value }}</td>
 
             <td>{{ activity.total_descent|round_to:0 }}</td>
             <td>{{ activity.total_distance_km }} </td>
@@ -44,13 +43,7 @@
             <td>{% if activity.get_strava_url %}
                 <a href="{{ activity.get_strava_url }}" target="_blank">View on Strava</a>
             {% endif %}
-            </td>
-            <td>{{ activity.created_on }}</td>
-            <td>{{ activity.modified_on }}</td>
-
-
-
-        
+            </td>       
 
         </tr>
     {% endfor %}

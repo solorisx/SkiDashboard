@@ -79,12 +79,12 @@ def season_pass_detail(request, pass_id):
                     ski_area__in=season_pass.skiarea_network.members.values_list('member', flat=True),  
                     start_time__gte=season_pass.valid_from,
                     start_time__lte=season_pass.valid_until
-                    )
+                    ).order_by('-timestamp')
     else:
         activities = Activity.objects.filter(user=request.user, 
                                             ski_area=season_pass.skiarea, 
                                             start_time__gte=season_pass.valid_from, 
-                                            start_time__lte=season_pass.valid_until)
+                                            start_time__lte=season_pass.valid_until).order_by('-timestamp')
     
     context = {
         'season_pass': season_pass,
