@@ -35,6 +35,7 @@ def cost_detail_network(request, season=None):
     context = {
         'activities': activities,
         'networks': networks,
+        'count': activities.count(),
         'sum_cost': activities.aggregate(Sum('cost'))['cost__sum'], 
         'sum_value': activities.aggregate(Sum('value'))['value__sum'],
         'avg_cost': activities.aggregate(Avg('cost'))['cost__avg'],
@@ -89,6 +90,8 @@ def season_pass_detail(request, pass_id):
     context = {
         'season_pass': season_pass,
         'activities': activities,
+        'sum_cost': activities.aggregate(Sum('cost'))['cost__sum'],
+        'sum_value': activities.aggregate(Sum('value'))['value__sum'],
     }
 
     return render (request, "season_pass_detail.html", context)
