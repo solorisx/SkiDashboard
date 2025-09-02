@@ -62,6 +62,28 @@ def create_point(lat_field, lon_field, data):
         return point
     return None
 
+
+def add_lift_ride(aerialway, lift_ride, before=None, after=None):
+    """
+    Adds a lift ride to a lap.
+    If before is True, the lift ride is added before the lift ride.
+    If after is True, the lift ride is added after the lift ride.
+    """
+    if before:
+        timestamp = lift_ride.timestamp - timedelta(seconds=1)
+    elif after:
+        timestamp = lift_ride.timestamp + timedelta(seconds=1)
+    else:
+        raise ValueError("Either before or after must be True")
+    
+    new_lift_ride = LiftRide.create(
+        lap=lift_ride.lap,
+        aerialway=aerialway,
+        timestamp=timestamp,
+        uphill=False,
+    )
+    new_lift_ride.save()
+
 def get_ski_area_boundary(point, buffer=0):
     """
     Finds the ski area containing the given point.

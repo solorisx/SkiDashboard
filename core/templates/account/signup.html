@@ -1,0 +1,57 @@
+{% extends "base/base.html" %}
+{% load i18n socialaccount %}
+
+{% block content %}
+<div class="container mt-5 text-center" style="max-width: 560px;">
+
+  <div class="mt-4 p-4 bg-light rounded shadow-sm">
+    <h1 class="text-primary fw-bold">{% trans "Create your Ski Dashboard account" %} 🎿</h1>
+    <p class="lead text-muted">{% trans "Join now and start tracking your skiing adventures." %}</p>
+  </div>
+
+  {# Messages or form errors #}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger mt-4 text-start" role="alert">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  <div class="mt-4 p-4 bg-white rounded shadow-sm text-start">
+    <form method="post" action="{% url 'account_signup' %}">
+      {% csrf_token %}
+      {% if redirect_field_value %}
+        <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+      {% endif %}
+
+      {{ form.as_p }}
+
+      <button class="btn btn-success w-100 fw-bold">{% trans "Sign up" %}</button>
+
+      <div class="d-flex justify-content-between mt-3">
+        <span class="text-muted">{% trans "Already have an account?" %}</span>
+        <a href="{% url 'account_login' %}" class="fw-bold">{% trans "Sign in →" %}</a>
+      </div>
+    </form>
+  </div>
+
+  {# Social signup (Strava) #}
+  {% get_providers as socialproviders %}
+  {% if socialproviders %}
+    <div class="mt-4 p-4 bg-white rounded shadow-sm">
+      <p class="text-center text-secondary mb-3">{% trans "Or sign up with" %}</p>
+      <div class="d-grid gap-2">
+        {# Use our styled provider list override below #}
+        {% include "socialaccount/snippets/provider_list.html" with process="signup" %}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="mt-5 p-4 bg-light rounded shadow-sm text-center">
+    <h3 class="text-primary fw-bold">{% trans "Tip:" %} ⛷️</h3>
+    <p class="text-muted mb-0">
+      {% trans "Connecting Strava lets us import your ski activities automatically." %}
+    </p>
+  </div>
+
+</div>
+{% endblock %}

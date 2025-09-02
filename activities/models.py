@@ -4,6 +4,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from djmoney.models.fields import MoneyField
 from osm.models import Aerialway, SkiArea, SkiAreaBoundary, PisteSegment
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Activity(models.Model):
@@ -133,3 +134,32 @@ class ActivityPisteSegment(models.Model):
 
     def __str__(self):
         return f"{self.activity} - {self.piste_segment}"
+    
+class StravaSyncSettings(models.Model):
+    """
+    Single row with global toggles for sync methods + scheduling.
+    """
+    # Singleton-ish: keep one row; enforce in admin/migrations or via get_solo()
+    enable_scheduled_sync = models.BooleanField(default=False)
+    schedule_every_minutes = models.PositiveIntegerField(
+        default=15, validators=[MinValueValidator(1), MaxValueValidator(1440)]
+    )
+
+    enable_webhook_sync = models.BooleanField(default=False)
+
+    # Webhook verification/secret material
+    webhook_verify_token = models.CharField(
+        max_length=64, blank=True, help_text="Used to verify Strava webhook challenge (GET)."
+    )
+    webhook_signing_secret = models.CharField(
+        max_length=128, blank=True, help_text="Used to verify X-Strava-Signature HMAC (POST)."
+    )
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return "Strava Sync Settings"
+
+    class Meta:
+        verbose_name = "Strava Sync Settings"
+        verbose_name_plural = "Strava Sync Settings"

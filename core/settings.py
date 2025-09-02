@@ -19,6 +19,16 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+STATIC_URL = "/static/"
+
+# Add project-level "static" directory
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
+# For production, you'll also want:
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -42,9 +52,18 @@ AUTHENTICATION_BACKENDS = [
     
 ]
 
+LOGIN_REDIRECT_URL = "/"
+ACCOUNT_LOGOUT_REDIRECT_URL = "/"
+
 # Application definition
 
 INSTALLED_APPS = [
+
+    'core',
+    'activities',
+    'osm',
+    'cost',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -52,16 +71,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.gis',
+
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.strava',
     'dal',
     'dal_select2',
-    'core',
-    'activities',
-    'osm',
-    'cost'
+
 ]
 
 MIDDLEWARE = [
@@ -78,6 +95,11 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'core.urls'
 
 SOCIALACCOUNT_STORE_TOKENS = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
+
+EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
+EMAIL_FILE_PATH = BASE_DIR / "tmp/emails"
+DEFAULT_FROM_EMAIL = "no-reply@skidashboard.local"
 
 TEMPLATES = [
     {

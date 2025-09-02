@@ -1,0 +1,22 @@
+{% load static allauth socialaccount %}
+
+{% get_providers as socialaccount_providers %}
+{% if socialaccount_providers %}
+{# Renders a vertical list of provider buttons with Bootstrap styles #}
+{% for provider in socialaccount_providers %}
+  {# Build the login/signup URL for each provider #}
+  {% provider_login_url provider.id process=process as auth_url %}
+
+  {# Custom styling per provider (example for Strava) #}
+  {% if provider.id == "strava" %}
+  <a href="{{ auth_url }}" class="d-block mb-2">
+    <img src="{% static 'img/btn_strava_connect_with_orange.svg' %}" 
+         alt="Connect with Strava" class="img-fluid">
+  </a>
+  {% else %}
+    <a href="{{ auth_url }}" class="btn btn-outline-secondary w-100 fw-bold">
+      Continue with {{ provider.name }}
+    </a>
+  {% endif %}
+{% endfor %}
+{% endif %}

@@ -1,16 +1,15 @@
-import heapq
 import logging
-import time
 from datetime import timedelta, datetime
 
 from core.models import UserProfile
-from .strava_interface import load_activities, load_activity, load_activity_streams, load_activity_laps
+from .strava_interface import load_activities
 
 from .tasks import sync_strava_activity_task
 
 logger = logging.getLogger(__name__)
 
 def parse_strava_activities(user, all=False, update=False):
+    # deprecated, use parse_strava_activities_task instead
     if all:
         max_strava_sync = UserProfile.objects.get(user=user).max_strava_sync
         if max_strava_sync == -1:

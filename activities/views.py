@@ -25,7 +25,8 @@ from django.db.models import Count, OuterRef, Subquery
 from django.core.serializers import serialize
 from cost.models import SeasonPass
 from .models import Activity
-from .forms import StravaSyncForm
+from .forms import StravaSyncForm, PerUserSyncForm, GlobalSyncForm
+from .tasks import sync_strava_activity_task, sync_user_activities_task as sync_user_new_activities_task, scheduled_strava_sync
 from .activity_parser import sync_strava_activity
 from .batch import parse_strava_activities, parse_strava_activity
 
@@ -33,26 +34,69 @@ logger = logging.getLogger('core')
 
 @staff_member_required
 def sync_strava_admin(request):
+    activity_form = StravaSyncForm()
+    peruser_form = PerUserSyncForm()
+    global_form = GlobalSyncForm()
+
     if request.method == "POST":
-        form = StravaSyncForm(request.POST)
-        if form.is_valid():
-            user = form.cleaned_data["user"]
-            account = SocialAccount.objects.select_related('user').get(user=user, provider='strava')
-            if not account:
-                messages.error(request, f"User {user} does not have a Strava account.")
+
+        # 1) Single-activity manual sync
+        if "action_single_activity" in request.POST:
+            activity_form = StravaSyncForm(request.POST)
+            if activity_form.is_valid():
+                user = activity_form.cleaned_data["user"]
+                # Make sure this user actually has a Strava account
+                if not SocialAccount.objects.filter(user=user, provider="strava").exists():
+                    messages.error(request, f"User {user} does not have a Strava account.")
+                    return redirect("sync_strava_admin")
+
+                strava_activity_id = activity_form.cleaned_data["strava_activity_id"]
+                update = activity_form.cleaned_data["update"]
+                try:
+                    sync_strava_activity_task.delay(user, strava_activity_id, update)
+                    messages.success(
+                        request,
+                        f"Started sync for Strava activity {strava_activity_id} (user: {user})."
+                    )
+                except Exception as e:
+                    messages.error(request, f"Error syncing Strava activity: {e}")
                 return redirect("sync_strava_admin")
-            strava_activity_id = form.cleaned_data["strava_activity_id"]
-            user = form.cleaned_data["user"]
-            update = form.cleaned_data["update"]
-            try:
-                sync_strava_activity(user, strava_activity_id, update)
-                messages.success(request, f"Successfully started sync Strava activity {strava_activity_id} for {user}.")
-            except Exception as e:
-                messages.error(request, f"Error syncing Strava activity: {e}")
+
+        # 2) Per-user sweep of new activities (background)
+        if "action_per_user" in request.POST:
+            peruser_form = PerUserSyncForm(request.POST)
+            if peruser_form.is_valid():
+                user = peruser_form.cleaned_data["user"]
+                if not SocialAccount.objects.filter(user=user, provider="strava").exists():
+                    messages.error(request, f"User {user} does not have a Strava account.")
+                    return redirect("sync_strava_admin")
+
+                # Enqueue a background sweep for new activities (all=False, update=False)
+
+                all_flag = peruser_form.cleaned_data["all"]
+                update_flag = peruser_form.cleaned_data["update"]
+
+                sync_user_new_activities_task.delay(user.id, all=all_flag, update=update_flag)
+                msg = f"Started sync for {'ALL' if all_flag else 'NEW'} activities (user: {user})"
+                if update_flag:
+                    msg += ", UPDATING existing activities."
+                messages.success(request, msg)
                 return redirect("sync_strava_admin")
-    else:
-        form = StravaSyncForm()
-    return render(request, 'admin/strava-admin.html', {"form": form})
+
+        # 3) Global sweep for all Strava users (background)
+        if "action_global" in request.POST:
+            global_form = GlobalSyncForm(request.POST)
+            if global_form.is_valid():
+                scheduled_strava_sync.delay(True)
+                messages.info(request, "Triggered background sync for all Strava-connected users.")
+                return redirect("sync_strava_admin")
+
+    context = {
+        "activity_form": activity_form,
+        "peruser_form": peruser_form,
+        "global_form": global_form,
+    }
+    return render(request, "admin/strava-admin.html", context)
 
 
 @login_required
@@ -470,6 +514,15 @@ def home_stats(request):
         total_num_laps=Sum("num_laps"),
         total_num_lift_rides=Sum("num_lift_rides"),
     )
+
+    if not total_stats['total_distance_km']:
+        total_stats['total_distance_km'] = 0
+    if not total_stats['total_descent']:
+        total_stats['total_descent'] = 0
+    if not total_stats['total_num_laps']:
+        total_stats['total_num_laps'] = 0
+    if not total_stats['total_num_lift_rides']:
+        total_stats['total_num_lift_rides'] = 0
 
     season_passes = SeasonPass.objects.filter(user=request.user, valid_from__lte=current_season_end, valid_until__gte=current_season_start)
     for sp in season_passes:

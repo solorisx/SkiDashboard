@@ -1,14 +1,35 @@
 {% extends "admin/base_site.html" %}
+{% load static %}
 {% block content %}
-<h1>Admin Sync Actions</h1>
 
-<h2>Sync Strava Activity</h2>
-<form action="{% url 'sync_strava_admin' %}" method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="button">Sync Strava</button>
+<h1>Strava Sync Admin</h1>
+
+<h2>Single Activity</h2>
+<form method="post" class="form">{% csrf_token %}
+  {{ activity_form.as_p }}
+  <button class="default" type="submit" name="action_single_activity" value="1">
+    Sync one activity
+  </button>
 </form>
 
+<hr/>
 
+<h2>Per-User Sweep (new activities)</h2>
+<form method="post" class="form">{% csrf_token %}
+  {{ peruser_form.as_p }}
+  <button class="default" type="submit" name="action_per_user" value="1">
+    Sync user’s new activities
+  </button>
+</form>
+
+<hr/>
+
+<h2>Global Sweep (all Strava users)</h2>
+<form method="post" class="form">{% csrf_token %}
+  {{ global_form.as_p }}
+  <button class="default" type="submit" name="action_global" value="1">
+    Sync all users (new activities)
+  </button>
+</form>
 
 {% endblock %}
