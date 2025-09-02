@@ -1,0 +1,105 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-5" style="max-width: 720px;">
+  <div class="p-4 bg-white rounded shadow-sm">
+    <h1 class="fw-bold mb-1">{% trans "Email Addresses" %} 📬</h1>
+    <p class="text-muted mb-4">
+      {% trans "Manage the email addresses linked to your account. Choose a primary address and verify any unverified emails." %}
+    </p>
+
+    {# --- Existing emails / actions --- #}
+    <div class="mb-4">
+      {% if emailaddresses %}
+        <form method="post" action="{% url 'account_email' %}" class="text-start">
+          {% csrf_token %}
+
+          <div class="table-responsive mb-3">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th style="width: 44px;"></th>
+                  <th>{% trans "Email" %}</th>
+                  <th class="text-end">{% trans "Status" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for emailaddress in emailaddresses %}
+                  <tr>
+                    <td>
+                      <input
+                        id="email_{{ forloop.counter }}"
+                        type="radio"
+                        name="email"
+                        value="{{ emailaddress.email }}"
+                        {% if emailaddress.primary %}checked{% endif %}
+                        class="form-check-input"
+                        aria-label="{% trans 'Select email' %}"
+                      >
+                    </td>
+                    <td>
+                      <label for="email_{{ forloop.counter }}" class="mb-0">{{ emailaddress.email }}</label>
+                    </td>
+                    <td class="text-end">
+                      {% if emailaddress.primary %}
+                        <span class="badge text-bg-primary">{% trans "Primary" %}</span>
+                      {% endif %}
+                      {% if emailaddress.verified %}
+                        <span class="badge text-bg-success">{% trans "Verified" %}</span>
+                      {% else %}
+                        <span class="badge text-bg-warning">{% trans "Unverified" %}</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-outline-primary" type="submit" name="action_primary">
+              {% trans "Set as Primary" %}
+            </button>
+            <button class="btn btn-outline-secondary" type="submit" name="action_send">
+              {% trans "Re-send Verification" %}
+            </button>
+            <button class="btn btn-outline-danger" type="submit" name="action_remove">
+              {% trans "Remove Selected" %}
+            </button>
+          </div>
+        </form>
+      {% else %}
+        <div class="alert alert-info mb-0">
+          {% trans "You don’t have any email addresses yet. Add one below." %}
+        </div>
+      {% endif %}
+    </div>
+
+    <hr class="my-4">
+
+    {# --- Add new email --- #}
+    <div class="text-start">
+      <h2 class="h5 fw-bold mb-3">{% trans "Add a New Email" %}</h2>
+      <form method="post" action="{% url 'account_email' %}" novalidate>
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="mb-3">
+          <label class="form-label fw-semibold" for="id_email">{% trans "Email address" %}</label>
+          {{ form.email }}
+          {% if form.email.help_text %}
+            <div class="form-text">{{ form.email.help_text }}</div>
+          {% endif %}
+          {{ form.email.errors }}
+        </div>
+        <button type="submit" name="action_add" class="btn btn-primary fw-bold">
+          {% trans "Add Email" %}
+        </button>
+      </form>
+      <p class="text-muted mt-3 small">
+        {% trans "We’ll send a verification link to confirm ownership." %}
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

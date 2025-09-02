@@ -27,6 +27,8 @@ urlpatterns = [
     path('home/', views.home, name="home"),
     path('accounts/', include('allauth.urls')),
     path('accounts/delete/', views.UserDeleteView.as_view(), name='account_delete'),
+    path("accounts/strava/", views.strava_connection_view, name="strava-connection"),
+    path("accounts/strava/unlink/", views.strava_unlink_view, name="strava-unlink"),
     path('cost/', include('cost.urls')),
     path("osm/", include('osm.urls')),
 ]

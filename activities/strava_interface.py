@@ -10,7 +10,7 @@ from django.db.models import Q
 import logging
 
 # Get an instance of a logger
-logger = logging.getLogger('SkiingDashboard')
+logger = logging.getLogger(__name__)
 
 def refresh_strava_token(user, token, app):
     """
@@ -58,20 +58,15 @@ def get_access_token(user):
 
     return token.token
 
-def deauthorize_strava(user_id):
+def deauthorize_strava(user):
     """
     Deauthorizes the Strava token for a given user.
     """
-    user = User.objects.get(id=user_id)
     access_token = get_access_token(user)
     client = Client(access_token)
-    try:
-        response = client.deauthorize()
-        logger.info("Deauthorized Strava token for user %s", user.username)
-        return response
-    except Exception as e:
-        logger.error(f"Failed to deauthorize Strava token for {user.username}: {e}")
-        raise
+    response = client.deauthorize()
+    logger.info("Deauthorized Strava token for user %s", user.username)
+    return response
 
 def load_activities(User, before=None, after=None):
     access_token = get_access_token(User)

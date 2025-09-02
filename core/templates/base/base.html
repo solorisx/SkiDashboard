@@ -4,13 +4,17 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js"></script>
 
-{{ form.media }}
+{% if form %}
+    {{ form.media }}
+{% endif %}
 
 <body>
 
     <header>
         {% include './navbar.html' %}
     </header>
+
+    {% include 'base/messages.html' %}
 
     <main>
         <h1 class="bd-title" id="content"> {% block pagetitle %} {% endblock %}</h1>

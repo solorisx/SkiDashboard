@@ -13,6 +13,7 @@ from .core.skiarea_manager import init_networks
 from cost.forms import CostForm
 from django.db.models import Count, OuterRef, Subquery
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
 from django.contrib.admin.views.decorators import staff_member_required
 from dal import autocomplete
 from activities.views import home_stats
@@ -26,6 +27,8 @@ from django.contrib.auth import logout
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.generic import View
+
+from allauth.socialaccount.models import SocialAccount, SocialToken
 
 from .forms import UserDeleteForm
 
@@ -68,5 +71,28 @@ class UserDeleteView(LoginRequiredMixin, View):
             user.delete()
             messages.success(request, 'Account successfully deleted')
             return redirect(reverse('home'))
-        return render(request, 'account/user_deletion.html', {'form': form})
+        return render(request, 'account/user_deletion.html', {'form': form})  
+
+@login_required
+def strava_connection_view(request):
+    sa = SocialAccount.objects.filter(user=request.user, provider="strava").first()
+    return render(request, "account/strava.html", {"strava_account": sa})
+
+@login_required
+@require_http_methods(["POST"])
+def strava_unlink_view(request):
+    sa = SocialAccount.objects.filter(user=request.user, provider="strava").first()
+    if not sa:
+        messages.info(request, "Your account is not linked to Strava.")
+        return redirect("strava-connection")
+    try:
+        deauthorize_strava(request.user)
+    except Exception:
+        messages.warning(request, "Could not reach Strava to revoke; unlinking locally.")
+
+    logger.debug("Deleting Strava SocialAccount and SocialToken for user %s", request.user.username)
+    SocialToken.objects.filter(account=sa).delete()
+    sa.delete()
+    messages.success(request, "Strava has been unlinked.")
+    return redirect("strava-connection")
 
