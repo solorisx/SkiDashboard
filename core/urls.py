@@ -26,6 +26,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('home/', views.home, name="home"),
     path('accounts/', include('allauth.urls')),
+    path('accounts/delete/', views.UserDeleteView.as_view(), name='account_delete'),
     path('cost/', include('cost.urls')),
     path("osm/", include('osm.urls')),
 ]

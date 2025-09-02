@@ -1,0 +1,26 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-5 text-center" style="max-width: 560px;">
+  <div class="p-4 bg-white rounded shadow-sm">
+    <h1 class="text-danger fw-bold">{% trans "Delete Account" %} 🗑️</h1>
+    <p class="text-muted">
+      {% trans "This will permanently delete your account and all associated data. This action cannot be undone." %}
+    </p>
+    <form method="post" action="{% url 'account_delete' %}" class="text-start mt-3">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="mb-3">
+        <label class="form-label fw-bold">{% trans "Confirmation" %}</label>
+        {{ form.confirm }}
+        <div class="form-text">{{ form.confirm.help_text }}</div>
+        {{ form.confirm.errors }}
+      </div>
+      <button type="submit" class="btn btn-danger w-100 fw-bold">
+        {% trans "Delete My Account" %}
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

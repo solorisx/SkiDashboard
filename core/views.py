@@ -18,6 +18,17 @@ from dal import autocomplete
 from activities.views import home_stats
 import os
 
+from activities.strava_interface import deauthorize_strava
+
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+from django.contrib.auth import logout
+from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.views.generic import View
+
+from .forms import UserDeleteForm
+
 logger = logging.getLogger(__name__)
 
 def landing(request):
@@ -35,4 +46,27 @@ def home(request):
 def initialize_ski_area_networks(request):
     init_networks(request)
     return HttpResponse("Ski area networks initialized.")
+
+
+class UserDeleteView(LoginRequiredMixin, View):
+    """
+    Deletes the currently signed-in user and all associated data.
+    """
+    def get(self, request, *args, **kwargs):
+        form = UserDeleteForm()
+        return render(request, 'account/user_deletion.html', {'form': form})
+
+    def post(self, request, *args, **kwargs):
+        form = UserDeleteForm(request.POST)
+        # Form will be valid if checkbox is checked.
+        if form.is_valid():
+            user = request.user
+            deauthorize_strava(user.id)
+            logout(request)
+            # Delete user (and any associated ForeignKeys, according to
+            # on_delete parameters).
+            user.delete()
+            messages.success(request, 'Account successfully deleted')
+            return redirect(reverse('home'))
+        return render(request, 'account/user_deletion.html', {'form': form})
 

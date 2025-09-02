@@ -58,6 +58,21 @@ def get_access_token(user):
 
     return token.token
 
+def deauthorize_strava(user_id):
+    """
+    Deauthorizes the Strava token for a given user.
+    """
+    user = User.objects.get(id=user_id)
+    access_token = get_access_token(user)
+    client = Client(access_token)
+    try:
+        response = client.deauthorize()
+        logger.info("Deauthorized Strava token for user %s", user.username)
+        return response
+    except Exception as e:
+        logger.error(f"Failed to deauthorize Strava token for {user.username}: {e}")
+        raise
+
 def load_activities(User, before=None, after=None):
     access_token = get_access_token(User)
     client = Client(access_token)
