@@ -11,12 +11,14 @@ logger = logging.getLogger(__name__)
 wkbfab = osmium.geom.WKBFactory()
 
 class OSMHandler(osmium.SimpleHandler):
-    def __init__(self):
-        super().__init__()
-        self.ways = []
-        self.nodes = []
-        self.areas = []
-        self.relations = []
+    def __init__(self, scope):
+        osmium.SimpleHandler.__init__(self)
+        self.scope = scope
+        self.nodes = [] if scope[0] else None
+        self.ways = [] if scope[1] else None  
+        self.relations = [] if scope[2] else None
+        self.areas = [] if scope[3] else None
+        self.processed_count = 0
 
     def way(self, w):
         way_data = {
@@ -358,7 +360,7 @@ def parse_osm_file(file_path, scope):
 
     logger.info(f"Starting to apply OSM file to handler: {file_path}")
     start_time_handler = time.time()
-    handler = OSMHandler()
+    handler = OSMHandler(scope)
     handler.apply_file(file_path, locations=True)
     total_duration_handler = time.time() - start_time_handler
     logger.info(f"Applied OSM file to handler in {total_duration_handler:.4f} seconds")
