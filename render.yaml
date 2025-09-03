@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: skidasher-web
+    name: skidashboard-web
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
@@ -10,7 +10,7 @@ services:
       - key: RENDER
         value: "true"
       - key: DJANGO_SETTINGS_MODULE
-        value: config.settings
+        value: core.settings
       - key: ALLOWED_HOSTS
         value: ".onrender.com,localhost,127.0.0.1"
       - key: CSRF_TRUSTED_ORIGINS
@@ -26,24 +26,24 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     # Either keep dockerCommand here OR set CMD in your Dockerfile
-    dockerCommand: celery -A config worker -l info
+    dockerCommand: celery -A activities worker -l info
     envVars:
       - key: RENDER
         value: "true"
       - key: DJANGO_SETTINGS_MODULE
-        value: config.settings
+        value: core.settings
 
   - type: worker
     name: skidashboard-beat
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
-    dockerCommand: celery -A config beat -l info
+    dockerCommand: celery -A activities beat -l info
     envVars:
       - key: RENDER
         value: "true"
       - key: DJANGO_SETTINGS_MODULE
-        value: config.settings
+        value: core.settings
 
   # Flower exposes an HTTP UI — make it a web service and bind to $PORT
   - type: web
@@ -51,13 +51,13 @@ services:
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
-    dockerCommand: celery -A config flower --port=$PORT
+    dockerCommand: celery -A activities flower --port=$PORT
     healthCheckPath: /
     envVars:
       - key: RENDER
         value: "true"
       - key: DJANGO_SETTINGS_MODULE
-        value: config.settings
+        value: core.settings
 
   # Render's Redis-like service is "keyvalue" and requires an ipAllowList
   - type: keyvalue
