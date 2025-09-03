@@ -60,6 +60,7 @@ databases:
   - name: skidashboard-db
     plan: starter
 
-keyValueStores:
+redis:
   - name: skidashboard-redis
     plan: starter
+    maxmemoryPolicy: allkeys-lru
