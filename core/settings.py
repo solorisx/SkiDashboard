@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 load_dotenv()
 
@@ -119,19 +120,27 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 # Prefer Render's DATABASE_URL; otherwise assemble from local env vars (or defaults)
-_fallback_url = (
-    f"postgresql://{os.getenv('DATABASE_USER', 'user')}:"
-    f"{os.getenv('DATABASE_PASSWORD', 'password')}@"
-    f"{os.getenv('DATABASE_HOST', '127.0.0.1')}:"
-    f"{os.getenv('DATABASE_PORT', '5432')}/"
-    f"{os.getenv('DATABASE_NAME', 'skidashboard')}"
-)
+ON_RENDER = os.getenv("RENDER", "false").lower() == "true"
 
-_db = dj_database_url.config(
-    default=os.getenv("DATABASE_URL", _fallback_url),
-    conn_max_age=600,
-    ssl_require=os.getenv("RENDER", "false").lower() == "true",  # only force SSL on Render
-)
+if ON_RENDER:
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        raise ImproperlyConfigured("DATABASE_URL is required on Render")
+    _db = dj_database_url.parse(
+        db_url,
+        conn_max_age=600,
+        ssl_require=True,   # Render Postgres requires SSL
+    )
+else:
+    # Local dev fallback only
+    _fallback_url = (
+        f"postgresql://{os.getenv('DATABASE_USER', 'user')}:"
+        f"{os.getenv('DATABASE_PASSWORD', 'password')}@"
+        f"{os.getenv('DATABASE_HOST', '127.0.0.1')}:"
+        f"{os.getenv('DATABASE_PORT', '5432')}/"
+        f"{os.getenv('DATABASE_NAME', 'skidashboard')}"
+    )
+    _db = dj_database_url.parse(_fallback_url, conn_max_age=600)
 
 _db["ENGINE"] = "django.contrib.gis.db.backends.postgis"
 DATABASES = {"default": _db}
