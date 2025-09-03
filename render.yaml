@@ -56,11 +56,11 @@ services:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings
 
+  - type: redis
+    name: skidashboard-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+
 databases:
   - name: skidashboard-db
     plan: starter
-
-redis:
-  - name: skidashboard-redis
-    plan: starter
-    maxmemoryPolicy: allkeys-lru
