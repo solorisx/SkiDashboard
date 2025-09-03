@@ -5,7 +5,7 @@ import os
 import logging
 
 # Get an instance of a logger
-logger = logging.getLogger('SkiingDashboard')
+logger = logging.getLogger(__name__)
 
 def load_osm():
     url = 'https://www.opensnowmap.org/download/planet_pistes.osm.gz'
@@ -17,6 +17,10 @@ def load_osm():
 
     # Download the state file
     state_response = requests.get(state_url, stream=True)
+
+    logger.debug(f'Downloading state file from {state_url}')
+    logger.debug(f'State file response status code: {state_response.status_code}')
+
     if state_response.status_code == 200:
         new_state = state_response.text.strip()
         if os.path.exists(dest_state):
