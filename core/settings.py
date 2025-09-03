@@ -26,10 +26,10 @@ load_dotenv()
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-if os.getenv('DJANGO_DEBUG') == 'False':
-    DEBUG = False
-else:
+if os.getenv('DJANGO_DEBUG') == 'True':
     DEBUG = True
+else:
+    DEBUG = False
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -120,9 +120,9 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 # Prefer Render's DATABASE_URL; otherwise assemble from local env vars (or defaults)
-ON_RENDER = os.getenv("RENDER", "false").lower() == "true"
+ON_CLOUD = os.getenv("RENDER", "false").lower() == "true" or os.getenv("RAILWAY_PROJECT_ID") is not None
 
-if ON_RENDER:
+if ON_CLOUD:
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
         raise ImproperlyConfigured("DATABASE_URL is required on Render")
@@ -204,14 +204,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOG_DIR = 'core/logs'
 
 print("Initializing LOGGING in settings.py - if you see this more than once use 'runserver --noreload'")
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
+if not ON_CLOUD:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'verbose': {
             'format': '{asctime} {levelname} {module} {message}',
             'style': '{',
-            'datefmt': '%Y-%m-%d %H:%M:%S',  # Define the date format
+            'datefmt': '%Y-%m-%d %H:%M:%S',
         },
         'simple': {
             'format': '{levelname} {message}',
@@ -299,7 +300,57 @@ LOGGING = {
             'propagate': True,
         },
     },
-}
+    }
+else:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'verbose': {
+            'format': '{asctime} {levelname} {module} {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+        'core': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'activities': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'osm': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'cost': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+    }
+
 
 
 # Redis as broker (you can change this if using RabbitMQ etc.)
