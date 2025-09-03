@@ -369,12 +369,8 @@ def parse_osm_file(file_path, scope):
     total_duration_handler = time.time() - start_time_handler
     logger.info(f"Applied OSM file to handler in {total_duration_handler:.4f} seconds")
 
-    # Get the number of nodes, ways, and relations
-    logger.info(f"Number of nodes: {len(handler.nodes)}")
-    logger.info(f"Number of ways: {len(handler.ways)}")
-    logger.info(f"Number of areas: {len(handler.areas)}")
-    logger.info(f"Number of relations: {len(handler.relations)}")
-
+    logger.info(f"OSM file has {len(handler.nodes) if handler.nodes is not None else 'N/A'} nodes, {len(handler.ways) if handler.ways is not None else 'N/A'} ways, {len(handler.relations) if handler.relations is not None else 'N/A'} relations, {len(handler.areas) if handler.areas is not None else 'N/A'} areas")
+    
     # Process and save or update nodes
     if scope[0]:
         process_nodes(handler)
