@@ -36,7 +36,7 @@ class OSMHandler(osmium.SimpleHandler):
                 'geom': f'POINT({n.location.lon} {n.location.lat})',
                 'tags': dict(n.tags)
             }
-        self.nodes.append(node_data)
+            self.nodes.append(node_data)
 
     def area(self, a):
         if self.areas is not None:
