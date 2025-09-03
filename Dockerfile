@@ -23,6 +23,9 @@ RUN pip install --upgrade pip \
 # Copy project
 COPY . .
 
+# make sure the logs directory exists
+RUN mkdir -p /app/core/logs
+
 # Copy and make the startup script executable
 COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh
