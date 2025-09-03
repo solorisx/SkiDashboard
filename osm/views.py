@@ -70,8 +70,6 @@ def sync_osm_file(request):
                 sync_nodes = form.cleaned_data["sync_nodes"]
                 sync_areas = form.cleaned_data["sync_areas"]
                 logger.debug(f"Syncing OSM data: ways={sync_ways}, relations={sync_relations}, nodes={sync_nodes}, areas={sync_areas}")
-                load_osm()
-                logger.debug("Loaded OSM data")
                 parse_osm_file_task.delay("planet_pistes-osmium.osm", [sync_nodes, sync_ways, sync_relations, sync_areas])
                 messages.success(request, f"Successfully initiated loading OSM data from file.")
                 return redirect("sync_osm")

@@ -1,5 +1,7 @@
 from celery import shared_task
 import logging
+
+from osm.osm_downloader import load_osm
 from .osm_parser import parse_osm_file
 import os
 
@@ -9,6 +11,8 @@ logger = logging.getLogger(__name__)
 def parse_osm_file_task(osm_file_path, parse_options):
     logger.debug(f'Working directory: {os.getcwd()}')
     try:
+        load_osm()
+        logger.debug("Loaded OSM data")
         parse_osm_file(osm_file_path, parse_options)
         logger.info(f"Successfully parsed OSM file: {osm_file_path}")
     except Exception as e:
