@@ -21,13 +21,14 @@ class OSMHandler(osmium.SimpleHandler):
         self.processed_count = 0
 
     def way(self, w):
-        way_data = {
-            'osm_id': w.id,
-            'geom': wkbfab.create_linestring(w),
-            'nodes': [n.ref for n in w.nodes],
-            'tags': dict(w.tags)
-        }
-        self.ways.append(way_data)
+        if self.ways is not None:
+            way_data = {
+                'osm_id': w.id,
+                'geom': wkbfab.create_linestring(w),
+                'nodes': [n.ref for n in w.nodes],
+                'tags': dict(w.tags)
+            }
+            self.ways.append(way_data)
 
     def node(self, n):
         if self.nodes is not None:
