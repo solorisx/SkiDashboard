@@ -30,33 +30,36 @@ class OSMHandler(osmium.SimpleHandler):
         self.ways.append(way_data)
 
     def node(self, n):
-        node_data = {
-            'osm_id': n.id,
-            'geom': f'POINT({n.location.lon} {n.location.lat})',
-            'tags': dict(n.tags)
-        }
+        if self.nodes is not None:
+            node_data = {
+                'osm_id': n.id,
+                'geom': f'POINT({n.location.lon} {n.location.lat})',
+                'tags': dict(n.tags)
+            }
         self.nodes.append(node_data)
 
     def area(self, a):
-        if 'landuse' in a.tags and a.tags['landuse'] == 'winter_sports':
-            area_data = {
-                'osm_id': a.orig_id(),
-                'geom': wkbfab.create_multipolygon(a),
-                'name': a.tags.get('name'),
-                'tags': dict(a.tags)
-            }
-            self.areas.append(area_data)
+        if self.areas is not None:
+            if 'landuse' in a.tags and a.tags['landuse'] == 'winter_sports':
+                area_data = {
+                    'osm_id': a.orig_id(),
+                    'geom': wkbfab.create_multipolygon(a),
+                    'name': a.tags.get('name'),
+                    'tags': dict(a.tags)
+                }
+                self.areas.append(area_data)
 
     def relation(self, r):
-        if 'site' in r.tags and r.tags['site'] == 'piste':
-            relation_data = {
-                'osm_id': r.id,
-                'name': r.tags.get('name'),
-                'url': r.tags.get('url'),
-                'wikipedia': r.tags.get('wikipedia'),
-                'member_ids': [member.ref for member in r.members if member.type == 'w']
-            }
-            self.relations.append(relation_data)
+        if self.relations is not None:
+            if 'site' in r.tags and r.tags['site'] == 'piste':
+                relation_data = {
+                    'osm_id': r.id,
+                    'name': r.tags.get('name'),
+                    'url': r.tags.get('url'),
+                    'wikipedia': r.tags.get('wikipedia'),
+                    'member_ids': [member.ref for member in r.members if member.type == 'w']
+                }
+                self.relations.append(relation_data)
 
 def duration_to_minutes(duration):
     try:
