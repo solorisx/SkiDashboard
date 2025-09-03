@@ -1,4 +1,3 @@
-# Dockerfile
 FROM python:3.11-slim
 
 # --- System deps (GDAL/GEOS/PROJ + build tools) ---
@@ -24,6 +23,10 @@ RUN pip install --upgrade pip \
 # Copy project
 COPY . .
 
+# Copy and make the startup script executable
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 # Default envs (override in Render/compose as needed)
 ENV DJANGO_SETTINGS_MODULE=core.settings \
     WEB_CONCURRENCY=2
@@ -31,6 +34,5 @@ ENV DJANGO_SETTINGS_MODULE=core.settings \
 # Expose app port (for local compose)
 EXPOSE 8000
 
-# Default start is gunicorn for web service
-# (Render workers will override with their own startCommand)
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Use the startup script instead of direct gunicorn
+CMD ["/app/start.sh"]

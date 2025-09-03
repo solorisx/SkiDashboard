@@ -19,11 +19,6 @@ services:
         value: "2"
       - key: PYTHONUNBUFFERED
         value: "1"
-      # DATABASE_URL and REDIS_URL come from linked resources; do not set here.
-    # Run migrations & collectstatic after each deploy
-    postDeployCommand: |
-      python manage.py migrate --noinput && \
-      python manage.py collectstatic --noinput
 
   - type: worker
     name: skidashboard-celery
