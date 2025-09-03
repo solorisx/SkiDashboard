@@ -353,6 +353,7 @@ else:
 
 
 
+
 # Redis as broker (you can change this if using RabbitMQ etc.)
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL")
 
