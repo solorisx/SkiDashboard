@@ -1,0 +1,70 @@
+services:
+  - type: web
+    name: skidasher-web
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /
+    envVars:
+      - key: RENDER
+        value: "true"
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com,localhost,127.0.0.1"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://*.onrender.com"
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      # DATABASE_URL and REDIS_URL come from linked resources; do not set here.
+    # Run migrations & collectstatic after each deploy
+    postDeployCommand: |
+      python manage.py migrate --noinput && \
+      python manage.py collectstatic --noinput
+
+  - type: worker
+    name: skidashboard-celery
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    startCommand: celery -A config worker -l info
+    envVars:
+      - key: RENDER
+        value: "true"
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+
+  - type: worker
+    name: skidashboard-beat
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    startCommand: celery -A config beat -l info
+    envVars:
+      - key: RENDER
+        value: "true"
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+
+  - type: worker
+    name: skidashboard-flower
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    startCommand: celery -A config flower --port=5555
+    envVars:
+      - key: RENDER
+        value: "true"
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+
+databases:
+  - name: skidashboard-db
+    plan: starter
+
+keyValueStores:
+  - name: skidashboard-redis
+    plan: starter

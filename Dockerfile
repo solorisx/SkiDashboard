@@ -1,0 +1,36 @@
+# Dockerfile
+FROM python:3.11-slim
+
+# --- System deps (GDAL/GEOS/PROJ + build tools) ---
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gdal-bin libgdal-dev libgeos-dev proj-bin libproj-dev \
+    build-essential gcc \
+    # optional but useful:
+    curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# Python setup
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Leverage Docker layer caching for deps
+COPY requirements.txt .
+RUN pip install --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt
+
+# Copy project
+COPY . .
+
+# Default envs (override in Render/compose as needed)
+ENV DJANGO_SETTINGS_MODULE=core.settings \
+    WEB_CONCURRENCY=2
+
+# Expose app port (for local compose)
+EXPOSE 8000
+
+# Default start is gunicorn for web service
+# (Render workers will override with their own startCommand)
+CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]

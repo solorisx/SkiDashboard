@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from .forms import OSMSyncForm, OSMFileSyncForm, SkiAreaNetworkForm, SegmentUpdateForm
 
-from .models import SkiArea, SkiAreaNetwork, SkiAreaNetworkMember, Way, Piste, PisteSegment
+from .models import SkiArea, SkiAreaNetwork, SkiAreaNetworkMember, Way, Piste, PisteSegment, Node
 from django.shortcuts import render, get_object_or_404
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
@@ -16,6 +16,7 @@ from .osm_downloader import load_osm
 from .osm_parser import parse_osm_file
 from .osm_interface import load_osm_data
 from .osm_segments import update_piste_segments
+from .tasks import parse_osm_file_task
 
 
 logger = logging.getLogger('core')
@@ -27,7 +28,18 @@ def sync_osm(request):
     form2 = OSMFileSyncForm()
     form3 = SkiAreaNetworkForm()
     form4 = SegmentUpdateForm()
-    return render(request, "admin/osm-admin.html", {"form1": form1, "form2": form2, "form3": form3, "form4": form4})
+
+    # Get database counts
+    db_stats = {
+        'ski_areas': SkiArea.objects.count(),
+        'ski_area_networks': SkiAreaNetwork.objects.count(),
+        'ski_area_network_members': SkiAreaNetworkMember.objects.count(),
+        'ways': Way.objects.count(),
+        'pistes': Piste.objects.count(),
+        'nodes': Node.objects.count(),
+    }
+
+    return render(request, "admin/osm-admin.html", {"form1": form1, "form2": form2, "form3": form3, "form4": form4, "db_stats": db_stats})
     
 
 @staff_member_required
@@ -60,8 +72,9 @@ def sync_osm_file(request):
                 logger.debug(f"Syncing OSM data: ways={sync_ways}, relations={sync_relations}, nodes={sync_nodes}, areas={sync_areas}")
                 load_osm()
                 logger.debug("Loaded OSM data")
-                parse_osm_file("planet_pistes-osmium.osm", [sync_nodes, sync_ways, sync_relations, sync_areas])
-                messages.success(request, f"Successfully loaded OSM data from file.")
+                parse_osm_file_task.delay("planet_pistes-osmium.osm", [sync_nodes, sync_ways, sync_relations, sync_areas])
+                messages.success(request, f"Successfully initiated loading OSM data from file.")
+                return redirect("sync_osm")
         except Exception as e:
             messages.error(request, f"Error loading OSM data: {e}")
             return redirect("sync_osm")

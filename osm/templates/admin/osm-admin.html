@@ -8,6 +8,37 @@
 {% block content %}
 <h1>Admin Sync Actions</h1>
 
+<!-- Database Overview Section -->
+<div style="background: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+    <h2>Database Overview</h2>
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 5px; font-weight: bold;">Ski Areas:</td>
+            <td style="padding: 5px;">{{ db_stats.ski_areas|default:0 }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 5px; font-weight: bold;">Ski Area Networks:</td>
+            <td style="padding: 5px;">{{ db_stats.ski_area_networks|default:0 }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 5px; font-weight: bold;">Network Members:</td>
+            <td style="padding: 5px;">{{ db_stats.ski_area_network_members|default:0 }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 5px; font-weight: bold;">Ways:</td>
+            <td style="padding: 5px;">{{ db_stats.ways|default:0 }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 5px; font-weight: bold;">Pistes:</td>
+            <td style="padding: 5px;">{{ db_stats.pistes|default:0 }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 5px; font-weight: bold;">Nodes:</td>
+            <td style="padding: 5px;">{{ db_stats.nodes|default:0 }}</td>
+        </tr>
+    </table>
+</div>
+
 <h2>Sync select OSM Data over API</h2>
 <form action="{% url 'sync-osm-api' %}" method="POST" class="form">
     {% csrf_token %}
@@ -35,6 +66,5 @@
     {{ form4.as_p }}
     <button type="submit" class="button">Update</button>
 </form>
-
 
 {% endblock %}

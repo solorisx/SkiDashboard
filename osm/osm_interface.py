@@ -22,8 +22,6 @@ def load_osm_data(osm_id, osm_type):
     logger.debug(len(result.ways))
     nodes = result.ways[0].get_nodes(resolve_missing=True)
     logger.debug(len(nodes))
-    for node in nodes:
-        logger.debug(node)
 
 def get_country_code(osm_id, osm_type):
     try:

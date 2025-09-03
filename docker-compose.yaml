@@ -1,0 +1,60 @@
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build: .
+    command: celery -A activities worker -l info
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
+  beat:
+    build: .
+    command: celery -A activities beat -l info
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
+  flower:
+    build: .
+    command: celery -A activities flower --port=5555
+    env_file: .env
+    ports:
+      - "5555:5555"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: django
+      POSTGRES_PASSWORD: password      
+    ports:
+      - "55432:55432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data   # bind mount = data stored in repo folder
+
+  redis:
+    image: redis:7
+    ports:
+      - "56379:56379"

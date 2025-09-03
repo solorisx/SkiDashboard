@@ -13,34 +13,25 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import dj_database_url
 
 load_dotenv()
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-STATIC_URL = "/static/"
-
-# Add project-level "static" directory
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
-
-# For production, you'll also want:
-STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-zz*0!e^y(c!!93sb16gs^=l$+_4#$!+ido2gcz03mbm#uah92m'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+if os.getenv('DJANGO_DEBUG') == 'False':
+    DEBUG = False
+else:
+    DEBUG = True
 
-ALLOWED_HOSTS = []
-
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 AUTHENTICATION_BACKENDS = [
     
@@ -79,6 +70,8 @@ INSTALLED_APPS = [
     'dal',
     'dal_select2',
 
+    "whitenoise.runserver_nostatic",
+
 ]
 
 MIDDLEWARE = [
@@ -89,7 +82,9 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',   
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -123,16 +118,23 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': os.getenv('DATABASE_NAME'),
-        'USER': os.getenv('DATABASE_USER'),
-        'PASSWORD': os.getenv('DATABASE_PASSWORD'),
-        'HOST': os.getenv('DATABASE_HOST'),
-        'PORT': os.getenv('DATABASE_PORT'),
-    }
-}
+# Prefer Render's DATABASE_URL; otherwise assemble from local env vars (or defaults)
+_fallback_url = (
+    f"postgresql://{os.getenv('DATABASE_USER', 'user')}:"
+    f"{os.getenv('DATABASE_PASSWORD', 'password')}@"
+    f"{os.getenv('DATABASE_HOST', '127.0.0.1')}:"
+    f"{os.getenv('DATABASE_PORT', '5432')}/"
+    f"{os.getenv('DATABASE_NAME', 'skidashboard')}"
+)
+
+_db = dj_database_url.config(
+    default=os.getenv("DATABASE_URL", _fallback_url),
+    conn_max_age=600,
+    ssl_require=os.getenv("RENDER", "false").lower() == "true",  # only force SSL on Render
+)
+
+_db["ENGINE"] = "django.contrib.gis.db.backends.postgis"
+DATABASES = {"default": _db}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -171,6 +173,17 @@ USE_L10N = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
+# Optional (recommended):
+WHITENOISE_KEEP_ONLY_HASHED_FILES = True
+
+
+
+# Add project-level "static" directory
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -281,12 +294,17 @@ LOGGING = {
 
 
 # Redis as broker (you can change this if using RabbitMQ etc.)
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL")
 
 # Optional but recommended settings
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/1'  # Optional: to store task results
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND")  # Optional: to store task results
 CELERY_TIMEZONE = 'UTC'
+broker_connection_retry_on_startup = True
 
+
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
