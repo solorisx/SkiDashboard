@@ -1,7 +1,7 @@
 services:
   - type: web
     name: skidasher-web
-    env: docker
+    runtime: docker
     plan: starter
     dockerfilePath: ./Dockerfile
     autoDeploy: true
@@ -22,10 +22,11 @@ services:
 
   - type: worker
     name: skidashboard-celery
-    env: docker
+    runtime: docker
     plan: starter
     dockerfilePath: ./Dockerfile
-    startCommand: celery -A config worker -l info
+    # Either keep dockerCommand here OR set CMD in your Dockerfile
+    dockerCommand: celery -A config worker -l info
     envVars:
       - key: RENDER
         value: "true"
@@ -34,32 +35,38 @@ services:
 
   - type: worker
     name: skidashboard-beat
-    env: docker
+    runtime: docker
     plan: starter
     dockerfilePath: ./Dockerfile
-    startCommand: celery -A config beat -l info
+    dockerCommand: celery -A config beat -l info
     envVars:
       - key: RENDER
         value: "true"
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings
 
-  - type: worker
+  # Flower exposes an HTTP UI — make it a web service and bind to $PORT
+  - type: web
     name: skidashboard-flower
-    env: docker
+    runtime: docker
     plan: starter
     dockerfilePath: ./Dockerfile
-    startCommand: celery -A config flower --port=5555
+    dockerCommand: celery -A config flower --port=$PORT
+    healthCheckPath: /
     envVars:
       - key: RENDER
         value: "true"
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings
 
-  - type: redis
+  # Render's Redis-like service is "keyvalue" and requires an ipAllowList
+  - type: keyvalue
     name: skidashboard-redis
     plan: starter
     maxmemoryPolicy: allkeys-lru
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: allow all (tighten this later)
 
 databases:
   - name: skidashboard-db
