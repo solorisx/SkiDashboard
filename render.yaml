@@ -2,7 +2,7 @@ services:
   - type: web
     name: skidasher-web
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: ./Dockerfile
     autoDeploy: true
     healthCheckPath: /
@@ -23,7 +23,7 @@ services:
   - type: worker
     name: skidashboard-celery
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: ./Dockerfile
     # Either keep dockerCommand here OR set CMD in your Dockerfile
     dockerCommand: celery -A config worker -l info
@@ -36,7 +36,7 @@ services:
   - type: worker
     name: skidashboard-beat
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: ./Dockerfile
     dockerCommand: celery -A config beat -l info
     envVars:
@@ -49,7 +49,7 @@ services:
   - type: web
     name: skidashboard-flower
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: ./Dockerfile
     dockerCommand: celery -A config flower --port=$PORT
     healthCheckPath: /
@@ -62,7 +62,7 @@ services:
   # Render's Redis-like service is "keyvalue" and requires an ipAllowList
   - type: keyvalue
     name: skidashboard-redis
-    plan: starter
+    plan: free
     maxmemoryPolicy: allkeys-lru
     ipAllowList:
       - source: 0.0.0.0/0
