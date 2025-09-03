@@ -70,4 +70,4 @@ services:
 
 databases:
   - name: skidashboard-db
-    plan: starter
+    plan: free
