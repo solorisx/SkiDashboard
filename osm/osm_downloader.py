@@ -18,9 +18,13 @@ def load_osm():
     # Download the state file
     state_response = requests.get(state_url, stream=True)
 
+    logger.debug(f'Working directory: {os.getcwd()}')
     logger.debug(f'Downloading state file from {state_url}')
     logger.debug(f'State file response status code: {state_response.status_code}')
-
+    logger.debug(f'State file response content: {state_response.text}')
+    logger.debug(f'Checking if state file exists at {dest_state}: {os.path.exists(dest_state)}')
+    logger.debug(f'Checking if OSM file exists at {dest}: {os.path.exists(dest)}')
+    
     if state_response.status_code == 200:
         new_state = state_response.text.strip()
         if os.path.exists(dest_state):
@@ -30,6 +34,10 @@ def load_osm():
             current_state = None
         
         # Compare state files
+
+        logger.debug(f'Current state: {current_state}')
+        logger.debug(f'New state: {new_state}')
+
         if current_state != new_state:
             # Download the OSM file
             response = requests.get(url, stream=True)
