@@ -124,7 +124,7 @@ def process_ways(handler):
             way_objs = [Way(osm_id=way['osm_id'], tags=way.get('tags', {})) for way in chunk]
             Way.objects.bulk_create(way_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['tags'], unique_fields=['osm_id'])
 
-            logger.info(f"Created {len(way_objs)} ways")
+            logger.debug(f"Created {len(way_objs)} ways")
 
             # Fetch the created ways to update nodes
             osm_ids = [way['osm_id'] for way in chunk]
@@ -196,8 +196,8 @@ def process_ways(handler):
                 if way_nodes_to_create or nodes_to_delete:
                     logger.warning(f"Processed added/deleted WayNodes for way {way.osm_id}")
 
-            logger.info(f"Processed {min((i + 1) * chunk_size, len(handler.ways))} / {len(handler.ways)} ways")
-            if i % 100 == 0:
+            logger.debug(f"Processed {min((i + 1) * chunk_size, len(handler.ways))} / {len(handler.ways)} ways")
+            if i % 10000 == 0:
                 logger.info(f"Processed {round(i * chunk_size / len(handler.ways) * 100, 2)}% ({i * chunk_size} / {len(handler.ways)} ways)")
         except Exception as e:
             logger.error(f"Error processing chunk {i} of ways: {e}")
@@ -356,6 +356,90 @@ def process_relations(handler):
                 logger.error(f"Error processing relation {relation_data['osm_id']}, {relation_data}: {e}")
         logger.info("Finished processing relations")
 
+def delete_orphan_nodes(dry_run=False):
+    """
+    Delete nodes that are not referenced by any ways or stations.
+    
+    Args:
+        dry_run (bool): If True, only count orphan nodes without deleting them.
+                       If False, actually delete the orphan nodes.
+    
+    Returns:
+        int: Number of orphan nodes found (and deleted if not dry_run).
+    """
+    
+    # Find nodes that have no associated ways and no associated station
+    orphan_nodes = Node.objects.filter(
+        ways__isnull=True,  # No ways reference this node
+        station__isnull=True  # No station references this node
+    )
+    
+    orphan_count = orphan_nodes.count()
+    
+    if dry_run:
+        logger.info(f"Found {orphan_count} orphan nodes (dry run - not deleting)")
+        return orphan_count
+    
+    if orphan_count == 0:
+        logger.info("No orphan nodes found")
+        return 0
+    
+    # Use transaction to ensure atomicity
+    with transaction.atomic():
+        deleted_count, _ = orphan_nodes.delete()
+        logger.info(f"Deleted {deleted_count} orphan nodes")
+    
+    return deleted_count
+
+
+def delete_orphan_nodes_batch(batch_size=1000, dry_run=False):
+    """
+    Delete orphan nodes in batches to avoid memory issues with large datasets.
+    
+    Args:
+        batch_size (int): Number of nodes to process in each batch.
+        dry_run (bool): If True, only count orphan nodes without deleting them.
+    
+    Returns:
+        int: Total number of orphan nodes found (and deleted if not dry_run).
+    """
+    
+    total_deleted = 0
+    
+    while True:
+        # Find orphan nodes in batches
+        orphan_node_ids = list(
+            Node.objects.filter(
+                ways__isnull=True,
+                station__isnull=True
+            ).values_list('id', flat=True)[:batch_size]
+        )
+        
+        if not orphan_node_ids:
+            break
+        
+        if dry_run:
+            total_deleted += len(orphan_node_ids)
+            logger.info(f"Found batch of {len(orphan_node_ids)} orphan nodes (dry run)")
+            # In dry run, we break after first batch to avoid infinite loop
+            break
+        else:
+            with transaction.atomic():
+                deleted_count, _ = Node.objects.filter(id__in=orphan_node_ids).delete()
+                total_deleted += deleted_count
+                logger.info(f"Deleted batch of {deleted_count} orphan nodes")
+    
+    if dry_run:
+        # For dry run, count all orphan nodes
+        total_orphans = Node.objects.filter(
+            ways__isnull=True,
+            station__isnull=True
+        ).count()
+        logger.info(f"Total orphan nodes found: {total_orphans} (dry run - not deleting)")
+        return total_orphans
+    else:
+        logger.info(f"Total orphan nodes deleted: {total_deleted}")
+        return total_deleted
 
 def parse_osm_file(file_path, scope):
     logger.info(f"Starting to parse OSM file: {file_path}")
@@ -378,6 +462,7 @@ def parse_osm_file(file_path, scope):
     # Process and save or update ways, aerialways, and pistes
     if scope[1]:
         process_ways(handler)
+        delete_orphan_nodes_batch()
 
     # Process and save or update ski areas
     if scope[2]:

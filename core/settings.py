@@ -31,6 +31,8 @@ if os.getenv('DJANGO_DEBUG') == 'True':
 else:
     DEBUG = False
 
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -277,26 +279,26 @@ if not ON_CLOUD:
     'loggers': {
         'django': {
             'handlers': ['console', 'django_file', 'django_file_info', 'django_file_warn'],
-            'level': 'DEBUG',
+            'level': LOG_LEVEL,
         },
         'core': {
             'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
-            'level': 'DEBUG',
+            'level': LOG_LEVEL,
             'propagate': True,
         },
         'activities': {
             'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
-            'level': 'DEBUG',
+            'level': LOG_LEVEL,
             'propagate': True,
         },
         'osm': {
             'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
-            'level': 'INFO',
+            'level': LOG_LEVEL,
             'propagate': True,
         },
         'cost': {
             'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
-            'level': 'DEBUG',
+            'level': LOG_LEVEL,
             'propagate': True,
         },
     },
@@ -318,39 +320,39 @@ else:
         },
         'handlers': {
             'console': {
-                'level': 'DEBUG',
+                'level': LOG_LEVEL,
                 'class': 'logging.StreamHandler',
                 'formatter': 'verbose',
             },
         },
         'root': {   # <--- root logger catches everything not caught by other loggers
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': LOG_LEVEL,
         },
         'loggers': {
             'django': {
                 'handlers': ['console'],
-                'level': 'DEBUG',
+                'level': LOG_LEVEL,
                 'propagate': False,  # don't duplicate logs
             },
             'core': {
                 'handlers': ['console'],
-                'level': 'DEBUG',
+                'level': LOG_LEVEL,
                 'propagate': False,
             },
             'activities': {
                 'handlers': ['console'],
-                'level': 'DEBUG',
+                'level': LOG_LEVEL,
                 'propagate': False,
             },
             'osm': {
                 'handlers': ['console'],
-                'level': 'DEBUG',
+                'level': LOG_LEVEL,
                 'propagate': False,
             },
             'cost': {
                 'handlers': ['console'],
-                'level': 'DEBUG',
+                'level': LOG_LEVEL,
                 'propagate': False,
             },
         },
