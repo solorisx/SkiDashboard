@@ -30,6 +30,19 @@
                         <li><a class="dropdown-item" href="{% url 'lift_ride_list_season_all' %}">Lift Rides per Season</a></li>
                     </ul>
                 </li>
+                {% if user.is_staff %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-white" href="#" id="adminDropdown" role="button"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                        Admin
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="adminDropdown">
+                        <li><a class="dropdown-item" href="{% url 'sync_strava_admin' %}">Sync Strava Admin</a></li>
+                        <li><a class="dropdown-item" href="{% url 'sync_osm' %}">Sync OSM</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+                <!--
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdown" role="button"
                         data-bs-toggle="dropdown" aria-expanded="false">
@@ -38,7 +51,8 @@
                     <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="navbarDropdown">
                         <li class="dropdown-item text-muted">Nothing here yet</li>
                     </ul>
-                </li>                 
+                </li>
+                -->             
             </ul>
         </div>
     </div>

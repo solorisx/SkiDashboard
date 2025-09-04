@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from .forms import OSMSyncForm, OSMFileSyncForm, SkiAreaNetworkForm, SegmentUpdateForm
 
-from .models import SkiArea, SkiAreaNetwork, SkiAreaNetworkMember, Way, Piste, PisteSegment, Node
+from .models import SkiArea, SkiAreaNetwork, SkiAreaNetworkMember, Way, Piste, PisteSegment, Node, Station, Aerialway
 from django.shortcuts import render, get_object_or_404
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
@@ -36,6 +36,8 @@ def sync_osm(request):
         'ski_area_network_members': SkiAreaNetworkMember.objects.count(),
         'ways': Way.objects.count(),
         'pistes': Piste.objects.count(),
+        'aerialways': Aerialway.objects.count(),
+        'stations': Station.objects.count(),
         'nodes': Node.objects.count(),
     }
 
