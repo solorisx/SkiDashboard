@@ -96,3 +96,8 @@ def strava_unlink_view(request):
     messages.success(request, "Strava has been unlinked.")
     return redirect("strava-connection")
 
+def privacy_policy(request):
+    return render(request, "base/privacy.html")
+
+def terms_of_service(request):
+    return render(request, "base/terms.html")

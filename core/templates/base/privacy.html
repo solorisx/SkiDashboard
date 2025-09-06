@@ -1,0 +1,289 @@
+{% extends '../base/base.html' %}
+
+{% block pagetitle %} Privacy Policy {% endblock %}
+{% block content %}
+
+<div class="container-fluid px-4 py-5">
+  <!-- Header Section -->
+  <div class="row mb-5">
+    <div class="col-12">
+      <div class="d-flex align-items-center mb-3">
+        <a href="{% url 'home' %}" class="btn btn-outline-primary me-3">
+          <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <div class="flex-grow-1">
+          <h1 class="display-6 fw-bold text-dark mb-1">Privacy Policy</h1>
+          <div class="d-flex flex-wrap align-items-center gap-3">
+            <span class="text-muted fs-6">
+              <i class="bi bi-calendar me-1"></i>Last Updated: {% now "F d, Y" %}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-10 col-xl-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-5">
+          
+          <!-- Introduction -->
+          <div class="mb-5">
+            <div class="d-flex align-items-center mb-3">
+              <div class="bg-primary bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-info-circle text-primary fs-4"></i>
+              </div>
+              <h2 class="fw-bold mb-0">About This Service</h2>
+            </div>
+            <p class="text-muted fs-5">Ski Dashboard is a personal ski activity tracking service operated from Switzerland and hosted on <a href="https://railway.com/" target="_blank">Railway</a>. We help you track and analyze your skiing activities by connecting with your Strava account.</p>
+          </div>
+
+          <!-- Information We Collect -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-info bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-collection text-info fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">Information We Collect</h3>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-md-6">
+                <div class="card bg-light border-0 h-100">
+                  <div class="card-body">
+                    <h5 class="fw-bold text-primary mb-3">
+                      <i class="bi bi-person-circle me-2"></i>Account Information
+                    </h5>
+                    <ul class="list-unstyled">
+                      <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Email address and username</li>
+                      <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Encrypted password</li>
+                      <li class="mb-0"><i class="bi bi-x-circle text-danger me-2"></i>We never store plain text passwords</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="card bg-light border-0 h-100">
+                  <div class="card-body">
+                    <h5 class="fw-bold text-warning mb-3">
+                      <i class="bi bi-link-45deg me-2"></i>Strava Integration
+                    </h5>
+                    <ul class="list-unstyled">
+                      <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Ski-related activities only</li>
+                      <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>GPS tracks and timestamps</li>
+                      <li class="mb-0"><i class="bi bi-check-circle text-success me-2"></i>Ski area and lift usage data</li>
+                      <li class="mb-0"><i class="bi bi-x-circle text-danger me-2"></i>No private activities</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="alert alert-info border-0 mt-4">
+              <div class="d-flex align-items-start">
+                <i class="bi bi-info-circle fs-4 me-3 mt-1"></i>
+                <div>
+                  <h6 class="fw-bold mb-2">Technical Information</h6>
+                  <p class="mb-0">We collect minimal technical data: session cookies for login, security tokens, and server logs for maintenance.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- How We Use Information -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-success bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-gear text-success fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">How We Use Your Information</h3>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-sm-6 col-lg-3">
+                <div class="text-center p-3">
+                  <div class="bg-primary bg-opacity-10 rounded-circle p-3 mb-3 mx-auto" style="width: 60px; height: 60px;">
+                    <i class="bi bi-activity text-primary fs-4"></i>
+                  </div>
+                  <h6 class="fw-bold">Activity Tracking</h6>
+                  <small class="text-muted">Analyze your ski activities and performance</small>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="text-center p-3">
+                  <div class="bg-info bg-opacity-10 rounded-circle p-3 mb-3 mx-auto" style="width: 60px; height: 60px;">
+                    <i class="bi bi-person-gear text-info fs-4"></i>
+                  </div>
+                  <h6 class="fw-bold">Account Management</h6>
+                  <small class="text-muted">Maintain your preferences and settings</small>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="text-center p-3">
+                  <div class="bg-warning bg-opacity-10 rounded-circle p-3 mb-3 mx-auto" style="width: 60px; height: 60px;">
+                    <i class="bi bi-arrow-up-circle text-warning fs-4"></i>
+                  </div>
+                  <h6 class="fw-bold">Service Improvement</h6>
+                  <small class="text-muted">Fix bugs and enhance functionality</small>
+                </div>
+              </div>
+              <div class="col-sm-6 col-lg-3">
+                <div class="text-center p-3">
+                  <div class="bg-danger bg-opacity-10 rounded-circle p-3 mb-3 mx-auto" style="width: 60px; height: 60px;">
+                    <i class="bi bi-shield-check text-danger fs-4"></i>
+                  </div>
+                  <h6 class="fw-bold">Security</h6>
+                  <small class="text-muted">Protect against unauthorized access</small>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Information Sharing -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-warning bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-shield-exclamation text-warning fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">Information Sharing</h3>
+            </div>
+
+            <div class="alert alert-success border-0">
+              <div class="d-flex align-items-start">
+                <i class="bi bi-check-circle-fill text-success fs-4 me-3 mt-1"></i>
+                <div>
+                  <h6 class="fw-bold mb-2">We Do NOT Sell Your Data</h6>
+                  <p class="mb-0">We do not sell, rent, or share your personal information with third parties for marketing purposes.</p>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-muted">We only share information:</p>
+            <ul class="list-unstyled">
+              <li class="mb-2">
+                <i class="bi bi-arrow-right text-primary me-2"></i>
+                <strong>With Strava:</strong> Through their official API with your explicit consent. We only access ski-related activities and respect privacy settings (private activities are not being processed).
+              </li>
+              <li class="mb-0">
+                <i class="bi bi-arrow-right text-primary me-2"></i>
+                <strong>Legal Requirements:</strong> Only if required by law or to protect legal rights
+              </li>
+            </ul>
+          </section>
+
+          <!-- Your Rights -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-primary bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-person-check text-primary fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">Your Rights</h3>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-lg-4">
+                <div class="card border-primary h-100">
+                  <div class="card-header bg-primary text-white">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-globe me-2"></i>All Users</h6>
+                  </div>
+                  <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                      <li class="mb-2"><i class="bi bi-eye text-primary me-2"></i>Access your data</li>
+                      <li class="mb-2"><i class="bi bi-pencil text-primary me-2"></i>Correct information</li>
+                      <li class="mb-2"><i class="bi bi-trash text-primary me-2"></i>Delete your account</li>
+                      <li class="mb-0"><i class="bi bi-link text-primary me-2"></i>Disconnect Strava</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-lg-4">
+                <div class="card border-info h-100">
+                  <div class="card-header bg-info text-white">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-flag me-2"></i>EU/EEA Users</h6>
+                  </div>
+                  <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                      <li class="mb-2"><i class="bi bi-download text-info me-2"></i>Export your data</li>
+                      <li class="mb-2"><i class="bi bi-pause text-info me-2"></i>Restrict processing</li>
+                      <li class="mb-2"><i class="bi bi-x-circle text-info me-2"></i>Object to processing</li>
+                      <li class="mb-0"><i class="bi bi-shield text-info me-2"></i>GDPR protections</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-lg-4">
+                <div class="card border-warning h-100">
+                  <div class="card-header bg-warning text-dark">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-star me-2"></i>California Users</h6>
+                  </div>
+                  <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                      <li class="mb-2"><i class="bi bi-info-circle text-warning me-2"></i>Know what we collect</li>
+                      <li class="mb-2"><i class="bi bi-trash text-warning me-2"></i>Delete personal info</li>
+                      <li class="mb-2"><i class="bi bi-x-octagon text-warning me-2"></i>We don't sell data</li>
+                      <li class="mb-0"><i class="bi bi-shield text-warning me-2"></i>CCPA rights</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Contact Information -->
+          <section class="mb-0">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-success bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-envelope text-success fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">Contact Us</h3>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-md-6">
+                <div class="card bg-light border-0">
+                  <div class="card-body text-center">
+                    <i class="bi bi-geo-alt text-primary fs-1 mb-3"></i>
+                    <h5 class="fw-bold">Data Controller</h5>
+                    <p class="mb-2"><strong><a href="mailto:[skidashboard@solor.dev]" class="btn btn-outline-success">Contact Us</a></strong></p>
+                    <p class="text-muted mb-0">Switzerland</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="card bg-light border-0">
+                  <div class="card-body text-center">
+                    <i class="bi bi-envelope-at text-success fs-1 mb-3"></i>
+                    <h5 class="fw-bold">Get In Touch</h5>
+                    <p class="mb-2">Privacy Questions:</p>
+                    <a href="mailto:[skidashboard@solor.dev]" class="btn btn-outline-success">
+                      <i class="bi bi-envelope me-2"></i>Email Us
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="alert alert-primary border-0 mt-4">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-clock fs-4 me-3"></i>
+                <div>
+                  <h6 class="fw-bold mb-1">Response Time</h6>
+                  <p class="mb-0">We respond to privacy requests within 30 days as required by applicable laws.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

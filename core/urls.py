@@ -31,4 +31,6 @@ urlpatterns = [
     path("accounts/strava/unlink/", views.strava_unlink_view, name="strava-unlink"),
     path('cost/', include('cost.urls')),
     path("osm/", include('osm.urls')),
+    path("privacy/", views.privacy_policy, name="privacy_policy"),
+    path("terms/", views.terms_of_service, name="terms_of_service"),
 ]

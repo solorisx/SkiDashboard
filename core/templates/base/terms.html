@@ -1,0 +1,449 @@
+{% extends '../base/base.html' %}
+
+{% block pagetitle %} Terms of Service {% endblock %}
+{% block content %}
+
+<div class="container-fluid px-4 py-5">
+  <!-- Header Section -->
+  <div class="row mb-5">
+    <div class="col-12">
+      <div class="d-flex align-items-center mb-3">
+        <a href="{% url 'home' %}" class="btn btn-outline-primary me-3">
+          <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <div class="flex-grow-1">
+          <h1 class="display-6 fw-bold text-dark mb-1">Terms of Service</h1>
+          <div class="d-flex flex-wrap align-items-center gap-3">
+            <span class="text-muted fs-6">
+              <i class="bi bi-calendar me-1"></i>Last Updated: {% now "F d, Y" %}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-10 col-xl-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-5">
+
+          <!-- Introduction -->
+          <div class="alert alert-warning border-0 mb-5">
+            <div class="d-flex align-items-start">
+              <i class="bi bi-exclamation-triangle fs-4 me-3 mt-1"></i>
+              <div>
+                <h5 class="fw-bold mb-2">Important Notice</h5>
+                <p class="mb-0">By using Ski Dashboard, you agree to these terms. Please read them carefully. If you don't agree, please don't use the service.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Service Description -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-primary bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-snow text-primary fs-4"></i>
+              </div>
+              <h2 class="fw-bold mb-0">About Ski Dashboard</h2>
+            </div>
+            
+            <div class="row g-4">
+              <div class="col-md-8">
+                <p class="text-muted fs-5 mb-4">Ski Dashboard is a web application that helps you track and analyze skiing activities by connecting with your Strava account.</p>
+                
+                <div class="d-flex align-items-start mb-3">
+                  <i class="bi bi-check-circle text-success me-3 mt-1"></i>
+                  <div>
+                    <h6 class="fw-bold mb-1">What You Get</h6>
+                    <p class="text-muted mb-0">Activity tracking, performance analysis, and detailed skiing statistics</p>
+                  </div>
+                </div>
+                
+                <div class="d-flex align-items-start">
+                  <i class="bi bi-link-45deg text-warning me-3 mt-1"></i>
+                  <div>
+                    <h6 class="fw-bold mb-1">Strava Integration</h6>
+                    <p class="text-muted mb-0">Seamless connection to import and analyze your skiing activities</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </section>
+
+          <!-- User Accounts -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-success bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-person-circle text-success fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">User Accounts</h3>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-lg-6">
+                <div class="card border-success h-100">
+                  <div class="card-header bg-success text-white">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-person-plus me-2"></i>Your Responsibilities</h6>
+                  </div>
+                  <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                      <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Provide accurate information</li>
+                      <li class="mb-2"><i class="bi bi-check text-success me-2"></i>Keep your password secure</li>
+                      <li class="mb-2"><i class="bi bi-check text-success me-2"></i>One account per person</li>
+                      <li class="mb-0"><i class="bi bi-check text-success me-2"></i>Notify us of security issues</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-lg-6">
+                <div class="card border-info h-100">
+                  <div class="card-header bg-info text-white">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-shield-check me-2"></i>Account Security</h6>
+                  </div>
+                  <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                      <li class="mb-2"><i class="bi bi-key text-info me-2"></i>Strong password required</li>
+                      <li class="mb-2"><i class="bi bi-bell text-info me-2"></i>Report unauthorized access</li>
+                      <li class="mb-2"><i class="bi bi-person-lock text-info me-2"></i>You're responsible for all activity</li>
+                      <li class="mb-0"><i class="bi bi-shield text-info me-2"></i>We monitor for suspicious activity</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Acceptable Use -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-warning bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-hand-thumbs-up text-warning fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">Acceptable Use Policy</h3>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-md-6">
+                <div class="card bg-success bg-opacity-10 border-success">
+                  <div class="card-body">
+                    <h5 class="fw-bold text-success mb-3">
+                      <i class="bi bi-check-circle me-2"></i>You May
+                    </h5>
+                    <ul class="list-unstyled">
+                      <li class="mb-2"><i class="bi bi-arrow-right text-success me-2"></i>Track your personal skiing activities</li>
+                      <li class="mb-2"><i class="bi bi-arrow-right text-success me-2"></i>Connect your own Strava account</li>
+                      <li class="mb-2"><i class="bi bi-arrow-right text-success me-2"></i>Export your own data</li>
+                      <li class="mb-0"><i class="bi bi-arrow-right text-success me-2"></i>Share feedback and suggestions</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="card bg-danger bg-opacity-10 border-danger">
+                  <div class="card-body">
+                    <h5 class="fw-bold text-danger mb-3">
+                      <i class="bi bi-x-circle me-2"></i>You May Not
+                    </h5>
+                    <ul class="list-unstyled">
+                      <li class="mb-2"><i class="bi bi-x text-danger me-2"></i>Access other users' accounts</li>
+                      <li class="mb-2"><i class="bi bi-x text-danger me-2"></i>Use for commercial purposes</li>
+                      <li class="mb-2"><i class="bi bi-x text-danger me-2"></i>Hack or disrupt the service</li>
+                      <li class="mb-0"><i class="bi bi-x text-danger me-2"></i>Upload malicious content</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Data Ownership -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-info bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-database text-info fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">Data & Ownership</h3>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-lg-4">
+                <div class="text-center p-3">
+                  <div class="bg-primary bg-opacity-10 rounded-circle p-3 mb-3 mx-auto" style="width: 80px; height: 80px;">
+                    <i class="bi bi-person-check text-primary fs-1"></i>
+                  </div>
+                  <h5 class="fw-bold">Your Data</h5>
+                  <p class="text-muted">You own your activity data and can delete it anytime</p>
+                </div>
+              </div>
+              
+              <div class="col-lg-4">
+                <div class="text-center p-3">
+                  <div class="bg-success bg-opacity-10 rounded-circle p-3 mb-3 mx-auto" style="width: 80px; height: 80px;">
+                    <i class="bi bi-gear-fill text-success fs-1"></i>
+                  </div>
+                  <h5 class="fw-bold">Our Service</h5>
+                  <p class="text-muted">We own the software and provide the platform</p>
+                </div>
+              </div>
+              
+              <div class="col-lg-4">
+                <div class="text-center p-3">
+                  <div class="bg-warning bg-opacity-10 rounded-circle p-3 mb-3 mx-auto" style="width: 80px; height: 80px;">
+                    <i class="bi bi-graph-up text-warning fs-1"></i>
+                  </div>
+                  <h5 class="fw-bold">Improvements</h5>
+                  <p class="text-muted">We may use anonymized data to improve the service</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Service Availability -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-danger bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-exclamation-triangle text-danger fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">Service Availability</h3>
+            </div>
+
+            <div class="alert alert-info border-0">
+              <div class="d-flex align-items-start">
+                <i class="bi bi-info-circle fs-4 me-3 mt-1"></i>
+                <div>
+                  <h6 class="fw-bold mb-2">"As Is" Service</h6>
+                  <p class="mb-0">We provide Ski Dashboard "as is" without warranties. While we strive for 100% uptime, we may experience occasional downtime for maintenance or technical issues. We're not liable for service interruptions or data loss due to technical problems.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-3 mt-2">
+              <div class="col-sm-6">
+                <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                  <i class="bi bi-tools text-primary me-3 fs-4"></i>
+                  <div>
+                    <h6 class="fw-bold mb-1">Maintenance</h6>
+                    <small class="text-muted">Scheduled updates with notice</small>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-sm-6">
+                <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                  <i class="bi bi-arrow-clockwise text-success me-3 fs-4"></i>
+                  <div>
+                    <h6 class="fw-bold mb-1">Updates</h6>
+                    <small class="text-muted">Feature improvements over time</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Limitation of Liability -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-warning bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-shield-exclamation text-warning fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">Liability Limitations</h3>
+            </div>
+
+            <div class="alert alert-warning border-0">
+              <div class="d-flex align-items-start">
+                <i class="bi bi-exclamation-triangle fs-4 me-3 mt-1"></i>
+                <div>
+                  <h6 class="fw-bold mb-2">Important Legal Notice</h6>
+                  <p class="mb-2">To the maximum extent permitted by law:</p>
+                  <ul class="mb-0">
+                    <li>We're not liable for indirect or consequential damages</li>
+                    <li>Our total liability is limited or capped at the amount paid for the service</li>
+                    <li>We're not responsible for data loss due to user actions</li>
+                    <li>We're not liable for third-party services like Strava</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-3 mt-2">
+              <div class="col-md-4">
+                <div class="card bg-light border-0 h-100">
+                  <div class="card-body text-center">
+                    <i class="bi bi-shield-x text-danger fs-2 mb-2"></i>
+                    <h6 class="fw-bold">No Warranties</h6>
+                    <small class="text-muted">Service provided as-is</small>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-4">
+                <div class="card bg-light border-0 h-100">
+                  <div class="card-body text-center">
+                    <i class="bi bi-currency-dollar text-info fs-2 mb-2"></i>
+                    <h6 class="fw-bold">Free Service</h6>
+                    <small class="text-muted">Limited liability protection</small>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-4">
+                <div class="card bg-light border-0 h-100">
+                  <div class="card-body text-center">
+                    <i class="bi bi-person-check text-success fs-2 mb-2"></i>
+                    <h6 class="fw-bold">User Responsibility</h6>
+                    <small class="text-muted">Back up important data</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Termination -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-danger bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-power text-danger fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">Account Termination</h3>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-md-6">
+                <div class="card border-primary">
+                  <div class="card-header bg-primary text-white">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-person-dash me-2"></i>You Can</h6>
+                  </div>
+                  <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                      <li class="mb-2"><i class="bi bi-trash text-primary me-2"></i>Delete your account anytime</li>
+                      <li class="mb-2"><i class="bi bi-box-arrow-right text-primary me-2"></i>Stop using the service</li>
+                      <li class="mb-0"><i class="bi bi-download text-primary me-2"></i>Export your data first</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <div class="card border-warning">
+                  <div class="card-header bg-warning text-dark">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-exclamation-triangle me-2"></i>We Can</h6>
+                  </div>
+                  <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                      <li class="mb-2"><i class="bi bi-x-circle text-warning me-2"></i>Terminate accounts violating terms</li>
+                      <li class="mb-2"><i class="bi bi-calendar text-warning me-2"></i>Discontinue service at any time without notice</li>
+                      <li class="mb-0"><i class="bi bi-pause text-warning me-2"></i>Suspend for security reasons</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="alert alert-info border-0 mt-4">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-info-circle fs-4 me-3"></i>
+                <p class="mb-0">Upon termination, your right to use the service ends immediately, but you have 30 days to export your data.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Governing Law -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-success bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-flag text-success fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">Governing Law</h3>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-lg-4">
+                <div class="card bg-light border-0 text-center h-100">
+                  <div class="card-body">
+                    <i class="bi bi-geo-alt text-danger fs-1 mb-3"></i>
+                    <h5 class="fw-bold">Swiss Law</h5>
+                    <p class="text-muted mb-0">These terms are governed by Swiss law</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-lg-4">
+                <div class="card bg-light border-0 text-center h-100">
+                  <div class="card-body">
+                    <i class="bi bi-flag text-primary fs-1 mb-3"></i>
+                    <h5 class="fw-bold">EU Consumers</h5>
+                    <p class="text-muted mb-0">Retain rights under local consumer protection laws</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Changes to Terms -->
+          <section class="mb-5">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-info bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-arrow-repeat text-info fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">Updates to These Terms</h3>
+            </div>
+
+            <div class="alert alert-primary border-0">
+              <div class="d-flex align-items-start">
+                <i class="bi bi-bell fs-4 me-3 mt-1"></i>
+                <div>
+                  <h6 class="fw-bold mb-2">We'll Keep You Informed</h6>
+                  <p class="mb-2">We may update these terms occasionally. When we do:</p>
+                  <ul class="mb-0">
+                    <li>We'll notify you by email or through the service</li>
+                    <li>Material changes get at least 30 days notice</li>
+                    <li>Continued use means you accept the new terms</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Contact Information -->
+          <section class="mb-0">
+            <div class="d-flex align-items-center mb-4">
+              <div class="bg-success bg-opacity-10 rounded-3 p-2 me-3">
+                <i class="bi bi-envelope text-success fs-4"></i>
+              </div>
+              <h3 class="fw-bold mb-0">Questions About These Terms?</h3>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-md-6">
+                <div class="card border-success">
+                  <div class="card-body text-center">
+                    <i class="bi bi-building text-success fs-1 mb-3"></i>
+                    <h5 class="fw-bold">Service Provider</h5>
+                    <p class="mb-2"><strong>solor.dev</strong></p>
+                    <p class="text-muted mb-3">Located in Switzerland</p>
+                    <a href="mailto:skidashboard@solor.dev" class="btn btn-outline-success">
+                      <i class="bi bi-envelope me-2"></i>General Questions
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-center mt-4 p-4 bg-light rounded-3">
+              <h6 class="fw-bold mb-2">Thank You for Using Ski Dashboard!</h6>
+              <p class="text-muted mb-0">We're committed to providing a great service while respecting your rights and privacy.</p>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
