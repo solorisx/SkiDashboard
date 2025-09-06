@@ -1,6 +1,7 @@
 
 
 
+import os
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import admin
@@ -563,9 +564,11 @@ def strava_webhook(request):
         challenge = request.GET.get("hub.challenge")
         verify_token = request.GET.get("hub.verify_token")
 
-        if mode == "subscribe" and verify_token == "STRAVA_SKIDASHBOARD":
+        if mode == "subscribe" and verify_token == os.getenv("STRAVA_VERIFY_TOKEN"):
             return HttpResponse(challenge)
         else:
+            logger.warning("Strava webhook verification failed.")
+            logger.debug(f"Mode: {mode}, Verify Token: {verify_token}")
             return HttpResponse("Verification failed.", status=403)
     elif request.method == "POST":
         import json
@@ -598,7 +601,7 @@ def subscribe_strava_webhook(request):
     import requests
     client_id = os.getenv("STRAVA_CLIENT_ID")
     client_secret = os.getenv("STRAVA_CLIENT_SECRET")
-    verify_token = "STRAVA_SKIDASHBOARD"
+    verify_token = os.getenv("STRAVA_VERIFY_TOKEN")
     callback_url = os.getenv("STRAVA_WEBHOOK_CALLBACK_URL")
     response = requests.post(
         "https://www.strava.com/api/v3/push_subscriptions",
