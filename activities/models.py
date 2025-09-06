@@ -35,6 +35,8 @@ class Activity(models.Model):
     num_lift_rides = models.PositiveIntegerField(null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+    processed_on = models.DateTimeField(null=True)
+    processing_time = models.DurationField(null=True)
 
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
 

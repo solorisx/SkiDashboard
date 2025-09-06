@@ -740,6 +740,10 @@ def sync_strava_activity(user, activity_id, update=False):
     assign_badges(activity_instance)
     logger.info(f"Assigned badges to activity {activity_instance.id}")
 
+    processing_time = time.time() - start_time
+    activity_instance.processed_on = datetime.now()
+    activity_instance.processing_time = timedelta(seconds=processing_time)
+
     logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")
 
     return activity_instance

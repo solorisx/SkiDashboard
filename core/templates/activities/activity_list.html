@@ -4,85 +4,318 @@
 {% block pagetitle %} All Activities {% endblock %}
 {% block content %}
 
-<div class="container">
-  <div class="row">
+<div class="container-fluid px-4 py-5">
+  <!-- Header Section -->
+  <div class="row mb-5">
+    <div class="col-12">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <h1 class="display-6 fw-bold text-dark mb-2">My Activities</h1>
+          <p class="text-muted fs-5 mb-0">Track your skiing adventures and achievements</p>
+        </div>
+        <div class="badge bg-primary fs-6 px-3 py-2">
+          {{ page_obj.paginator.count }} Activities
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activities Grid -->
+  <div class="row g-4">
     {% for activity in page_obj %}
-      <div class="col-md-6 mb-4">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title text-primary">{{ activity.name }}</h5>
-            <p class="text-muted">{{ activity.timestamp }}</p>
-            
-            <div class="row">
-              <div class="col-md-6">
-                <ul class="list-group list-group-flush">
-                  <li class="list-group-item"><strong>Ski Area:</strong> {{ activity.ski_area.name }}</li>
-                  <li class="list-group-item"><strong>Total Descent:</strong> {{ activity.total_descent|round_to:0 }} m</li>
-                  <li class="list-group-item"><strong>Total Distance:</strong> {{ activity.total_distance_km }} km</li>
-                  <li class="list-group-item"><strong>Lift Rides:</strong> {{ activity.num_lift_rides }}</li>
-                </ul>
-                
-                <div class="mt-3">
-                  {% for badge in activity.badges.all %}
-                    <i class="{{ badge.badge.icon }} text-warning me-2" title="{{ badge.badge.name }}"></i>
-                  {% endfor %}
+      <div class="col-12 col-lg-6 col-xl-4">
+        <div class="card h-100 border-0 shadow-sm hover-shadow-lg transition-all">
+          <div class="card-body p-4">
+            <!-- Header -->
+            <div class="d-flex align-items-start justify-content-between mb-3">
+              <div>
+                <h5 class="card-title fw-bold text-dark mb-1">{{ activity.name }}</h5>
+                <small class="text-muted d-flex align-items-center">
+                  <i class="bi bi-clock me-1"></i>
+                  {{ activity.timestamp|date:"M d, Y • H:i" }}
+                </small>
+              </div>
+              <span class="badge bg-light text-primary border border-primary-subtle">
+                <i class="bi bi-snow me-1"></i>{{ activity.ski_area.name }}
+              </span>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="row g-3 mb-4">
+              <div class="col-6">
+                <div class="stats-card bg-primary bg-opacity-10 rounded-3 p-3 text-center">
+                  <div class="fs-4 fw-bold text-primary mb-1">{{ activity.total_descent|round_to:0 }}</div>
+                  <small class="text-muted fw-medium">Descent (m)</small>
                 </div>
-                
-                <a href="{% url 'activity_detail' activity.id %}" class="btn btn-outline-primary w-100 mt-3">View Details</a>
               </div>
-              
-              <!-- Mini Map with Track -->
-              <div class="col-md-6">
-                <div id="map{{ forloop.counter }}" class="mini-map rounded" style="height: 200px; border: 1px solid #ccc;"></div>
-                <script>
-                  document.addEventListener("DOMContentLoaded", function() {
-                    var map = L.map('map{{ forloop.counter }}').setView([{{ activity.geom.centroid.y }}, {{ activity.geom.centroid.x }}], 13);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                      attribution: '&copy; OpenStreetMap contributors'
-                    }).addTo(map);
-                    
-                    var track = {{ activity.geom.geojson|safe }};
-                    trackLayer = L.geoJSON(track, {
-                      style: { color: 'blue', weight: 3 }
-                    }).addTo(map);
-                    map.fitBounds(trackLayer.getBounds());
-                  });
-                </script>
+              <div class="col-6">
+                <div class="stats-card bg-success bg-opacity-10 rounded-3 p-3 text-center">
+                  <div class="fs-4 fw-bold text-success mb-1">{{ activity.total_distance_km }}</div>
+                  <small class="text-muted fw-medium">Distance (km)</small>
+                </div>
               </div>
+              <div class="col-6">
+                <div class="stats-card bg-info bg-opacity-10 rounded-3 p-3 text-center">
+                  <div class="fs-4 fw-bold text-info mb-1">{{ activity.num_lift_rides }}</div>
+                  <small class="text-muted fw-medium">Lift Rides</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="stats-card bg-warning bg-opacity-10 rounded-3 p-3 text-center">
+                  <div class="fs-4 fw-bold text-warning mb-1">{{ activity.badges.all|length }}</div>
+                  <small class="text-muted fw-medium">Badges</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mini Map -->
+            <div class="mb-4">
+              <div id="map{{ forloop.counter }}" class="mini-map rounded-3 shadow-sm" style="height: 180px; border: 2px solid var(--bs-border-color);"></div>
+            </div>
+
+            <!-- Badges -->
+            {% if activity.badges.all %}
+            <div class="mb-4">
+              <div class="d-flex flex-wrap gap-2">
+                {% for badge in activity.badges.all %}
+                  <span class="badge-icon bg-warning bg-opacity-20 rounded-circle p-2" 
+                        title="{{ badge.badge.name }}" 
+                        data-bs-toggle="tooltip" 
+                        data-bs-placement="top">
+                    <i class="{{ badge.badge.icon }} text-warning fs-6"></i>
+                  </span>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Action Button -->
+            <div class="d-grid">
+              <a href="{% url 'activity_detail' activity.id %}" 
+                 class="btn btn-primary btn-lg fw-medium d-flex align-items-center justify-content-center gap-2">
+                <i class="bi bi-eye"></i>
+                View Details
+              </a>
             </div>
           </div>
         </div>
       </div>
-      {% if forloop.counter|divisibleby:2 %}</div><div class="row">{% endif %}
     {% endfor %}
   </div>
+
+  <!-- Empty State -->
+  {% if not page_obj %}
+  <div class="row">
+    <div class="col-12">
+      <div class="text-center py-5">
+        <div class="mb-4">
+          <i class="bi bi-snow display-1 text-muted"></i>
+        </div>
+        <h3 class="text-muted mb-3">No activities found</h3>
+        <p class="text-muted">Link Strava and start tracking your skiing adventures!</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
-<!-- Pagination Controls -->
-<nav aria-label="Page navigation">
-  <ul class="pagination justify-content-center mt-4">
-    {% if page_obj.has_previous %}
-      <li class="page-item">
-        <a class="page-link" href="?page=1">&laquo; First</a>
-      </li>
-      <li class="page-item">
-        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
-      </li>
-    {% endif %}
+<!-- Enhanced Pagination -->
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="container-fluid px-4 pb-5">
+  <div class="row">
+    <div class="col-12">
+      <nav aria-label="Activities pagination" class="d-flex justify-content-center">
+        <ul class="pagination pagination-lg shadow-sm">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link rounded-start-pill px-4" href="?page=1" aria-label="First page">
+                <i class="bi bi-chevron-double-left"></i>
+              </a>
+            </li>
+            <li class="page-item">
+              <a class="page-link px-4" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous page">
+                <i class="bi bi-chevron-left"></i>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link rounded-start-pill px-4">
+                <i class="bi bi-chevron-double-left"></i>
+              </span>
+            </li>
+            <li class="page-item disabled">
+              <span class="page-link px-4">
+                <i class="bi bi-chevron-left"></i>
+              </span>
+            </li>
+          {% endif %}
 
-    <li class="page-item disabled">
-      <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-    </li>
+          <li class="page-item active">
+            <span class="page-link bg-primary border-primary px-4 fw-bold">
+              {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+          </li>
 
-    {% if page_obj.has_next %}
-      <li class="page-item">
-        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
-      </li>
-      <li class="page-item">
-        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
-      </li>
-    {% endif %}
-  </ul>
-</nav>
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link px-4" href="?page={{ page_obj.next_page_number }}" aria-label="Next page">
+                <i class="bi bi-chevron-right"></i>
+              </a>
+            </li>
+            <li class="page-item">
+              <a class="page-link rounded-end-pill px-4" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last page">
+                <i class="bi bi-chevron-double-right"></i>
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link px-4">
+                <i class="bi bi-chevron-right"></i>
+              </span>
+            </li>
+            <li class="page-item disabled">
+              <span class="page-link rounded-end-pill px-4">
+                <i class="bi bi-chevron-double-right"></i>
+              </span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Map Scripts -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Initialize tooltips
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+
+  // Initialize maps
+  {% for activity in page_obj %}
+  (function() {
+    var map = L.map('map{{ forloop.counter }}', {
+      zoomControl: false,
+      attributionControl: false
+    }).setView([{{ activity.geom.centroid.y }}, {{ activity.geom.centroid.x }}], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: false
+    }).addTo(map);
+    
+    var track = {{ activity.geom.geojson|safe }};
+    var trackLayer = L.geoJSON(track, {
+      style: { 
+        color: '#0d6efd', 
+        weight: 4,
+        opacity: 0.8,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }
+    }).addTo(map);
+    
+    map.fitBounds(trackLayer.getBounds(), { padding: [10, 10] });
+    map.dragging.disable();
+    map.touchZoom.disable();
+    map.doubleClickZoom.disable();
+    map.scrollWheelZoom.disable();
+  })();
+  {% endfor %}
+});
+</script>
+
+<style>
+.hover-shadow-lg {
+  transition: all 0.3s ease;
+}
+
+.hover-shadow-lg:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 1rem 3rem rgba(0,0,0,.175) !important;
+}
+
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+.stats-card {
+  transition: all 0.2s ease;
+}
+
+.stats-card:hover {
+  transform: scale(1.02);
+}
+
+.badge-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.badge-icon:hover {
+  transform: scale(1.1);
+}
+
+.mini-map {
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mini-map:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+}
+
+.pagination .page-link {
+  border: none;
+  margin: 0 2px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.pagination .page-link:hover:not(.active .page-link) {
+  background-color: var(--bs-primary);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+}
+
+@media (max-width: 768px) {
+  .container-fluid {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  .display-6 {
+    font-size: 2rem;
+  }
+  
+  .stats-card .fs-4 {
+    font-size: 1.25rem !important;
+  }
+  
+  .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .pagination .page-link {
+    margin: 2px;
+    padding: 0.5rem 0.75rem;
+  }
+}
+</style>
 
 {% endblock %}

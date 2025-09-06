@@ -1,8 +1,10 @@
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: ["sh", "/app/start.sh"]
     env_file: .env
+    environment:
+      - PORT=8000                    # gunicorn in start.sh uses $PORT
     ports:
       - "8000:8000"
     volumes:
