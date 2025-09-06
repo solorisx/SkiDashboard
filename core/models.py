@@ -1,7 +1,6 @@
 from django.contrib.gis.db import models
 from django.contrib.auth.models import User
 
-
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     beta_tester = models.BooleanField(default=False)

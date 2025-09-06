@@ -600,7 +600,7 @@ def sync_strava_activity(user, activity_id, update=False):
     
     if not activity.type == 'AlpineSki':
         logger.warning(f"Strava activity {activity_id} is not an AlpineSki activity.")
-        raise ValueError(f"Strava activity {activity_id} is not an AlpineSki activity.")
+        return
 
     activity_streams = load_activity_streams(user, activity_id)
 

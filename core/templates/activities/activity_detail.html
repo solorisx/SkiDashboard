@@ -1,103 +1,559 @@
 {% extends '../base/base.html' %}
 {% load custom_filters %}
+
+{% block pagetitle %} {{ activity.name }} - Activity Details {% endblock %}
 {% block content %}
-    <div class="container mt-4">
-        <h1 class="text-primary">{{ activity.name }} - {{ activity.start_time }} - {{activity.ski_area.name}}</h1>
-        
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <h2>Laps</h2>
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Lap</th>
-                                <th>Distance</th>
-                                <th>Descent</th>
-                                <th>Duration</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for lap in laps %}
-                            <tr>
-                                <td>Lap {{ lap.lap_index }}</td>
-                                <td>{{ lap.total_distance|round_to:2 }}m</td>
-                                <td>{{ lap.total_descent|round_to:0 }}m</td>
-                                <td>{{ lap.total_elapsed_time }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="4" class="text-center">No laps recorded</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div class="col-md-6">
-                <h2>Lift Rides</h2>
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Lap</th>
-                                <th>Lift</th>
-                                <th>Aerialway</th>
-                                <th>Direction</th>
-                                <th>Timestamp</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for lift_ride in lift_rides %}
-                            <tr>
-                                <td>{{ lift_ride.lap.lap_index }}</td>
-                                <td>{{ lift_ride.lift.name }}</td>
-                                <td>{{ lift_ride.aerialway.name }}</td>
-                                <td>
-                                    {% if lift_ride.uphill %} Uphill {% elif lift_ride.uphill == False %} Downhill {% else %} Unknown {% endif %}
-                                </td>
-                                <td>{{ lift_ride.timestamp }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="5" class="text-center">No lift rides recorded</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
 
-        <h2 class="mt-4">Badges</h2>
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Badge</th>
-                        <th>Name</th>
-                        <th>Description</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for badge in badges %}
-                    <tr>
-                        <td><i class="{{ badge.badge.icon }} text-warning fs-4"></i></td>
-                        <td>{{ badge.badge.name }}</td>
-                        <td>{{ badge.badge.description }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="3" class="text-center">No badges recorded</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<div class="container-fluid px-4 py-5">
+  <!-- Header Section -->
+  <div class="row mb-5">
+    <div class="col-12">
+      <div class="d-flex align-items-center mb-3">
+        <a href="{% url 'activity_list' %}" class="btn btn-outline-primary me-3">
+          <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <div class="flex-grow-1">
+          <h1 class="display-6 fw-bold text-dark mb-1">{{ activity.name }}</h1>
+          <div class="d-flex flex-wrap align-items-center gap-3">
+            <span class="badge bg-primary fs-6 px-3 py-2">
+              <i class="bi bi-snow me-1"></i>{{ activity.ski_area.name }}
+            </span>
+            <span class="text-muted fs-5">
+              <i class="bi bi-clock me-1"></i>{{ activity.start_time|date:"M d, Y • H:i" }}
+            </span>
+          </div>
         </div>
-
-        <form action="{% url 'reprocess_activity' activity.id %}" method="POST" class="mt-4">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger w-100 py-2">Reprocess Activity</button>
-        </form>
-
-        <div class="mt-3 d-flex gap-3">
-            <a href="{{ activity.get_strava_url }}" target="_blank" class="btn btn-outline-secondary">View on Strava</a>
-            <a href="{% url 'activity_list' %}" class="btn btn-outline-primary">Back to Activities</a>
-        </div>
+      </div>
     </div>
+  </div>
+
+  <!-- Stats Overview Cards -->
+  <div class="row g-4 mb-5">
+    <div class="col-6 col-md-3">
+      <div class="card bg-primary bg-opacity-10 border-primary border-2 h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-arrow-down-circle display-4 text-primary mb-2"></i>
+          <h3 class="fw-bold text-primary mb-1">{{ activity.total_descent|round_to:0 }}</h3>
+          <small class="text-muted fw-medium">Total Descent (m)</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card bg-success bg-opacity-10 border-success border-2 h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-geo-alt display-4 text-success mb-2"></i>
+          <h3 class="fw-bold text-success mb-1">{{ activity.total_distance_km }}</h3>
+          <small class="text-muted fw-medium">Distance (km)</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card bg-info bg-opacity-10 border-info border-2 h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-arrow-up-circle display-4 text-info mb-2"></i>
+          <h3 class="fw-bold text-info mb-1">{{ activity.num_lift_rides }}</h3>
+          <small class="text-muted fw-medium">Lift Rides</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card bg-warning bg-opacity-10 border-warning border-2 h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-award display-4 text-warning mb-2"></i>
+          <h3 class="fw-bold text-warning mb-1">{{ badges|length }}</h3>
+          <small class="text-muted fw-medium">Badges Earned</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map Section -->
+  <div class="row mb-5">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom-0 py-3">
+          <h4 class="card-title mb-0 fw-bold">
+            <i class="bi bi-map me-2 text-primary"></i>Activity Track
+          </h4>
+        </div>
+        <div class="card-body p-0">
+          <div id="mainMap" style="height: 400px; border-radius: 0 0 0.375rem 0.375rem;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="row g-4">
+    <!-- Laps Section -->
+    <div class="col-12 col-xl-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-bottom py-3">
+          <h4 class="card-title mb-0 fw-bold">
+            <i class="bi bi-stopwatch me-2 text-success"></i>Laps
+          </h4>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="fw-bold">Lap</th>
+                  <th class="fw-bold">Distance</th>
+                  <th class="fw-bold">Descent</th>
+                  <th class="fw-bold">Duration</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for lap in laps %}
+                <tr class="table-row-hover">
+                  <td class="fw-medium">
+                    <span class="badge bg-primary-subtle text-primary px-3 py-2">
+                      {{ lap.lap_index }}
+                    </span>
+                  </td>
+                  <td>{{ lap.total_distance|round_to:2 }}m</td>
+                  <td class="fw-bold text-primary">{{ lap.total_descent|round_to:0 }}m</td>
+                  <td>{{ lap.total_elapsed_time }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center py-4 text-muted">
+                    <i class="bi bi-info-circle me-2"></i>No laps recorded
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lift Rides Section -->
+    <div class="col-12 col-xl-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+          <h4 class="card-title mb-0 fw-bold">
+            <i class="bi bi-arrow-up-circle me-2 text-info"></i>Lift Rides
+          </h4>
+          <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLiftRideModal">
+            <i class="bi bi-plus-circle me-1"></i>Add Ride
+          </button>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0" id="liftRidesTable">
+              <thead class="table-light">
+                <tr>
+                  <th class="fw-bold" style="width: 40px;"></th>
+                  <th class="fw-bold">Lap</th>
+                  <th class="fw-bold">Lift</th>
+                  <th class="fw-bold">Direction</th>
+                  <th class="fw-bold">Time</th>
+                  <th class="fw-bold" style="width: 100px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="liftRidesBody">
+                {% for lift_ride in lift_rides %}
+                <tr class="table-row-hover lift-ride-row" data-lift-id="{{ lift_ride.id }}">
+                  <td>
+                    <div class="drag-handle text-muted" style="cursor: grab;">
+                      <i class="bi bi-grip-vertical"></i>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-primary-subtle text-primary px-2 py-1">
+                      {{ lift_ride.lap.lap_index }}
+                    </span>
+                  </td>
+                  <td class="fw-medium">{{ lift_ride.aerialway.name }}</td>
+                  <td>
+                    <span class="badge {% if lift_ride.uphill %}bg-success-subtle text-success{% elif lift_ride.uphill == False %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning{% endif %} px-2 py-1">
+                      <i class="bi {% if lift_ride.uphill %}bi-arrow-up{% elif lift_ride.uphill == False %}bi-arrow-down{% else %}bi-question{% endif %} me-1"></i>
+                      {% if lift_ride.uphill %}Uphill{% elif lift_ride.uphill == False %}Downhill{% else %}Unknown{% endif %}
+                    </span>
+                  </td>
+                  <td class="text-muted">{{ lift_ride.timestamp|date:"H:i:s" }}</td>
+                  <td>
+                    <div class="btn-group" role="group">
+                      <button class="btn btn-outline-primary btn-sm" onclick="editLiftRide({{ lift_ride.id }})" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button class="btn btn-outline-danger btn-sm" onclick="deleteLiftRide({{ lift_ride.id }})" title="Delete">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr id="noLiftRidesRow">
+                  <td colspan="6" class="text-center py-4 text-muted">
+                    <i class="bi bi-info-circle me-2"></i>No lift rides recorded
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Badges Section -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3">
+          <h4 class="card-title mb-0 fw-bold">
+            <i class="bi bi-award me-2 text-warning"></i>Badges Earned
+          </h4>
+        </div>
+        <div class="card-body">
+          {% if badges %}
+            <div class="row g-3">
+              {% for badge in badges %}
+              <div class="col-12 col-md-6 col-lg-4">
+                <div class="badge-card bg-warning bg-opacity-10 rounded-3 p-3 h-100">
+                  <div class="d-flex align-items-start">
+                    <div class="badge-icon bg-warning bg-opacity-20 rounded-circle p-3 me-3 flex-shrink-0">
+                      <i class="{{ badge.badge.icon }} text-warning fs-3"></i>
+                    </div>
+                    <div>
+                      <h6 class="fw-bold mb-1">{{ badge.badge.name }}</h6>
+                      <p class="text-muted small mb-0">{{ badge.badge.description }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-4 text-muted">
+              <i class="bi bi-award display-4 mb-3"></i>
+              <p class="mb-0">No badges earned for this activity</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Section -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12 col-md-6 col-lg-3">
+              <form action="{% url 'reprocess_activity' activity.id %}" method="POST" class="d-grid">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-lg fw-medium" onclick="return confirm('Are you sure you want to reprocess this activity?')">
+                  <i class="bi bi-arrow-clockwise me-2"></i>Reprocess Activity
+                </button>
+              </form>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+              <a href="{{ activity.get_strava_url }}" target="_blank" class="btn btn-outline-warning btn-lg fw-medium d-grid">
+                <i class="bi bi-box-arrow-up-right me-2"></i>View on Strava
+              </a>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+              <button class="btn btn-outline-success btn-lg fw-medium d-grid" onclick="exportActivity()">
+                <i class="bi bi-download me-2"></i>Export Data
+              </button>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+              <a href="{% url 'activity_list' %}" class="btn btn-primary btn-lg fw-medium d-grid">
+                <i class="bi bi-list me-2"></i>All Activities
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Lift Ride Modal -->
+<div class="modal fade" id="addLiftRideModal" tabindex="-1" aria-labelledby="addLiftRideModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold" id="addLiftRideModalLabel">
+          <i class="bi bi-plus-circle me-2"></i>Add New Lift Ride
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addLiftRideForm">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="lapSelect" class="form-label fw-bold">Lap</label>
+              <select class="form-select" id="lapSelect" required>
+                <option value="">Select Lap</option>
+                {% for lap in laps %}
+                <option value="{{ lap.lap_index }}">Lap {{ lap.lap_index }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="liftSelect" class="form-label fw-bold">Lift</label>
+              <select class="form-select" id="liftSelect" required>
+                <option value="">Select Lift</option>
+                <!-- This would be populated with available lifts -->
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="directionSelect" class="form-label fw-bold">Direction</label>
+              <select class="form-select" id="directionSelect" required>
+                <option value="">Select Direction</option>
+                <option value="true">Uphill</option>
+                <option value="false">Downhill</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="timestampInput" class="form-label fw-bold">Timestamp</label>
+              <input type="time" class="form-control" id="timestampInput" required>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveLiftRide()">
+          <i class="bi bi-check-circle me-1"></i>Add Lift Ride
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Lift Ride Modal -->
+<div class="modal fade" id="editLiftRideModal" tabindex="-1" aria-labelledby="editLiftRideModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title fw-bold" id="editLiftRideModalLabel">
+          <i class="bi bi-pencil me-2"></i>Edit Lift Ride
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editLiftRideForm">
+          <input type="hidden" id="editLiftRideId">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="editLapSelect" class="form-label fw-bold">Lap</label>
+              <select class="form-select" id="editLapSelect" required>
+                <option value="">Select Lap</option>
+                {% for lap in laps %}
+                <option value="{{ lap.lap_index }}">Lap {{ lap.lap_index }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="editLiftSelect" class="form-label fw-bold">Lift</label>
+              <select class="form-select" id="editLiftSelect" required>
+                <option value="">Select Lift</option>
+                <!-- This would be populated with available lifts -->
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="editDirectionSelect" class="form-label fw-bold">Direction</label>
+              <select class="form-select" id="editDirectionSelect" required>
+                <option value="">Select Direction</option>
+                <option value="true">Uphill</option>
+                <option value="false">Downhill</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="editTimestampInput" class="form-label fw-bold">Timestamp</label>
+              <input type="time" class="form-control" id="editTimestampInput" required>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning" onclick="updateLiftRide()">
+          <i class="bi bi-check-circle me-1"></i>Update Lift Ride
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Initialize main map
+  var map = L.map('mainMap').setView([{{ activity.geom.centroid.y }}, {{ activity.geom.centroid.x }}], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+  
+  var track = {{ activity.geom.geojson|safe }};
+  var trackLayer = L.geoJSON(track, {
+    style: { 
+      color: '#0d6efd', 
+      weight: 4,
+      opacity: 0.8,
+      lineCap: 'round',
+      lineJoin: 'round'
+    }
+  }).addTo(map);
+  
+  map.fitBounds(trackLayer.getBounds(), { padding: [20, 20] });
+
+  // Initialize sortable for lift rides
+  const tbody = document.getElementById('liftRidesBody');
+  if (tbody && tbody.children.length > 0) {
+    new Sortable(tbody, {
+      handle: '.drag-handle',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      onEnd: function(evt) {
+        updateLiftRideOrder();
+      }
+    });
+  }
+});
+
+// Lift ride management functions (to be implemented in backend)
+function saveLiftRide() {
+  const form = document.getElementById('addLiftRideForm');
+  const formData = new FormData(form);
+  
+  // TODO: Implement backend API call
+  console.log('Adding lift ride:', Object.fromEntries(formData));
+  
+  // Close modal and refresh table
+  bootstrap.Modal.getInstance(document.getElementById('addLiftRideModal')).hide();
+  // showSuccessToast('Lift ride added successfully!');
+}
+
+function editLiftRide(liftRideId) {
+  // TODO: Populate edit form with existing data
+  console.log('Editing lift ride:', liftRideId);
+  
+  const modal = new bootstrap.Modal(document.getElementById('editLiftRideModal'));
+  document.getElementById('editLiftRideId').value = liftRideId;
+  modal.show();
+}
+
+function updateLiftRide() {
+  const form = document.getElementById('editLiftRideForm');
+  const formData = new FormData(form);
+  
+  // TODO: Implement backend API call
+  console.log('Updating lift ride:', Object.fromEntries(formData));
+  
+  // Close modal and refresh table
+  bootstrap.Modal.getInstance(document.getElementById('editLiftRideModal')).hide();
+  // showSuccessToast('Lift ride updated successfully!');
+}
+
+function deleteLiftRide(liftRideId) {
+  if (confirm('Are you sure you want to delete this lift ride?')) {
+    // TODO: Implement backend API call
+    console.log('Deleting lift ride:', liftRideId);
+    
+    // Remove row from table
+    document.querySelector(`[data-lift-id="${liftRideId}"]`).remove();
+    // showSuccessToast('Lift ride deleted successfully!');
+  }
+}
+
+function updateLiftRideOrder() {
+  const rows = document.querySelectorAll('.lift-ride-row');
+  const order = Array.from(rows).map(row => row.dataset.liftId);
+  
+  // TODO: Implement backend API call
+  console.log('New lift ride order:', order);
+  // showSuccessToast('Lift ride order updated!');
+}
+
+function exportActivity() {
+  // TODO: Implement activity export functionality
+  console.log('Exporting activity data...');
+  // showInfoToast('Export functionality coming soon!');
+}
+
+// Toast notification functions (optional)
+function showSuccessToast(message) {
+  // Implementation depends on your toast library
+}
+
+function showInfoToast(message) {
+  // Implementation depends on your toast library
+}
+</script>
+
+<!-- Include SortableJS for drag & drop -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+<style>
+.table-row-hover:hover {
+  background-color: var(--bs-gray-50);
+}
+
+.badge-card {
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.badge-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--bs-warning);
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,.1);
+}
+
+.badge-icon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drag-handle:hover {
+  color: var(--bs-primary) !important;
+}
+
+.sortable-ghost {
+  opacity: 0.4;
+  background: var(--bs-primary-bg-subtle);
+}
+
+.lift-ride-row.sortable-chosen {
+  background-color: var(--bs-primary-bg-subtle);
+}
+
+.card {
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .container-fluid {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  .display-6 {
+    font-size: 2rem;
+  }
+  
+  .btn-group {
+    flex-direction: column;
+  }
+  
+  .btn-group .btn {
+    border-radius: 0.375rem !important;
+    margin-bottom: 0.25rem;
+  }
+}
+</style>
+
 {% endblock %}
