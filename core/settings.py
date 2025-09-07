@@ -77,7 +77,13 @@ INSTALLED_APPS = [
 
 ]
 
+if os.getenv("ENABLE_SILK", "false").lower() == "true":
+    INSTALLED_APPS += [
+        'silk',
+    ]
+
 MIDDLEWARE = [
+    'silk.middleware.SilkyMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -89,6 +95,9 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
+
+if os.getenv("ENABLE_SILK", "false").lower() != "true":
+    MIDDLEWARE.remove('silk.middleware.SilkyMiddleware')
 
 ROOT_URLCONF = 'core.urls'
 

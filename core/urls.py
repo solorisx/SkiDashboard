@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from . import views
+import os
 
 
 urlpatterns = [
@@ -34,3 +35,6 @@ urlpatterns = [
     path("privacy/", views.privacy_policy, name="privacy_policy"),
     path("terms/", views.terms_of_service, name="terms_of_service"),
 ]
+
+if os.getenv("ENABLE_SILK", "false").lower() == "true":
+    urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]
