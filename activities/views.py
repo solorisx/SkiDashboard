@@ -506,9 +506,14 @@ def segment_map(request, activity_id):
 
 
 def home_stats(request):
-    current_season_start = datetime(datetime.now().year, 7, 1) if datetime.now().month >= 7 else datetime(datetime.now().year-1, 7, 1)
-    current_season_end = datetime(datetime.now().year+1, 6, 30) if datetime.now().month >= 7 else datetime(datetime.now().year, 6, 30)
-    activities = Activity.objects.filter(user=request.user, timestamp__gte=current_season_start)
+    current = True
+    if current:
+        season_start = datetime(datetime.now().year, 7, 1) if datetime.now().month >= 7 else datetime(datetime.now().year-1, 7, 1)
+        season_end = datetime(datetime.now().year+1, 6, 30) if datetime.now().month >= 7 else datetime(datetime.now().year, 6, 30)
+    else:
+        season_start = datetime(datetime.now().year-1, 7, 1) if datetime.now().month >= 7 else datetime(datetime.now().year-2, 7, 1)
+        season_end = datetime(datetime.now().year, 6, 30) if datetime.now().month >= 7 else datetime(datetime.now().year-1, 6, 30)
+    activities = Activity.objects.filter(user=request.user, timestamp__gte=season_start, timestamp__lte=season_end)
     skiarea = (
         activities.values("ski_area")
         .annotate(count=Count("ski_area"))
@@ -523,6 +528,7 @@ def home_stats(request):
         total_descent=Sum("total_descent"),
         total_num_laps=Sum("num_laps"),
         total_num_lift_rides=Sum("num_lift_rides"),
+        total_num_activities=Count("id"),
     )
 
     if not total_stats['total_distance_km']:
@@ -534,28 +540,100 @@ def home_stats(request):
     if not total_stats['total_num_lift_rides']:
         total_stats['total_num_lift_rides'] = 0
 
-    season_passes = SeasonPass.objects.filter(user=request.user, valid_from__lte=current_season_end, valid_until__gte=current_season_start)
+    season_passes = SeasonPass.objects.filter(user=request.user, valid_from__lte=season_end, valid_until__gte=season_start)
     for sp in season_passes:
         logger.debug(f"Season pass: {sp}")
-        activities = sp.get_valid_activities(current_season_start, current_season_end)
+        activities = sp.get_valid_activities(season_start, season_end)
         logger.debug(f"Activities: {activities}")
     
     season_pass_stats = {}
     if season_passes:
         for sp in season_passes:
-            activities = sp.get_valid_activities(current_season_start, current_season_end)
+            activities = sp.get_valid_activities(season_start, season_end)
             if activities:
                 season_pass_stats[sp] = {'name': sp.skiarea.name if sp.skiarea else sp.skiarea_network, 'activities': activities.count(), 'total_savings': activities.aggregate(total_savings=Sum('value'))['total_savings']}
     logger.debug(f"Season pass stats: {season_pass_stats}")
 
 
     return render(request, "home.html", {
-        "season": f"{current_season_start.year}-{current_season_end.year}",
+        "season": f"{season_start.year}-{season_end.year}",
         "skiarea": SkiArea.objects.get(id=skiarea["ski_area"]) if skiarea else None,
         "count": skiarea["count"] if skiarea else 0,
         "total_stats": total_stats,
         "season_passes": season_pass_stats,
     })
+
+@login_required
+def season_stats(request):
+    """
+    Dedicated API endpoint for season stats AJAX calls
+    """
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'AJAX requests only'}, status=400)
+    
+    # Get season from query parameter
+    season_param = request.GET.get('season', 'current')
+    current = season_param == 'current'
+    
+    # Calculate season dates
+    if current:
+        season_start = datetime(datetime.now().year, 7, 1) if datetime.now().month >= 7 else datetime(datetime.now().year-1, 7, 1)
+        season_end = datetime(datetime.now().year+1, 6, 30) if datetime.now().month >= 7 else datetime(datetime.now().year, 6, 30)
+    else:
+        season_start = datetime(datetime.now().year-1, 7, 1) if datetime.now().month >= 7 else datetime(datetime.now().year-2, 7, 1)
+        season_end = datetime(datetime.now().year, 6, 30) if datetime.now().month >= 7 else datetime(datetime.now().year-1, 6, 30)
+    
+    logger.debug(f"Season: {season_start} to {season_end}")
+
+    # Get activities for the season
+    activities = Activity.objects.filter(user=request.user, timestamp__gte=season_start, timestamp__lte=season_end)
+    
+    logger.debug(f"Activities count: {activities.count()}")
+
+    # Get most popular ski area
+    skiarea = (
+        activities.values("ski_area")
+        .annotate(count=Count("ski_area"))
+        .order_by("-count")
+        .first()
+    )
+
+    # Calculate total stats
+    total_stats = activities.aggregate(
+        total_distance_km=Round(Sum(F("total_distance"))/1000, 2),
+        total_descent=Sum("total_descent"),
+        total_num_laps=Sum("num_laps"),
+        total_num_lift_rides=Sum("num_lift_rides"),
+        total_num_activities=Count("id"),
+    )
+
+    # Handle None values
+    for key in total_stats:
+        if total_stats[key] is None:
+            total_stats[key] = 0
+
+    # Prepare skiarea data
+    skiarea_data = None
+    if skiarea:
+        try:
+            ski_area_obj = SkiArea.objects.get(id=skiarea["ski_area"])
+            skiarea_data = {
+                "id": ski_area_obj.id,
+                "name": ski_area_obj.name,
+            }
+        except SkiArea.DoesNotExist:
+            pass
+    
+    logger.debug(f"Ski area data: {skiarea_data}")
+
+    return JsonResponse({
+        "season": f"{season_start.year}-{season_end.year}",
+        "skiarea": skiarea_data,
+        "count": skiarea["count"] if skiarea else 0,
+        "total_stats": total_stats,
+        "current_season": current,
+    })
+
 
 def strava_webhook(request):
     logger.info(f"Strava webhook received: {request}")

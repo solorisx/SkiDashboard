@@ -16,7 +16,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.contrib.admin.views.decorators import staff_member_required
 from dal import autocomplete
-from activities.views import home_stats
+from activities.views import home_stats, season_stats
 import os
 
 from activities.strava_interface import deauthorize_strava
@@ -101,3 +101,9 @@ def privacy_policy(request):
 
 def terms_of_service(request):
     return render(request, "base/terms.html")
+
+# API endpoints
+
+@login_required
+def season_stats_api(request):
+    return season_stats(request)

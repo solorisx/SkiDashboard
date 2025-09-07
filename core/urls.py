@@ -34,6 +34,8 @@ urlpatterns = [
     path("osm/", include('osm.urls')),
     path("privacy/", views.privacy_policy, name="privacy_policy"),
     path("terms/", views.terms_of_service, name="terms_of_service"),
+
+    path("api/season-stats/", views.season_stats_api, name="season_stats_api"),
 ]
 
 if os.getenv("ENABLE_SILK", "false").lower() == "true":

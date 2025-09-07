@@ -83,7 +83,6 @@ if os.getenv("ENABLE_SILK", "false").lower() == "true":
     ]
 
 MIDDLEWARE = [
-    'silk.middleware.SilkyMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -92,14 +91,16 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    'silk.middleware.SilkyMiddleware',
 ]
 
 if os.getenv("ENABLE_SILK", "false").lower() != "true":
     MIDDLEWARE.remove('silk.middleware.SilkyMiddleware')
 
 ROOT_URLCONF = 'core.urls'
+
+SILKY_INTERCEPT_FUNC = lambda request: not request.path.startswith('/accounts/')
 
 SILKY_AUTHENTICATION = True  # User must login
 SILKY_AUTHORISATION = True  # User must have permissions
@@ -217,7 +218,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 print("Initializing LOGGING in settings.py - if you see this more than once use 'runserver --noreload'")
 
-FORMATTER = os.getenv('LOG_FORMAT', 'json')
+FORMATTER = os.getenv('FORMATTER', 'json')
 
 print(f"LOG_LEVEL is set to {LOG_LEVEL} and FORMATTER to {FORMATTER}")
 
@@ -249,13 +250,13 @@ LOGGING = {
     },
     'root': {   # <--- root logger catches everything not caught by other loggers
         'handlers': ['console'],
-        'level': LOG_LEVEL,
+        'level': 'WARNING',
     },
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': LOG_LEVEL,
-            'propagate': False,  # don't duplicate logs
+            'level': 'WARNING', #LOG_LEVEL,
+            'propagate': False,
         },
         'core': {
             'handlers': ['console'],

@@ -15,6 +15,8 @@
     <!-- Leaflet CSS (if using maps) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
+    {% block extra_head %}{% endblock %}
+
     <!-- Custom Styles -->
     <style>
         /* Global Styles */
@@ -354,4 +356,5 @@
 
     <!-- Page-specific styles block -->
     {% block extra_css %}{% endblock %}
+
 </head>

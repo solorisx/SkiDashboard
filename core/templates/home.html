@@ -1,26 +1,448 @@
 {% extends "base/base.html" %}
 
-{% block content %}
+{% block title %}Ski Dashboard - Welcome{% endblock %}
 
-<div class="container mt-5 text-center">
-    <h3 class="fw-bold">Welcome, {{ user.username }}! ⛷️</h3>
-    
-    <div class="mt-4 p-4 bg-light rounded shadow-sm">
-        <h1 class="text-primary fw-bold">Welcome to the Ski Dashboard</h1>
-        <p class="lead text-muted">Track your skiing activities and monitor your progress.</p>
-        <p class="lead text-muted">Get started by clicking the <strong>“Activities”</strong> link in the navigation bar above.</p>
+{% block extra_css %}
+<style>
+  :root {
+    --ski-primary: #2563eb;
+    --ski-secondary: #1e40af;
+    --ski-accent: #06b6d4;
+    --ski-success: #10b981;
+    --ski-warning: #f59e0b;
+    --ski-danger: #ef4444;
+    --ski-snow: #f8fafc;
+
+    /* Glass tints tuned for white background */
+    --ski-glass-bg: rgba(0, 0, 0, 0.03);
+    --ski-glass-border: rgba(0, 0, 0, 0.06);
+  }
+
+  .hero-section {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.015) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--ski-glass-border);
+    border-radius: 24px;
+    padding: 3rem 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.12);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .hero-section:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 16px 48px rgba(31, 38, 135, 0.18);
+  }
+
+  .stats-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--ski-glass-border);
+    border-radius: 20px;
+    padding: 2rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    color: #111827;
+  }
+
+  .stats-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  }
+
+  .season-toggle {
+    background: var(--ski-glass-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--ski-glass-border);
+    border-radius: 50px;
+    padding: 0.5rem;
+    display: inline-flex;
+    margin: 2rem 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  }
+
+  .season-option {
+    background: transparent;
+    border: none;
+    border-radius: 40px;
+    padding: 1rem 2rem;
+    color: #1f2937; /* slate-800 for visibility on white */
+    font-weight: 600;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 2;
+  }
+
+  .season-option.active {
+    background: linear-gradient(135deg, var(--ski-primary) 0%, var(--ski-secondary) 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+    transform: scale(1.05);
+  }
+
+  .season-option:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.04);
+    color: #111827;
+  }
+
+  .stat-number {
+    font-size: 3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--ski-primary) 0%, var(--ski-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .stat-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.8;
+    color: #374151; /* slate-700 */
+  }
+
+  .welcome-title {
+    /* Use brand gradient for visibility on white */
+    background: linear-gradient(135deg, var(--ski-primary) 0%, var(--ski-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 3.5rem;
+    font-weight: 900;
+    margin-bottom: 1rem;
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .fade-in { animation: fadeIn 0.8s ease-out; }
+  .slide-up { animation: slideUp 0.6s ease-out; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .metric-card {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.015) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--ski-glass-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+    color: #111827;
+  }
+
+  .metric-card:hover {
+    transform: translateY(-5px);
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  .metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937; /* dark text */
+    margin-bottom: 0.5rem;
+  }
+
+  .metric-label {
+    color: #6b7280; /* slate-500 */
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .favorite-area {
+    background: linear-gradient(135deg, var(--ski-warning) 0%, #fb923c 100%);
+    color: #ffffff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.25);
+  }
+
+  .no-data-state {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.04) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #7f1d1d; /* red-900 */
+  }
+
+  .loading-spinner {
+    display: none;
+    color: var(--ski-primary);
+  }
+
+  .action-btn {
+    background: rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--ski-glass-border);
+    color: #1f2937;
+    transition: all 0.3s ease;
+  }
+
+  .action-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #111827;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  .action-btn-primary {
+    background: linear-gradient(135deg, var(--ski-primary) 0%, var(--ski-secondary) 100%);
+    border: none;
+    color: #ffffff;
+  }
+
+  .action-btn-primary:hover {
+    background: linear-gradient(135deg, var(--ski-secondary) 0%, var(--ski-primary) 100%);
+    transform: translateY(-2px) scale(1.05);
+  }
+
+  @media (max-width: 768px) {
+    .welcome-title { font-size: 2.5rem; }
+    .hero-section { padding: 2rem 1rem; }
+    .season-toggle { width: 100%; justify-content: center; }
+    .metric-value { font-size: 1.5rem; }
+  }
+</style>
+
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Welcome Section -->
+    <div class="hero-section fade-in text-center">
+        <h1 class="welcome-title">Welcome Back, {{ user.username }}! ⛷️</h1>
+        <p class="lead text-white-50 mb-0">Ready to hit the slopes? Track your skiing adventures and monitor your progress.</p>
     </div>
 
-    <div class="mt-5 p-4 bg-white rounded shadow-sm">
+    <!-- Season Toggle -->
+    <div class="text-center">
+        <div class="season-toggle">
+            <button class="season-option active" data-season="current" onclick="switchSeason('current')">
+                <i class="bi bi-snow me-2"></i>Current Season
+            </button>
+            <button class="season-option" data-season="previous" onclick="switchSeason('previous')">
+                <i class="bi bi-clock-history me-2"></i>Previous Season
+            </button>
+        </div>
+        <div class="loading-spinner">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-white-50">Loading season data...</p>
+        </div>
+    </div>
+
+    <!-- Stats Dashboard -->
+    <div id="stats-container" class="slide-up">
         {% if total_stats %}
-            <h2 class="text-primary fw-bold">You've skied <span class="text-success">{{ total_stats.total_distance_km }} km</span> so far this season! 🎿</h2>
-            <h3 class="text-secondary">You've taken <span class="text-danger">{{ total_stats.total_num_lift_rides }}</span> lift rides.</h3>
-            <h3 class="text-secondary">Your favorite ski area this season is <span class="text-warning">{{ skiarea.name }}</span> with <strong>{{ count }}</strong> activities! 🏔️</h3>
+        <!-- Stats Cards Row -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-4">
+                <div class="metric-card">
+                    <div class="stat-icon text-info">
+                        <i class="bi bi-map"></i>
+                    </div>
+                    <div class="metric-value">{{ total_stats.total_distance_km }}</div>
+                    <div class="metric-label">Kilometers Skied</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="metric-card">
+                    <div class="stat-icon text-success">
+                        <i class="bi bi-arrow-up-circle"></i>
+                    </div>
+                    <div class="metric-value">{{ total_stats.total_num_lift_rides }}</div>
+                    <div class="metric-label">Lift Rides</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="metric-card">
+                    <div class="stat-icon text-warning">
+                        <i class="bi bi-house"></i>
+                    </div>
+                    <div class="metric-value">{{ total_stats.total_num_activities }}</div>
+                    <div class="metric-label">Activities</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Main Stats Card -->
+        <div class="stats-card">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h2 class="text-primary fw-bold mb-3">
+                        <i class="bi bi-graph-up me-3"></i>Season Summary
+                    </h2>
+                    <h3 class="mb-3">
+                        You've conquered <span class="stat-number d-inline">{{ total_stats.total_distance_km }}</span> 
+                        <span class="text-success fw-bold">kilometers</span> of slopes this season! 🎿
+                    </h3>
+                </div>
+                <div class="col-lg-4 text-center">
+                    <div class="stat-icon text-primary">
+                        <i class="bi bi-trophy"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="favorite-area">
+                <h4 class="fw-bold mb-2">
+                    <i class="bi bi-heart-fill me-2"></i>Your Favorite Resort
+                </h4>
+                <h3 class="mb-1">{{ skiarea.name }} 🏔️</h3>
+                <p class="mb-0 opacity-75">{{ count }} activities and counting!</p>
+            </div>
+
+        </div>
+        
         {% else %}
-            <h2 class="text-primary fw-bold">You haven't recorded any activities yet! 📉</h2>
-            <p class="lead text-muted">Start tracking your skiing adventures to see your stats here.</p>
+        <!-- No Data State -->
+        <div class="no-data-state">
+            <div class="text-center">
+                <i class="bi bi-bar-chart text-muted" style="font-size: 4rem; margin-bottom: 2rem;"></i>
+                <h2 class="text-muted fw-bold mb-3">No Activities Yet! 📉</h2>
+                <p class="lead text-muted mb-4">Start your skiing adventure by recording your first activity.</p>
+            </div>
+        </div>
         {% endif %}
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="text-center mt-5 mb-5">
+        <p class="lead text-white-50 mb-4">Ready for your next adventure?</p>
+        <a href="{% url 'activity_list' %}" class="btn action-btn btn-lg rounded-pill px-5 me-3">
+            <i class="bi bi-list-ul me-2"></i>View Activities
+        </a>
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentSeason = 'current';
+
+function switchSeason(season) {
+    if (currentSeason === season) return;
+    
+    currentSeason = season;
+    
+    // Update toggle buttons
+    document.querySelectorAll('.season-option').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-season="${season}"]`).classList.add('active');
+    
+    // Show loading state
+    const loadingSpinner = document.querySelector('.loading-spinner');
+    const statsContainer = document.getElementById('stats-container');
+    
+    loadingSpinner.style.display = 'block';
+    statsContainer.style.opacity = '0.5';
+    
+    // Make AJAX call to fetch season data
+    fetch(`/api/season-stats/?season=${season}`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        updateStatsDisplay(data);
+        
+        // Hide loading state
+        loadingSpinner.style.display = 'none';
+        statsContainer.style.opacity = '1';
+        
+        // Add subtle animation
+        statsContainer.style.transform = 'translateY(10px)';
+        setTimeout(() => {
+            statsContainer.style.transform = 'translateY(0)';
+        }, 100);
+    })
+    .catch(error => {
+        console.error('Error fetching season data:', error);
+        
+        // Hide loading state even on error
+        loadingSpinner.classList.remove('show');
+        statsContainer.style.opacity = '1';
+        
+        // You could show an error message here
+        // showErrorMessage('Failed to load season data. Please try again.');
+    });
+}
+
+function updateStatsDisplay(data) {
+    // Update metric cards
+    const metricValues = document.querySelectorAll('.metric-value');
+    if (data.total_stats) {
+        metricValues[0].textContent = data.total_stats.total_distance_km || '0';
+        metricValues[1].textContent = data.total_stats.total_num_lift_rides || '0';
+        metricValues[2].textContent = data.total_stats.total_num_activities || '0';
+    }
+    
+    // Update main stats text
+    const statNumbers = document.querySelectorAll('.stat-number');
+    if (statNumbers.length > 0 && data.total_stats) {
+        statNumbers[0].textContent = data.total_stats.total_distance_km || '0';
+    }
+    
+    // Update season text conditionally
+    const seasonText = document.querySelector('.season-text');
+    if (seasonText) {
+        seasonText.textContent = currentSeason === 'current' ? 'this season' : 'last season';
+    }
+    
+    // Update favorite resort if present
+    const favoriteArea = document.querySelector('.favorite-area');
+    if (favoriteArea && data.skiarea) {
+        const resortName = favoriteArea.querySelector('h3');
+        const activityCount = favoriteArea.querySelector('p');
+        if (resortName) resortName.innerHTML = `${data.skiarea.name} 🏔️`;
+        if (activityCount) activityCount.innerHTML = `${data.count} activities and counting!`;
+        favoriteArea.style.display = 'block';
+    } else if (favoriteArea) {
+        favoriteArea.style.display = 'none';
+    }
+    
+    // Handle no data state
+    if (!data.total_stats || (data.total_stats.total_distance_km === 0 && data.total_stats.total_num_lift_rides === 0)) {
+        // You could switch to no-data state here if needed
+        console.log('No data for this season');
+    }
+}
+
+// Add smooth scrolling and entrance animations
+document.addEventListener('DOMContentLoaded', function() {
+    // Add staggered animation to metric cards
+    const metricCards = document.querySelectorAll('.metric-card');
+    metricCards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.classList.add('slide-up');
+    });
+
+    const favoriteArea = document.querySelector('.favorite-area');
+    const activityCount = favoriteArea.querySelector('p');
+    if (favoriteArea && activityCount && parseInt(activityCount.textContent) === 0) {
+        favoriteArea.style.display = 'none';
+    }
+});
+</script>
 {% endblock %}

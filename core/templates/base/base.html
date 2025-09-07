@@ -1,5 +1,7 @@
 {% include './head.html' %}
 
+{% block extra_head %}{% endblock %}
+{% block extra_css %}{% endblock %}
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js"></script>
@@ -9,7 +11,6 @@
 {% endif %}
 
 <body>
-
     <header>
         {% include './navbar.html' %}
     </header>
@@ -23,8 +24,10 @@
 
     {% include './footer.html' %}
 
-    {% include './scripts.html' %}    
+    {% include './scripts.html' %}
+    
+    <!-- Page-specific scripts block -->
+    {% block extra_scripts %}{% endblock %}
 
 </body>
-
 </html>
