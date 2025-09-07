@@ -31,6 +31,7 @@ from .tasks import sync_strava_activity_task, sync_user_activities_task as sync_
 from .activity_parser import sync_strava_activity
 from .batch import parse_strava_activities, parse_strava_activity
 from django.http import Http404, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 logger = logging.getLogger(__name__)
 
@@ -635,6 +636,7 @@ def season_stats(request):
     })
 
 
+@csrf_exempt
 def strava_webhook(request):
     logger.info(f"Strava webhook received: {request}")
     if request.method == "GET":

@@ -23,8 +23,7 @@
     backdrop-filter: blur(20px);
     border: 1px solid var(--ski-glass-border);
     border-radius: 24px;
-    padding: 3rem 2rem;
-    margin-bottom: 2rem;
+    padding: 1rem 1rem;
     box-shadow: 0 8px 32px rgba(31, 38, 135, 0.12);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
@@ -104,14 +103,12 @@
   }
 
   .welcome-title {
-    /* Use brand gradient for visibility on white */
     background: linear-gradient(135deg, var(--ski-primary) 0%, var(--ski-accent) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    font-size: 3.5rem;
+    font-size: 2rem;
     font-weight: 900;
-    margin-bottom: 1rem;
     text-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);
   }
 
@@ -222,10 +219,8 @@
 <div class="container mt-5">
     <!-- Welcome Section -->
     <div class="hero-section fade-in text-center">
-        <h1 class="welcome-title">Welcome Back, {{ user.username }}! ⛷️</h1>
-        <p class="lead text-white-50 mb-0">Ready to hit the slopes? Track your skiing adventures and monitor your progress.</p>
+        <h1 class="welcome-title">Welcome back, {{ user.username }}! ⛷️</h1>
     </div>
-
     <!-- Season Toggle -->
     <div class="text-center">
         <div class="season-toggle">
