@@ -216,6 +216,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Logging
 
 print("Initializing LOGGING in settings.py - if you see this more than once use 'runserver --noreload'")
+
+FORMATTER = os.getenv('LOG_FORMAT', 'json')
+
+print(f"LOG_LEVEL is set to {LOG_LEVEL} and FORMATTER to {FORMATTER}")
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -224,6 +229,11 @@ LOGGING = {
             'format': '{asctime} {levelname} {name} {message}',
             'style': '{',
             'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'json': {
+            'format': '{{"timestamp": "{asctime}", "level": "{levelname}", "logger": "{name}", "message": "{message}"}}',
+            'style': '{',
+            'datefmt': '%Y-%m-%dT%H:%M:%S',
         },
         'simple': {
             'format': '{levelname} {message}',
@@ -234,7 +244,7 @@ LOGGING = {
         'console': {
             'level': LOG_LEVEL,
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+            'formatter': FORMATTER,
         },
     },
     'root': {   # <--- root logger catches everything not caught by other loggers
