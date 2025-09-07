@@ -611,6 +611,10 @@ def subscribe_strava_webhook(request):
     client_secret = os.getenv("STRAVA_CLIENT_SECRET")
     verify_token = os.getenv("STRAVA_VERIFY_TOKEN")
     callback_url = os.getenv("STRAVA_WEBHOOK_CALLBACK_URL")
+    logger.debug(f"Client ID: {client_id}, Callback URL: {callback_url}, Verify Token: {verify_token}")
+    if not all([client_id, client_secret, verify_token, callback_url]):
+        messages.error(request, "Missing Strava webhook configuration in environment variables.")
+        return redirect("admin:index")
     response = requests.post(
         "https://www.strava.com/api/v3/push_subscriptions",
         data={

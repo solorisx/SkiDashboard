@@ -101,6 +101,9 @@ if os.getenv("ENABLE_SILK", "false").lower() != "true":
 
 ROOT_URLCONF = 'core.urls'
 
+SILKY_AUTHENTICATION = True  # User must login
+SILKY_AUTHORISATION = True  # User must have permissions
+
 SOCIALACCOUNT_STORE_TOKENS = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
