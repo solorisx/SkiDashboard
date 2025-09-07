@@ -558,7 +558,7 @@ def home_stats(request):
     })
 
 def strava_webhook(request):
-    logger.info(f"Strava webhook received: {request.method}")
+    logger.info(f"Strava webhook received: {request}")
     if request.method == "GET":
         # Verification challenge from Strava
         mode = request.GET.get("hub.mode")
@@ -606,6 +606,7 @@ def strava_webhook(request):
 def subscribe_strava_webhook(request):
     import os
     import requests
+    logger.info("Subscribing to Strava webhooks...")
     client_id = os.getenv("STRAVA_CLIENT_ID")
     client_secret = os.getenv("STRAVA_CLIENT_SECRET")
     verify_token = os.getenv("STRAVA_VERIFY_TOKEN")
@@ -619,7 +620,7 @@ def subscribe_strava_webhook(request):
             "verify_token": verify_token,
         },
     )
-    logger.debug(f"Strava webhook subscription response: {response.status_code}, {response.text}")
+    logger.info(f"Strava webhook subscription response: {response.status_code}, {response.text}")
     if response.status_code == 201:
         messages.success(request, "Successfully subscribed to Strava webhooks.")
     else:

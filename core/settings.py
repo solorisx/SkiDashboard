@@ -203,16 +203,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Logging
 
-LOG_DIR = 'core/logs'
-
 print("Initializing LOGGING in settings.py - if you see this more than once use 'runserver --noreload'")
-if not ON_CLOUD:
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'verbose': {
-            'format': '{asctime} {levelname} {module} {message}',
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {name} {message}',
             'style': '{',
             'datefmt': '%Y-%m-%d %H:%M:%S',
         },
@@ -223,145 +220,43 @@ if not ON_CLOUD:
     },
     'handlers': {
         'console': {
-            'level': 'INFO',
+            'level': LOG_LEVEL,
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'django_file': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR + '/django_debug.log',
-            'backupCount': 1,      
-            'maxBytes': 10971520,   # 20 MB
-            'formatter': 'verbose',
-        },
-        'django_file_info': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR + '/django_info.log',
-            'backupCount': 1,     
-            'maxBytes': 10971520,   # 10 MB
-            'formatter': 'verbose',
-        },
-        'django_file_warn': {
-            'level': 'WARNING',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR + '/django_warn.log',
-            'backupCount': 1,    
-            'maxBytes': 10971520,   # 10 MB      
-            'formatter': 'verbose',
-        },                
-        'app_file': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR + '/app_debug.log',
-            'backupCount': 1,     
-            'maxBytes': 10971520,   # 10 MB        
-            'formatter': 'verbose',
-        },
-        'app_file_info': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR + '/app_info.log',
-            'backupCount': 1,      
-            'maxBytes': 10971520,   # 10 MB
-            'formatter': 'verbose',
-        },
-        'app_file_warn': {
-            'level': 'WARNING',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOG_DIR + '/app_warn.log',
-            'backupCount': 1,   
-            'maxBytes': 10971520,   # 10 MB
-            'formatter': 'verbose',
-        },        
+    },
+    'root': {   # <--- root logger catches everything not caught by other loggers
+        'handlers': ['console'],
+        'level': LOG_LEVEL,
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'django_file', 'django_file_info', 'django_file_warn'],
-            'level': LOG_LEVEL,
-        },
-        'core': {
-            'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
-            'level': LOG_LEVEL,
-            'propagate': True,
-        },
-        'activities': {
-            'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
-            'level': LOG_LEVEL,
-            'propagate': True,
-        },
-        'osm': {
-            'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
-            'level': LOG_LEVEL,
-            'propagate': True,
-        },
-        'cost': {
-            'handlers': ['console', 'app_file', 'app_file_info', 'app_file_warn'],
-            'level': LOG_LEVEL,
-            'propagate': True,
-        },
-    },
-    }
-else:
-    LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'verbose': {
-                'format': '{asctime} {levelname} {name} {message}',
-                'style': '{',
-                'datefmt': '%Y-%m-%d %H:%M:%S',
-            },
-            'simple': {
-                'format': '{levelname} {message}',
-                'style': '{',
-            },
-        },
-        'handlers': {
-            'console': {
-                'level': LOG_LEVEL,
-                'class': 'logging.StreamHandler',
-                'formatter': 'verbose',
-            },
-        },
-        'root': {   # <--- root logger catches everything not caught by other loggers
             'handlers': ['console'],
             'level': LOG_LEVEL,
+            'propagate': False,  # don't duplicate logs
         },
-        'loggers': {
-            'django': {
-                'handlers': ['console'],
-                'level': LOG_LEVEL,
-                'propagate': False,  # don't duplicate logs
-            },
-            'core': {
-                'handlers': ['console'],
-                'level': LOG_LEVEL,
-                'propagate': False,
-            },
-            'activities': {
-                'handlers': ['console'],
-                'level': LOG_LEVEL,
-                'propagate': False,
-            },
-            'osm': {
-                'handlers': ['console'],
-                'level': LOG_LEVEL,
-                'propagate': False,
-            },
-            'cost': {
-                'handlers': ['console'],
-                'level': LOG_LEVEL,
-                'propagate': False,
-            },
+        'core': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
         },
-    }
-
-
-
-
-
+        'activities': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'osm': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'cost': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+    },
+}
 
 # Redis as broker (you can change this if using RabbitMQ etc.)
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL")
@@ -372,7 +267,6 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND")  # Optional: to store task results
 CELERY_TIMEZONE = 'UTC'
 broker_connection_retry_on_startup = True
-
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
