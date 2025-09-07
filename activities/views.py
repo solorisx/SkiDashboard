@@ -32,7 +32,7 @@ from .activity_parser import sync_strava_activity
 from .batch import parse_strava_activities, parse_strava_activity
 from django.http import Http404
 
-logger = logging.getLogger('core')
+logger = logging.getLogger(__name__)
 
 @staff_member_required
 def sync_strava_admin(request):
