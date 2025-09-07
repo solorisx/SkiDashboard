@@ -558,6 +558,7 @@ def home_stats(request):
     })
 
 def strava_webhook(request):
+    logger.info(f"Strava webhook received: {request.method}")
     if request.method == "GET":
         # Verification challenge from Strava
         mode = request.GET.get("hub.mode")
