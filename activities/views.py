@@ -30,7 +30,7 @@ from .forms import StravaSyncForm, PerUserSyncForm, GlobalSyncForm
 from .tasks import sync_strava_activity_task, sync_user_activities_task as sync_user_new_activities_task, scheduled_strava_sync
 from .activity_parser import sync_strava_activity
 from .batch import parse_strava_activities, parse_strava_activity
-from django.http import Http404
+from django.http import Http404, JsonResponse
 
 logger = logging.getLogger(__name__)
 
@@ -566,7 +566,7 @@ def strava_webhook(request):
         verify_token = request.GET.get("hub.verify_token")
 
         if mode == "subscribe" and verify_token == os.getenv("STRAVA_VERIFY_TOKEN"):
-            return HttpResponse(challenge)
+            return JsonResponse({"hub.challenge": challenge})
         else:
             logger.warning("Strava webhook verification failed.")
             logger.debug(f"Mode: {mode}, Verify Token: {verify_token}")
@@ -611,7 +611,7 @@ def subscribe_strava_webhook(request):
     client_secret = os.getenv("STRAVA_CLIENT_SECRET")
     verify_token = os.getenv("STRAVA_VERIFY_TOKEN")
     callback_url = os.getenv("STRAVA_WEBHOOK_CALLBACK_URL")
-    logger.debug(f"Client ID: {client_id}, Callback URL: {callback_url}, Verify Token: {verify_token}")
+    logger.info(f"Client ID: {client_id}, Callback URL: {callback_url}, Verify Token: {verify_token}")
     if not all([client_id, client_secret, verify_token, callback_url]):
         messages.error(request, "Missing Strava webhook configuration in environment variables.")
         return redirect("admin:index")
