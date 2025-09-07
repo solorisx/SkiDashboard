@@ -583,11 +583,17 @@ def strava_webhook(request):
                 return HttpResponse("OK")
             if payload.get("aspect_type") == "create":
                 user_id = payload.get("owner_id")
+                if Activity.objects.filter(user=user, strava_id=activity_id).exists():
+                    logger.info(f"Activity {activity_id} for user {user.username} ({user_id}) already exists; skipping.")
+                    return HttpResponse("OK")
                 sync_strava_activity_task.delay(user.id, activity_id)
                 logger.info(f"Enqueued sync for new activity for user {user.username} ({user_id})")
             elif payload.get("aspect_type") == "delete":
                 try:
                     activity = Activity.objects.get(strava_id=activity_id)
+                    if not activity:
+                        logger.warning(f"Activity {activity_id} not found for deletion.")
+                        return HttpResponse("OK")
                     activity.delete()
                     logger.info(f"Deleted activity {activity_id} as per Strava webhook.")
                 except Activity.DoesNotExist:
