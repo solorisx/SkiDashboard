@@ -2,3 +2,40 @@
 integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
 crossorigin="anonymous"></script>
 <script src="https://kit.fontawesome.com/2b588ae56d.js" crossorigin="anonymous"></script>
+
+<script>
+    function showSuccessToast(message) {
+    const toastEl = document.getElementById('successToast');
+    if (!toastEl) {
+        console.warn("No #successToast element in the DOM");
+        return;
+    }
+
+    toastEl.querySelector(".toast-body").textContent = message;
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+    }
+
+    function showErrorToast(message) {
+    const toastEl = document.getElementById('errorToast');
+    if (!toastEl) {
+        console.warn("No #errorToast element in the DOM");
+        return;
+    }
+
+    toastEl.querySelector(".toast-body").textContent = message;
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+    }
+    function showInfoToast(message) {
+    const toastEl = document.getElementById('infoToast');
+    if (!toastEl) {
+        console.warn("No #infoToast element in the DOM");
+        return;
+    }
+
+    toastEl.querySelector(".toast-body").textContent = message;
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+    }
+</script>

@@ -36,6 +36,8 @@ urlpatterns = [
     path("terms/", views.terms_of_service, name="terms_of_service"),
 
     path("api/season-stats/", views.season_stats_api, name="season_stats_api"),
+    path("api/lift-ride/", views.lift_ride_api, name="lift_ride_api"),
+    path("api/lift-ride/<int:lift_ride_id>/", views.lift_ride_api, name="lift_ride_api"),
 ]
 
 if os.getenv("ENABLE_SILK", "false").lower() == "true":

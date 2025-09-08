@@ -1,11 +1,12 @@
 from datetime import datetime
+import json
 import logging
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Count, Avg, Min, Max, F, Sum, Q
 from django.db.models.functions import Round
 from django.db import models
 from django.http import HttpResponse
-from activities.models import Activity, LiftRide
+from activities.models import Activity, LiftRide, Lap
 from osm.models import SkiArea, Aerialway
 
 
@@ -27,7 +28,8 @@ from django.contrib.auth import logout
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.generic import View
-
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
 from allauth.socialaccount.models import SocialAccount, SocialToken
 
 from .forms import UserDeleteForm
@@ -102,8 +104,67 @@ def privacy_policy(request):
 def terms_of_service(request):
     return render(request, "base/terms.html")
 
+
 # API endpoints
 
 @login_required
 def season_stats_api(request):
     return season_stats(request)
+
+@require_http_methods(["POST", "PATCH", "DELETE"])
+@login_required
+def lift_ride_api(request, lift_ride_id=None):
+    """ API endpoint to get, delete, or modify a lift ride by ID. """
+    if lift_ride_id:
+        lift_ride = LiftRide.objects.filter(id=lift_ride_id, lap__activity__user=request.user).first()
+        if not lift_ride:
+            return JsonResponse({"error": "Lift ride not found or does not belong to user."}, status=404)
+
+    if request.method == "DELETE":
+        lift_ride.delete()
+        return HttpResponse(status=204)
+
+    elif request.method == "PATCH":
+        logger.debug("Received PATCH data: %s", request.body)
+        data = json.loads(request.body)
+        if data.get("aerialway"):
+            aerialway = Aerialway.objects.filter(id=data["aerialway"]).first()
+            if not aerialway:
+                return JsonResponse({"error": "Aerialway not found."}, status=404)
+            lift_ride.aerialway = aerialway
+        if data.get("timestamp"):
+            activity_date = lift_ride.lap.activity.start_time.date()
+            combined_dt = datetime.strptime(f"{activity_date} {data['timestamp']}", "%Y-%m-%d %H:%M")
+            lift_ride.timestamp = combined_dt
+        if data.get("lap"):
+            lift_ride.lap_id = int(data["lap"])
+        if data.get("uphill"):
+            lift_ride.uphill = (str(data["uphill"]).lower() == "true")
+        lift_ride.save()
+        return HttpResponse(status=204)
+    
+    elif request.method == "POST":
+        data = json.loads(request.body)
+        logger.debug("Received lift ride data: %s", data)
+        if data.get("aerialway") and data.get("lap") and data.get("timestamp") and data.get("uphill"):
+            aerialway = Aerialway.objects.filter(id=data["aerialway"]).first()
+            if not aerialway:
+                return JsonResponse({"error": "Aerialway not found."}, status=404)
+            lap = Lap.objects.filter(id=data["lap"], activity__user=request.user).first()
+            if not lap:
+                return JsonResponse({"error": "Lap not found or does not belong to user."}, status=404)
+            time_str = data["timestamp"]
+            activity_date = lap.activity.start_time.date()
+            combined_dt = datetime.strptime(f"{activity_date} {time_str}", "%Y-%m-%d %H:%M")
+            uphill = str(data["uphill"]).lower() == "true"
+            lift_ride = LiftRide.objects.create(
+                aerialway=aerialway,
+                timestamp=combined_dt,
+                lap=lap,
+                uphill=uphill
+            )
+            lift_ride.save()
+            return HttpResponse(status=201)
+        
+        else:
+            return HttpResponse(status=400)

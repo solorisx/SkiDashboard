@@ -32,6 +32,7 @@ from .activity_parser import sync_strava_activity
 from .batch import parse_strava_activities, parse_strava_activity
 from django.http import Http404, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from osm.osm_util import get_aerialways_with_distance
 
 logger = logging.getLogger(__name__)
 
@@ -225,6 +226,17 @@ def activity_detail(request, activity_id):
         raise Http404("Activity not found")
     laps = activity.laps.all().order_by("lap_index")
     lift_rides = LiftRide.objects.filter(lap__activity=activity).order_by("lap__lap_index", "timestamp")
+    aerialways = (
+        Aerialway.objects
+        .filter(liftride__lap__activity=activity)
+        .distinct()
+    )
+
+    aerialways_dropdown = get_aerialways_with_distance(
+        lat=activity.start_position.y,
+        lon=activity.start_position.x,
+        distance_km=20
+    )
 
     return render(
         request,
@@ -234,6 +246,8 @@ def activity_detail(request, activity_id):
             "laps": laps,
             "lift_rides": lift_rides,
             "badges": activity.badges.all(),
+            "aerialways": aerialways,
+            "aerialways_dropdown": aerialways_dropdown,
         },
     )
 
@@ -660,7 +674,7 @@ def strava_webhook(request):
             try:
                 user = get_user_model().objects.get(socialaccount__uid=payload.get("owner_id"), socialaccount__provider="strava")
             except get_user_model().DoesNotExist:
-                logger.warning(f"No user found for Strava ID {payload.get('owner_id')}")
+                logger.error(f"No user found for Strava ID {payload.get('owner_id')}")
                 return HttpResponse("OK")
             if payload.get("aspect_type") == "create":
                 user_id = payload.get("owner_id")
@@ -673,12 +687,12 @@ def strava_webhook(request):
                 try:
                     activity = Activity.objects.get(strava_id=activity_id)
                     if not activity:
-                        logger.warning(f"Activity {activity_id} not found for deletion.")
+                        logger.info(f"Activity {activity_id} not found for deletion.")
                         return HttpResponse("OK")
                     activity.delete()
                     logger.info(f"Deleted activity {activity_id} as per Strava webhook.")
                 except Activity.DoesNotExist:
-                    logger.warning(f"Activity {activity_id} not found for deletion.")
+                    logger.info(f"Activity {activity_id} not found for deletion.")
                     return HttpResponse("OK")
         return HttpResponse("OK")
     

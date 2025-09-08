@@ -150,7 +150,6 @@
             <table class="table table-hover mb-0" id="liftRidesTable">
               <thead class="table-light">
                 <tr>
-                  <th class="fw-bold" style="width: 40px;"></th>
                   <th class="fw-bold">Lap</th>
                   <th class="fw-bold">Lift</th>
                   <th class="fw-bold">Direction</th>
@@ -161,11 +160,6 @@
               <tbody id="liftRidesBody">
                 {% for lift_ride in lift_rides %}
                 <tr class="table-row-hover lift-ride-row" data-lift-id="{{ lift_ride.id }}">
-                  <td>
-                    <div class="drag-handle text-muted" style="cursor: grab;">
-                      <i class="bi bi-grip-vertical"></i>
-                    </div>
-                  </td>
                   <td>
                     <span class="badge bg-primary-subtle text-primary px-2 py-1">
                       {{ lift_ride.lap.lap_index }}
@@ -260,11 +254,6 @@
               </a>
             </div>
             <div class="col-12 col-md-6 col-lg-3">
-              <button class="btn btn-outline-success btn-lg fw-medium d-grid" onclick="exportActivity()">
-                <i class="bi bi-download me-2"></i>Export Data
-              </button>
-            </div>
-            <div class="col-12 col-md-6 col-lg-3">
               <a href="{% url 'activity_list' %}" class="btn btn-primary btn-lg fw-medium d-grid">
                 <i class="bi bi-list me-2"></i>All Activities
               </a>
@@ -291,23 +280,25 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label for="lapSelect" class="form-label fw-bold">Lap</label>
-              <select class="form-select" id="lapSelect" required>
+              <select class="form-select" id="lapSelect" name="lap" required>
                 <option value="">Select Lap</option>
                 {% for lap in laps %}
-                <option value="{{ lap.lap_index }}">Lap {{ lap.lap_index }}</option>
+                <option value="{{ lap.id }}">Lap {{ lap.lap_index }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-md-6">
               <label for="liftSelect" class="form-label fw-bold">Lift</label>
-              <select class="form-select" id="liftSelect" required>
+              <select class="form-select" id="liftSelect" name="aerialway" required>
                 <option value="">Select Lift</option>
-                <!-- This would be populated with available lifts -->
+                {% for aerialway in aerialways_dropdown %}
+                <option value="{{ aerialway.id }}">{{ aerialway.name }}</option>
+                {% endfor %}
               </select>
             </div>
             <div class="col-md-6">
               <label for="directionSelect" class="form-label fw-bold">Direction</label>
-              <select class="form-select" id="directionSelect" required>
+              <select class="form-select" id="directionSelect" name="uphill" required>
                 <option value="">Select Direction</option>
                 <option value="true">Uphill</option>
                 <option value="false">Downhill</option>
@@ -315,7 +306,7 @@
             </div>
             <div class="col-md-6">
               <label for="timestampInput" class="form-label fw-bold">Timestamp</label>
-              <input type="time" class="form-control" id="timestampInput" required>
+              <input type="time" class="form-control" id="timestampInput" name="timestamp" required>
             </div>
           </div>
         </form>
@@ -346,23 +337,25 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label for="editLapSelect" class="form-label fw-bold">Lap</label>
-              <select class="form-select" id="editLapSelect" required>
+              <select class="form-select" id="editLapSelect" name="lap" required>
                 <option value="">Select Lap</option>
                 {% for lap in laps %}
-                <option value="{{ lap.lap_index }}">Lap {{ lap.lap_index }}</option>
+                <option value="{{ lap.id }}">Lap {{ lap.lap_index }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-md-6">
               <label for="editLiftSelect" class="form-label fw-bold">Lift</label>
-              <select class="form-select" id="editLiftSelect" required>
+              <select class="form-select" id="editLiftSelect" name="aerialway" required>
                 <option value="">Select Lift</option>
-                <!-- This would be populated with available lifts -->
+                {% for aerialway in aerialways_dropdown %}
+                <option value="{{ aerialway.id }}">{{ aerialway.name }}</option>
+                {% endfor %}
               </select>
             </div>
             <div class="col-md-6">
               <label for="editDirectionSelect" class="form-label fw-bold">Direction</label>
-              <select class="form-select" id="editDirectionSelect" required>
+              <select class="form-select" id="editDirectionSelect" name="uphill" required>
                 <option value="">Select Direction</option>
                 <option value="true">Uphill</option>
                 <option value="false">Downhill</option>
@@ -370,7 +363,7 @@
             </div>
             <div class="col-md-6">
               <label for="editTimestampInput" class="form-label fw-bold">Timestamp</label>
-              <input type="time" class="form-control" id="editTimestampInput" required>
+              <input type="time" class="form-control" id="editTimestampInput" name="timestamp" required>
             </div>
           </div>
         </form>
@@ -384,6 +377,42 @@
     </div>
   </div>
 </div>
+
+<!-- Success Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+  <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        ✅ Success!
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Error Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+  <div id="errorToast" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        ❌ Something went wrong.
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Info Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+  <div id="infoToast" class="toast align-items-center text-bg-info border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        ℹ️ Info message.
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+
 
 <!-- Scripts -->
 <script>
@@ -407,92 +436,139 @@ document.addEventListener("DOMContentLoaded", function() {
   
   map.fitBounds(trackLayer.getBounds(), { padding: [20, 20] });
 
-  // Initialize sortable for lift rides
-  const tbody = document.getElementById('liftRidesBody');
-  if (tbody && tbody.children.length > 0) {
-    new Sortable(tbody, {
-      handle: '.drag-handle',
-      animation: 150,
-      ghostClass: 'sortable-ghost',
-      onEnd: function(evt) {
-        updateLiftRideOrder();
-      }
-    });
-  }
 });
 
-// Lift ride management functions (to be implemented in backend)
-function saveLiftRide() {
-  const form = document.getElementById('addLiftRideForm');
-  const formData = new FormData(form);
-  
-  // TODO: Implement backend API call
-  console.log('Adding lift ride:', Object.fromEntries(formData));
-  
-  // Close modal and refresh table
-  bootstrap.Modal.getInstance(document.getElementById('addLiftRideModal')).hide();
-  // showSuccessToast('Lift ride added successfully!');
-}
-
 function editLiftRide(liftRideId) {
-  // TODO: Populate edit form with existing data
-  console.log('Editing lift ride:', liftRideId);
-  
   const modal = new bootstrap.Modal(document.getElementById('editLiftRideModal'));
   document.getElementById('editLiftRideId').value = liftRideId;
   modal.show();
 }
 
-function updateLiftRide() {
-  const form = document.getElementById('editLiftRideForm');
-  const formData = new FormData(form);
-  
-  // TODO: Implement backend API call
-  console.log('Updating lift ride:', Object.fromEntries(formData));
-  
-  // Close modal and refresh table
-  bootstrap.Modal.getInstance(document.getElementById('editLiftRideModal')).hide();
-  // showSuccessToast('Lift ride updated successfully!');
+// ---- small fetch helpers ----
+async function parseJSONSafe(response) {
+  if (response.status === 204) return null;
+  const ct = response.headers.get('content-type') || '';
+  if (ct.includes('application/json')) {
+    try { return await response.json(); } catch (_) { return null; }
+  }
+  const text = await response.text();
+  return text ? { detail: text } : null;
 }
 
-function deleteLiftRide(liftRideId) {
-  if (confirm('Are you sure you want to delete this lift ride?')) {
-    // TODO: Implement backend API call
-    console.log('Deleting lift ride:', liftRideId);
-    
-    // Remove row from table
-    document.querySelector(`[data-lift-id="${liftRideId}"]`).remove();
-    // showSuccessToast('Lift ride deleted successfully!');
+function jsonHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'X-CSRFToken': getCookie('csrftoken'),
+  };
+}
+
+// ---- CREATE: 201 Created ----
+async function saveLiftRide() {
+  const form = document.getElementById('addLiftRideForm');
+  const data = Object.fromEntries(new FormData(form));
+
+  try {
+    const res = await fetch('/api/lift-ride/', {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    const payload = await parseJSONSafe(res);
+
+    if (res.status === 201) {
+      showSuccessToast('Lift ride added successfully!');
+      // Optional: use Location header or payload.id to navigate if desired
+      // const locationURL = res.headers.get('Location');
+      bootstrap.Modal.getInstance(document.getElementById('addLiftRideModal')).hide();
+      location.reload();
+      return;
+    }
+
+    // Validation or other errors
+    const msg = payload?.error || payload?.detail || 'Failed to create lift ride.';
+    console.error('Create failed:', msg);
+    showErrorToast(msg);
+  } catch (err) {
+    console.error('Network error:', err);
+    showErrorToast('Network error while creating lift ride.');
   }
 }
 
-function updateLiftRideOrder() {
-  const rows = document.querySelectorAll('.lift-ride-row');
-  const order = Array.from(rows).map(row => row.dataset.liftId);
-  
-  // TODO: Implement backend API call
-  console.log('New lift ride order:', order);
-  // showSuccessToast('Lift ride order updated!');
+// ---- UPDATE: 200 OK (JSON) or 204 No Content ----
+async function updateLiftRide() {
+  const form = document.getElementById('editLiftRideForm');
+  const data = Object.fromEntries(new FormData(form));
+  const liftRideId = document.getElementById('editLiftRideId').value;
+
+  try {
+    const res = await fetch(`/api/lift-ride/${liftRideId}/`, {
+      method: 'PATCH',
+      headers: jsonHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    const payload = await parseJSONSafe(res);
+
+    if (res.ok) { // 200 or 204
+      showSuccessToast('Lift ride updated successfully!');
+      bootstrap.Modal.getInstance(document.getElementById('editLiftRideModal')).hide();
+      location.reload();
+      return;
+    }
+
+    const msg = payload?.error || payload?.detail || 'Failed to update lift ride.';
+    console.error('Update failed:', msg);
+    showErrorToast(msg);
+  } catch (err) {
+    console.error('Network error:', err);
+    showErrorToast('Network error while updating lift ride.');
+  }
 }
 
-function exportActivity() {
-  // TODO: Implement activity export functionality
-  console.log('Exporting activity data...');
-  // showInfoToast('Export functionality coming soon!');
+// ---- DELETE: 204 No Content ----
+async function deleteLiftRide(liftRideId) {
+  if (!confirm('Are you sure you want to delete this lift ride?')) return;
+
+  try {
+    const res = await fetch(`/api/lift-ride/${liftRideId}/`, {
+      method: 'DELETE',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }, // no Content-Type & no body
+    });
+
+    if (res.status === 204) {
+      document.querySelector(`[data-lift-id="${liftRideId}"]`)?.remove();
+      showSuccessToast('Lift ride deleted successfully!');
+      return;
+    }
+
+    // Try to read error details if not 204
+    const payload = await parseJSONSafe(res);
+    const msg = payload?.error || payload?.detail || 'Failed to delete lift ride.';
+    console.error('Delete failed:', msg);
+    showErrorToast(msg);
+  } catch (err) {
+    console.error('Network error:', err);
+    showErrorToast('Network error while deleting lift ride.');
+  }
 }
 
-// Toast notification functions (optional)
-function showSuccessToast(message) {
-  // Implementation depends on your toast library
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
 }
 
-function showInfoToast(message) {
-  // Implementation depends on your toast library
-}
 </script>
-
-<!-- Include SortableJS for drag & drop -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 
 <style>
 .table-row-hover:hover {
@@ -516,19 +592,6 @@ function showInfoToast(message) {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.drag-handle:hover {
-  color: var(--bs-primary) !important;
-}
-
-.sortable-ghost {
-  opacity: 0.4;
-  background: var(--bs-primary-bg-subtle);
-}
-
-.lift-ride-row.sortable-chosen {
-  background-color: var(--bs-primary-bg-subtle);
 }
 
 .card {

@@ -3,7 +3,7 @@ FROM python:3.11-slim
 # --- System deps (GDAL/GEOS/PROJ + build tools) ---
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gdal-bin libgdal-dev libgeos-dev proj-bin libproj-dev \
+    gdal-bin libgdal-dev libgeos-dev proj-bin libproj-dev postgresql-client\
     build-essential gcc \
     # optional but useful:
     curl ca-certificates \
