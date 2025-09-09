@@ -1,0 +1,244 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Upload Ski Area Networks{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-form {
+        border: 2px dashed #3498db;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        transition: all 0.3s ease;
+        background: #f8f9ff;
+    }
+    .upload-form:hover {
+        border-color: #2980b9;
+        background: #f0f6ff;
+    }
+    .upload-form.dragover {
+        border-color: #27ae60;
+        background: #f0fff0;
+    }
+    .file-input {
+        display: none;
+    }
+    .upload-button {
+        background: #3498db;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+        margin: 10px;
+    }
+    .upload-button:hover {
+        background: #2980b9;
+    }
+    .submit-button {
+        background: #27ae60;
+        color: white;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-top: 20px;
+        transition: background 0.3s ease;
+    }
+    .submit-button:hover {
+        background: #2ecc71;
+    }
+    .submit-button:disabled {
+        background: #bdc3c7;
+        cursor: not-allowed;
+    }
+    .file-info {
+        margin-top: 20px;
+        padding: 15px;
+        background: #e8f5e8;
+        border-radius: 6px;
+        display: none;
+    }
+    .json-example {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 20px;
+        margin-top: 20px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        overflow-x: auto;
+    }
+    .format-info {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 6px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+    .format-info h3 {
+        margin-top: 0;
+        color: #856404;
+    }
+</style>
+
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>🎿 Upload Ski Area Networks</h1>
+        <p>Upload a JSON file to create new ski area networks and their members</p>
+    </div>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="uploadForm" novalidate>
+        {% csrf_token %}
+        
+        <div class="upload-form" id="uploadArea">
+            <div>
+                <h3>📁 Select or Drop JSON File</h3>
+                <p>Choose a JSON file containing ski area networks data</p>
+                
+                <input type="file" name="json_file" id="jsonFile" class="file-input" accept=".json,application/json" required>
+                <button type="button" class="upload-button" id="chooseButton">
+                    Choose File
+                </button>
+                
+                <div class="file-info" id="fileInfo">
+                    <strong>Selected file:</strong> <span id="fileName"></span><br>
+                    <strong>Size:</strong> <span id="fileSize"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center;">
+            <button type="submit" class="submit-button" id="submitButton" disabled>
+                Upload and Process
+            </button>
+        </div>
+    </form>
+
+    <div class="format-info">
+        <h3>📋 JSON Format Requirements</h3>
+        <p>Your JSON file should follow this structure:</p>
+        <ul>
+            <li><strong>networks:</strong> Array of network objects</li>
+            <li><strong>name:</strong> Unique name for the network (required)</li>
+            <li><strong>season_pass_price:</strong> Price in CHF (optional)</li>
+            <li><strong>members:</strong> Array of member ski areas</li>
+            <li><strong>ski_area_id</strong> or <strong>ski_area_name:</strong> Reference to existing ski area</li>
+            <li><strong>Dates:</strong> Use YYYY-MM-DD format</li>
+        </ul>
+    </div>
+
+    <div class="json-example">
+<pre>{
+  "networks": [
+    {
+      "name": "TopCard",
+      "members": [
+        { "name": "Flims Laax Falera" },
+        { "name": "Davos Klosters" },
+        { "name": "Arosa Lenzerheide" }
+      ]
+    }
+  ]
+}</pre>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('jsonFile');
+    const chooseButton = document.getElementById('chooseButton');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const submitButton = document.getElementById('submitButton');
+    const form = document.getElementById('uploadForm');
+
+    // Trigger file picker
+    chooseButton.addEventListener('click', () => fileInput.click());
+
+    // Drag and drop functionality
+    ['dragenter','dragover'].forEach(evt =>
+        uploadArea.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            uploadArea.classList.add('dragover');
+        })
+    );
+
+    ['dragleave','drop'].forEach(evt =>
+        uploadArea.addEventListener(evt, () => uploadArea.classList.remove('dragover'))
+    );
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            fileInput.files = files;
+            updateFileInfo(files[0]);
+        }
+    });
+
+    // File input change handler
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            updateFileInfo(e.target.files[0]);
+        }
+    });
+
+    function updateFileInfo(file) {
+        const isJson = file.type === 'application/json' || file.name.toLowerCase().endsWith('.json');
+        if (!isJson) {
+            alert('Please select a JSON file (.json)');
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            submitButton.disabled = true;
+            return;
+        }
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        submitButton.disabled = false;
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
+    }
+
+    // Form submission handler
+    form.addEventListener('submit', (e) => {
+        if (!fileInput.files || !fileInput.files.length) {
+            e.preventDefault();
+            alert('Please select a file first');
+            return;
+        }
+        submitButton.textContent = 'Processing...';
+        submitButton.disabled = true;
+    });
+});
+</script>
+{% endblock %}

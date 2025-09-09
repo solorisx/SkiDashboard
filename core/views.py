@@ -73,7 +73,7 @@ class UserDeleteView(LoginRequiredMixin, View):
             user.delete()
             messages.success(request, 'Account successfully deleted')
             return redirect(reverse('home'))
-        return render(request, 'account/user_deletion.html', {'form': form})  
+        return render(request, 'account/user_deletion.html', {'form': form})
 
 @login_required
 def strava_connection_view(request):

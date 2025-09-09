@@ -1,38 +1,39 @@
-
-
-
-import os
-from django.contrib.auth.decorators import login_required
-from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib import admin
-from django.core.paginator import Paginator
-from django.urls import path
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth import get_user_model
-from django.contrib.gis.geos import GEOSGeometry, LineString, Point
-from allauth.socialaccount.models import SocialAccount
-from datetime import datetime
 import logging
-from django.shortcuts import render, get_object_or_404, redirect
-from django.db.models import Count, Avg, Min, Max, F, Sum, Q
-from django.db.models.functions import Round
-from django.db import models
-from django.http import HttpResponse
-from activities.models import Activity, LiftRide
-from osm.models import SkiArea, Aerialway, PisteSegment, Piste
-from cost.forms import CostForm
-from django.db.models import Count, OuterRef, Subquery
+import os
+from datetime import datetime
+
+from allauth.socialaccount.models import SocialAccount
+
+from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
+from django.contrib.gis.geos import LineString, Point
+from django.core.paginator import Paginator
 from django.core.serializers import serialize
-from cost.models import SeasonPass
-from .models import Activity
-from .forms import StravaSyncForm, PerUserSyncForm, GlobalSyncForm
-from .tasks import sync_strava_activity_task, sync_user_activities_task as sync_user_new_activities_task, scheduled_strava_sync
-from .activity_parser import sync_strava_activity
-from .batch import parse_strava_activities, parse_strava_activity
-from django.http import Http404, JsonResponse
+from django.db import models, transaction
+from django.db.models import Avg, Count, F, OuterRef, Q, Subquery, Sum
+from django.db.models.functions import Round
+from django.http import Http404, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import path
 from django.views.decorators.csrf import csrf_exempt
+
+from activities.models import LiftRide
+from cost.forms import CostForm
+from cost.models import SeasonPass
+from osm.models import Aerialway, Piste, PisteSegment, SkiArea
 from osm.osm_util import get_aerialways_with_distance
+
+from .batch import parse_strava_activities, parse_strava_activity
+from .forms import GlobalSyncForm, PerUserSyncForm, StravaSyncForm
+from .models import Activity
+from .tasks import (
+    scheduled_strava_sync,
+    sync_strava_activity_task,
+    sync_user_activities_task as sync_user_new_activities_task,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -208,8 +209,6 @@ def activity_list(request):
     page_obj = paginator.get_page(page_number)
 
     return render(request, 'activities/activity_list.html', {'page_obj': page_obj})    
-
-    # return render(request, "activities/activity_list.html", {"activities": activities})
 
 
 @login_required

@@ -1,19 +1,36 @@
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from .forms import OSMSyncForm, OSMFileSyncForm, SkiAreaNetworkForm, SegmentUpdateForm
+import json
+import logging
 
-from .models import SkiArea, SkiAreaNetwork, SkiAreaNetworkMember, Way, Piste, PisteSegment, Node, Station, Aerialway
-from django.shortcuts import render, get_object_or_404
+from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.serializers import serialize
+from django.db import transaction
 from django.db.models import Q
-import logging
-from dal import autocomplete
 from django.http import HttpResponseNotFound
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.decorators import method_decorator
+from django.views import View
 
-from .osm_downloader import load_osm
-from .osm_parser import parse_osm_file
+from dal import autocomplete
+
+from .forms import (
+    OSMSyncForm,
+    OSMFileSyncForm,
+    SkiAreaNetworkForm,
+    SegmentUpdateForm,
+)
+from .models import (
+    Aerialway,
+    Node,
+    Piste,
+    PisteSegment,
+    SkiArea,
+    SkiAreaNetwork,
+    SkiAreaNetworkMember,
+    Station,
+    Way,
+)
 from .osm_interface import load_osm_data
 from .osm_segments import update_piste_segments
 from .tasks import parse_osm_file_task
@@ -177,3 +194,111 @@ def update_segments(request, osm_id=None):
     except Exception as e:
         messages.error(request, f"Error updating segments: {e}")
     return redirect("sync_osm")
+
+
+@method_decorator(staff_member_required, name="dispatch")
+class SkiAreaNetworkUploadView(View):
+    def get(self, request, *args, **kwargs):
+        return render(request, 'admin/skiarea_network_upload.html')
+
+    def post(self, request, *args, **kwargs):
+        if 'json_file' not in request.FILES:
+            messages.error(request, "No JSON file uploaded.")
+            return redirect("skiarea_network_upload")
+
+        json_file = request.FILES['json_file']
+        if not json_file.name.endswith('.json'):
+            messages.error(request, "Uploaded file is not a JSON file.")
+            return redirect("skiarea_network_upload")
+        
+        try:
+            data = json_file.read().decode('utf-8')
+            result = self.process_data(data)
+            if result and result['created'] > 0:
+                messages.success(request, f"Successfully created {result['created']} ski area networks.")
+                return redirect("skiarea_network_upload")
+            else:
+                messages.error(request, "No new ski area networks were created.")
+                return redirect("skiarea_network_upload")
+        except Exception as e:
+            messages.error(request, f"Error processing file: {e}")
+            raise e
+            return redirect("skiarea_network_upload")
+        
+    def process_data(self, data):
+        """ Process the uploaded JSON data and create SkiAreaNetwork entries.
+        Args:
+            data (str): JSON string containing ski area network data. Expected format:
+                "networks": [
+                    {
+                        "name": "Network Name",
+                        "id":   123,
+                        "members":
+                            [
+                            {
+                                "osm_id": 12345,
+                                "name": "Ski Area Name",
+                                "valid_from": "2023-01-01",
+                                "valid_until": "2023-12-31"
+                            },
+                            ...
+                        ]
+                    },
+                    ...
+                ]
+        """
+
+        created_networks = 0
+        created_members = 0
+
+        try:
+            networks = json.loads(data).get('networks', [])
+            if not networks:
+                return {'created': created_networks, 'error': "No networks found in JSON data."}
+            for net in networks:
+
+                with transaction.atomic():
+                    if net.get('id'):
+                        skiarea_network = SkiAreaNetwork.objects.filter(id=net['id']).first()
+                        if not skiarea_network:
+                            raise json.JSONDecodeError(f"SkiAreaNetwork with id {net['id']} not found.", data, 0)
+                    elif net.get('name'):
+                        skiarea_network, created = SkiAreaNetwork.objects.get_or_create(name=net['name'])
+                        if created:
+                            created_networks += 1
+                    else:
+                        raise json.JSONDecodeError("Network must have at least an 'id' or 'name' field.", data, 0)
+
+                    for member in net.get('members', []):
+                        if member.get('osm_id'):
+                            skiarea = SkiArea.objects.filter(osm_id=member['osm_id'])
+                            if not skiarea.exists():
+                                logger.warning(f"SkiArea with OSM ID {member['osm_id']} not found.")
+                        elif member.get('name'):
+                            skiarea = SkiArea.objects.filter(name__icontains=member['name'])
+                            if not skiarea.exists():
+                                logger.warning(f"SkiArea with name containing '{member['name']}' not found.")
+                        else:
+                            raise json.JSONDecodeError("Member must have at least an 'osm_id' or 'name' field.", data, 0)
+                        
+                        valid_from = member.get('valid_from')
+                        valid_until = member.get('valid_until')
+
+                        for skiarea in skiarea:
+                            _, created = SkiAreaNetworkMember.objects.get_or_create(
+                                ski_area_network=skiarea_network,
+                                member=skiarea,
+                                valid_from=valid_from,
+                                valid_to=valid_until
+                            )
+                            if created:
+                                logger.debug(f"Added {skiarea} to network {skiarea_network}")
+                                created_members += 1
+                        
+            return {'created': created_networks, 'members_created': created_members}
+
+        except Exception as e:
+            logger.error(f"Error processing ski area network data: {e}")
+            return {'created': created_networks, 'error': str(e)}
+
+
