@@ -1,40 +1,82 @@
 {% extends "../base/base.html" %}
+{% load static %}
 
 {% block title %}Lift Rides - Ski Dashboard{% endblock %}
+{% block extra_css %}
+<link href="{% static 'css/tables.css' %}" rel="stylesheet">
+{% endblock %}
 
 {% block content %}
-    <div class="container mt-4">
-        <h1 class="text-primary">Lift Ride Statistics {% block header %}{% endblock %}</h1>
-        
-        <!-- Season/Year Navigation -->
-        <nav class="mb-4">
-            {% block navigation %}{% endblock %}
-        </nav>
+<div class="container mt-4">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <h1 class="m-0 text-primary">Lift Ride Statistics {% block header %}{% endblock %}</h1>
+    {# Optional spot for quick stats, badges, etc. #}
+  </div>
 
-        <!-- Lift Ride Statistics Table -->
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Aerialway</th>
-                        <th>Total Rides</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% block table_data %}
-                        {% for lift in lift_stats %}
-                            <tr>
-                                <td>{{ lift.aerialway__name }}</td>
-                                <td>{{ lift.total_rides }}</td>
-                            </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="2" class="text-center">No data available.</td>
-                            </tr>
-                        {% endfor %}
-                    {% endblock %}
-                </tbody>
-            </table>
-        </div>
+  <!-- Season/Year Navigation -->
+  <nav class="mb-4">
+    {% block navigation %}{% endblock %}
+  </nav>
+
+  <!-- Table Card -->
+  <div class="modern-table-card">
+    <div class="table-responsive">
+      <table class="table modern-table modern-table-striped">
+        <thead class="modern-table-header">
+          <tr>
+            <th scope="col" class="sortable-header">
+              <div class="header-content">
+                <span>Aerialway</span>
+                <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
+              </div>
+            </th>
+            <th scope="col" class="text-end sortable-header">
+              <div class="header-content justify-content-end">
+                <span>Location</span>
+                <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
+              </div>
+            <th scope="col" class="text-end sortable-header">
+              <div class="header-content justify-content-end">
+                <span>Total Rides</span>
+                <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
+              </div>
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% block table_data %}
+            {% if lift_stats %}
+              {% for lift in lift_stats %}
+                <tr class="modern-table-row">
+                  <td class="modern-table-cell" data-label="Aerialway">
+                    <div class="cell-content">
+                      <span class="fw-semibold">{{ lift.aerialway_name }}</span>
+                    </div>
+                  </td>
+                  <td class="modern-table-cell text-end" data-label="Location">
+                    <span class="metric-value">{% if lift.location_name %}{{ lift.location_name }}{% endif %}</span>
+                  </td>
+                  <td class="modern-table-cell text-end" data-label="Total Rides">
+                    <span class="metric-value">{{ lift.total_rides }}</span>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="2" class="modern-table-cell">
+                  <div class="table-empty">
+                    <i class="bi bi-table"></i>
+                    <div>No data available.</div>
+                  </div>
+                </td>
+              </tr>
+            {% endif %}
+          {% endblock %}
+        </tbody>
+
+      </table>
     </div>
+  </div>
+</div>
 {% endblock %}

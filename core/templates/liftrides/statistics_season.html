@@ -3,8 +3,22 @@
 {% block header %}for {{ selected_season|default:"All Seasons" }}{% endblock %}
 
 {% block navigation %}
-    <a href="{% url 'lift_ride_list_season_all' %}">All Seasons</a>
+  <ul class="nav nav-pills gap-2">
+    <li class="nav-item">
+      <a
+        href="{% url 'lift_ride_list_season_all' %}"
+        class="nav-link {% if not selected_season %}active{% endif %}">
+        All Seasons
+      </a>
+    </li>
     {% for season in seasons %}
-        <a href="{% url 'lift_ride_list_season' season=season %}">{{ season }}</a>
+      <li class="nav-item">
+        <a
+          href="{% url 'lift_ride_list_season' season=season %}"
+          class="nav-link {% if selected_season == season %}active{% endif %}">
+          {{ season }}
+        </a>
+      </li>
     {% endfor %}
+  </ul>
 {% endblock %}

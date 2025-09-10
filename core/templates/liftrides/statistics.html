@@ -3,8 +3,22 @@
 {% block header %}for {{ selected_year|default:"All Years" }}{% endblock %}
 
 {% block navigation %}
-    <a href="{% url 'lift_ride_list_all' %}">All Years</a>
+  <ul class="nav nav-pills gap-2">
+    <li class="nav-item">
+      <a
+        href="{% url 'lift_ride_list_all' %}"
+        class="nav-link {% if not selected_year %}active{% endif %}">
+        All Years
+      </a>
+    </li>
     {% for year in years %}
-        <a href="{% url 'lift_ride_list_year' year=year %}">{{ year }}</a>
+      <li class="nav-item">
+        <a
+          href="{% url 'lift_ride_list_year' year=year %}"
+          class="nav-link {% if selected_year == year %}active{% endif %}">
+          {{ year }}
+        </a>
+      </li>
     {% endfor %}
+  </ul>
 {% endblock %}

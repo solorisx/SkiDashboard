@@ -118,7 +118,7 @@ def assign_skiarea_network(request):
 
 class SkiAreaAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        # Don't forget to filter out results depending on the visitor !
+
         if not self.request.user.is_authenticated:
             return SkiArea.objects.none()
 
@@ -127,12 +127,11 @@ class SkiAreaAutocomplete(autocomplete.Select2QuerySetView):
         if self.q:
             qs = qs.filter(name__icontains=self.q)
 
-        return qs
-    
+        return qs.order_by("name")[:25]
 
 class SkiAreaNetworkAutocomplete(autocomplete.Select2QuerySetView):
     def get_queryset(self):
-        # Don't forget to filter out results depending on the visitor !
+
         if not self.request.user.is_authenticated:
             return SkiAreaNetwork.objects.none()
 

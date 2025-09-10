@@ -1,5 +1,5 @@
-from django.db import models
-from django.contrib.gis.geos import LineString
+from django.db import connection, models
+from django.contrib.gis.geos import LineString, Point
 from django.contrib.gis.db import models
 from djmoney.models.fields import MoneyField
 from django_countries.fields import CountryField
@@ -7,8 +7,10 @@ from django.contrib.gis.geos.error import GEOSException
 from datetime import datetime
 import logging
 from .osm_interface import get_osm_data, load_osm_data, get_country_code
+from django.utils.functional import cached_property
+from django.contrib.gis.db.models.functions import Transform
 
-logger = logging.getLogger('core')
+logger = logging.getLogger(__name__)
 
 class ValidDuring(models.TextChoices):
     winter = 'winter', 'Winter'
@@ -40,6 +42,7 @@ class Way(models.Model):
 
     def __str__(self):
         return f"Way {self.osm_id}"
+        
     
     def get_osm_url(self):
         return f"https://www.openstreetmap.org/way/{self.osm_id}"
@@ -97,6 +100,24 @@ class Aerialway(models.Model):
     
     def get_osm_url(self):
         return self.way.get_osm_url()
+    
+    @cached_property
+    def get_location(self):
+        skiarea = self.way.ski_areas.first()
+        if not skiarea:
+            ski_areas = SkiArea.objects.filter(geom__isnull=False)
+            point = self.way.nodes.first().geom
+            try:
+                skiarea = (
+                    ski_areas
+                    .filter(geom__covers=point)
+                    .first()
+                )
+            except Exception as e:
+                skiarea = None
+                logger.warning(f"Exception when checking if point is within ski area for aerialway {self.way.osm_id}: {e}")
+                raise e
+        return skiarea
 
 # Piste Model
 class Piste(models.Model):

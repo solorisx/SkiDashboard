@@ -6,8 +6,10 @@ from activities.models import Activity
 from .forms import SeasonPassForm, SeasonPass
 import logging
 from django.http import HttpResponseRedirect
+from osm.models import SkiArea, SkiAreaNetwork
+from django.db.models.functions import Round
 
-logger = logging.getLogger('core')
+logger = logging.getLogger(__name__)
 
 @login_required
 def cost_detail(request, season=None):
@@ -19,7 +21,7 @@ def cost_detail(request, season=None):
         'avg_cost': activities.aggregate(Avg('cost'))['cost__avg'],
     }
 
-    return render(request, "cost/cost_detail.html", context)
+    return render(request, "core/cost/cost_detail.html", context)
 
 
 @login_required
@@ -56,19 +58,24 @@ def cost_home(request):
             pass_form = form.save(commit=False)
             pass_form.user = request.user
             pass_form.save()
-            return(HttpResponseRedirect(''))
+            return redirect('cost_home')
         else:
             logger.debug(form.errors)
-            context = {
-                'passes': SeasonPass.objects.filter(user=request.user),
-                'form': form,
-            }
-            render(request, "cost_home.html", context)
+            message = "There were errors in your form. Please correct them."
+
+    passes = SeasonPass.objects.filter(user=request.user).order_by('-valid_until')
+
+    for p in passes:
+        logger.debug(p.count_valid_activities())
+        logger.debug(p.get_valid_activities())
+
     context = {
-        'passes': SeasonPass.objects.filter(user=request.user),
+        'passes': passes,
+        'networks_dropdown': SkiAreaNetwork.objects.all().order_by('name'),
+        'message': message if 'message' in locals() else None,
         'form': SeasonPassForm(),
     }
-    return render(request, "cost_home.html", context)
+    return render(request, "cost/cost_home.html", context)
 
 
 @login_required
@@ -82,19 +89,24 @@ def season_pass_detail(request, pass_id):
                     start_time__lte=season_pass.valid_until
                     ).order_by('-timestamp')
     else:
-        activities = Activity.objects.filter(user=request.user, 
+        activities = Activity.objects.filter(user=request.user,
                                             ski_area=season_pass.skiarea, 
                                             start_time__gte=season_pass.valid_from, 
                                             start_time__lte=season_pass.valid_until).order_by('-timestamp')
-    
+
+    activities = activities.annotate(
+        total_distance_km=Round(Sum('total_distance') / 1000, 2)
+    )
+
     context = {
         'season_pass': season_pass,
         'activities': activities,
+        'cost_per_day': round(season_pass.price / activities.count(), 2) if activities.count() > 0 else None,
         'sum_cost': activities.aggregate(Sum('cost'))['cost__sum'],
         'sum_value': activities.aggregate(Sum('value'))['value__sum'],
     }
 
-    return render (request, "season_pass_detail.html", context)
+    return render (request, "cost/season_pass_detail.html", context)
 
 @login_required
 def delete_season_pass(request, pass_id):

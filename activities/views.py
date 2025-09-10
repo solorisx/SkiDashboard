@@ -297,9 +297,27 @@ def lift_ride_list(request, year=None):
     if year:
         rides = rides.filter(lap__activity__timestamp__year=year)
     
-    lift_stats = rides.values('aerialway__name').annotate(
-        total_rides=Count('id'),
-    ).order_by('-total_rides')
+    # aggregation (by aerialway id)
+    lift_stats = (
+        rides.values("aerialway")
+        .annotate(total_rides=Count("id"))
+        .order_by("-total_rides")
+    )
+
+    # prefetch aerialways with their ski areas
+    aerialways = (
+        Aerialway.objects
+        .filter(pk__in=[s["aerialway"] for s in lift_stats])
+        .select_related("way")
+        .prefetch_related("way__ski_areas")
+    )
+    aw_map = {aw.pk: aw for aw in aerialways}
+
+    # enrich
+    for stat in lift_stats:
+        aw = aw_map[stat["aerialway"]]
+        stat["aerialway_name"] = aw.name
+        stat["location_name"] = aw.get_location.name if aw.get_location else None
 
     context = {
         'lift_stats': lift_stats,
@@ -335,9 +353,27 @@ def lift_ride_list_season(request, season=None):
         end_date = datetime(year2, 6, 30)
         rides = rides.filter(lap__activity__timestamp__range=(start_date, end_date))
     
-    lift_stats = rides.values('aerialway__name').annotate(
-        total_rides=Count('id'),
-    ).order_by('-total_rides')
+    # aggregation (by aerialway id)
+    lift_stats = (
+        rides.values("aerialway")
+        .annotate(total_rides=Count("id"))
+        .order_by("-total_rides")
+    )
+
+    # prefetch aerialways with their ski areas
+    aerialways = (
+        Aerialway.objects
+        .filter(pk__in=[s["aerialway"] for s in lift_stats])
+        .select_related("way")
+        .prefetch_related("way__ski_areas")
+    )
+    aw_map = {aw.pk: aw for aw in aerialways}
+
+    # enrich
+    for stat in lift_stats:
+        aw = aw_map[stat["aerialway"]]
+        stat["aerialway_name"] = aw.name
+        stat["location_name"] = aw.get_location.name if aw.get_location else None
 
     context = {
         'lift_stats': lift_stats,

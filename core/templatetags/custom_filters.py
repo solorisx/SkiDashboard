@@ -1,5 +1,7 @@
 from django import template
+import logging
 
+logger = logging.getLogger(__name__)
 register = template.Library()
 
 @register.filter
@@ -42,3 +44,13 @@ def round_to(value, arg):
         return round(value, arg)
     except (ValueError, ZeroDivisionError):
         return 0
+    
+@register.filter
+def format_money(value):
+    if value is None:
+        return ''
+    
+    currency = value.currency
+    amount = value.amount
+    
+    return f"{currency} {amount:,.2f}"

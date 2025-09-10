@@ -9,7 +9,7 @@ from activities.models import Activity
 from django.utils.timezone import make_aware
 import logging
 
-logger = logging.getLogger('core')
+logger = logging.getLogger(__name__)
 
 class TicketPrice(models.Model):
     skiarea = models.ForeignKey(SkiArea, on_delete=models.CASCADE)
@@ -54,8 +54,12 @@ class SeasonPass(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def is_active(self):
+        today = datetime.now().date()
+        return self.valid_from <= today <= self.valid_until
 
-    def get_valid_activities(self, date_from: datetime, date_until: datetime):
+    def get_valid_activities(self, date_from: datetime = make_aware(datetime.min), date_until: datetime = make_aware(datetime.max)):
         """
         Returns all activities within the valid period of this season pass.
         Includes activities from the ski area and ski areas belonging to the ski area network.
@@ -63,11 +67,13 @@ class SeasonPass(models.Model):
         start_date = max(self.valid_from, date_from.date())
         end_date = min(self.valid_until, date_until.date())
 
+        logger.debug(f"Getting valid activities for SeasonPass {self.id} from {start_date} to {end_date}")
+
         # Fetch ski areas from SkiAreaNetworkMember, considering NULL valid_to as "no expiry"
         ski_areas_in_network = SkiArea.objects.filter(
             skiareanetworkmember__ski_area_network=self.skiarea_network
         ).filter(
-            Q(skiareanetworkmember__valid_from__lte=self.valid_until) &  # Start date must be before season pass expiry
+            (Q(skiareanetworkmember__valid_from__lte=self.valid_until) | Q(skiareanetworkmember__valid_from__isnull=True)) &  # Start date must be before season pass expiry or NULL
             (Q(skiareanetworkmember__valid_to__gte=self.valid_from) | Q(skiareanetworkmember__valid_to__isnull=True))  # Valid if no expiry or within range
         ).values_list("id", flat=True) if self.skiarea_network else []
 
@@ -81,6 +87,9 @@ class SeasonPass(models.Model):
             timestamp__range=(start_date, end_date),
             ski_area_id__in=ski_areas_in_network  # Activities from ski areas in the network
         )
+
+    def count_valid_activities(self, date_from: datetime = make_aware(datetime.min), date_until: datetime = make_aware(datetime.max)):
+        return self.get_valid_activities(date_from, date_until).count()
 
     def __str__(self):
         return f'{self.user} - {self.skiarea}{self.skiarea_network} - {self.valid_from} - {self.valid_until}'

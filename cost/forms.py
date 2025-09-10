@@ -1,5 +1,5 @@
 from django import forms
-from djmoney.forms.fields import MoneyField
+from djmoney.forms.fields import MoneyField as MoneyFormField
 from djmoney.forms.widgets import MoneyWidget
 from dal import autocomplete
 from activities.models import Activity
@@ -15,34 +15,51 @@ class CostForm(forms.ModelForm):
         model = Activity
         fields = ['cost']
 
-
-class SeasonPassForm(forms.ModelForm):
-    skiarea = forms.ModelChoiceField(
+class SeasonPassForm(forms.Form):
+    skiareaAdd = forms.ModelChoiceField(
         queryset=SkiArea.objects.all(),
+        required=False,
         label="Ski Area",
         widget=autocomplete.ModelSelect2(
-            url='skiarea-autocomplete',  # The URL name of the autocomplete view
-            attrs={"class": "form-control", "data-placeholder": "Search for a ski area..."}
-        )
-    , required=False
-    )    
-    skiarea_network = forms.ModelChoiceField(
-        queryset=SkiAreaNetwork.objects.all(),
-        label="Ski Area Network",
-        widget=forms.Select(attrs={"class": "form-control"})
-    , required=False)
-    price = MoneyField(label="Price", max_digits=6, decimal_places=2, default_currency='CHF', widget=MoneyWidget(attrs={"class": "form-control"}))
-    valid_from = forms.DateField(
-        label="Valid From", 
-        widget=forms.SelectDateWidget(years=years, attrs={"class": "form-control"}),
-        initial=datetime.date.today()
-        )
-    valid_until = forms.DateField(
-        label="Valid Until", 
-        widget=forms.SelectDateWidget(years=years, attrs={"class": "form-control"}),
-        initial=datetime.date.today()
-        )
+            url="skiarea-autocomplete",
+            attrs={
+                "data-placeholder": "Search for a ski area…",
+                "data-width": "100%",
+                "data-dropdown-parent": "#addSeasonPassModal",
+                "data-theme": "bootstrap-5",
+            },
+        ),
+    )
+    skiareaEdit = forms.ModelChoiceField(
+        queryset=SkiArea.objects.all(),
+        required=False,
+        label="Ski Area",
+        widget=autocomplete.ModelSelect2(
+            url="skiarea-autocomplete",
+            attrs={
+                "data-placeholder": "Search for a ski area…",
+                "data-width": "100%",
+                "data-dropdown-parent": "#editSeasonPassModal",
+                "data-theme": "bootstrap-5",
+            },
+        ),
+    )
 
-    class Meta:
-        model = SeasonPass
-        fields = ["skiarea", "skiarea_network", "price", "valid_from", "valid_until"]
+    priceAdd = MoneyFormField(
+        label="Price",
+        max_digits=6,
+        decimal_places=2,
+        default_currency="CHF",
+        widget=MoneyWidget(
+            attrs={"class": "form-control"}
+            ),
+    )
+    priceEdit = MoneyFormField(
+        label="Price",
+        max_digits=6,
+        decimal_places=2,
+        default_currency="CHF",
+        widget=MoneyWidget(
+            attrs={"class": "form-control"}
+            ),
+    )

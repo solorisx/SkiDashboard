@@ -7,7 +7,8 @@ from django.db.models.functions import Round
 from django.db import models
 from django.http import HttpResponse
 from activities.models import Activity, LiftRide, Lap
-from osm.models import SkiArea, Aerialway
+from osm.models import SkiArea, Aerialway, SkiAreaNetwork
+from cost.models import SeasonPass
 
 
 from .core.skiarea_manager import init_networks
@@ -18,6 +19,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.admin.views.decorators import staff_member_required
 from dal import autocomplete
 from activities.views import home_stats, season_stats
+from djmoney.models.fields import MoneyField
 import os
 
 from activities.strava_interface import deauthorize_strava
@@ -31,6 +33,7 @@ from django.views.generic import View
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from allauth.socialaccount.models import SocialAccount, SocialToken
+from djmoney.money import Money
 
 from .forms import UserDeleteForm
 
@@ -168,3 +171,76 @@ def lift_ride_api(request, lift_ride_id=None):
         
         else:
             return HttpResponse(status=400)
+        
+class SeasonPassAPI(LoginRequiredMixin, View):
+    """
+    API endpoint to get, create, update, or delete a season pass.
+    """
+    def get(self, request, season_pass_id=None):
+        raise NotImplementedError("GET method not implemented in SeasonPassAPI.")
+
+    def post(self, request):
+        data = json.loads(request.body)
+        logger.debug("Received season pass data: %s", data)
+        if (data.get("skiarea") or data.get("skiarea_network")) and data.get("valid_from") and data.get("valid_until") and data.get("price_0") and data.get("price_1"):
+            if data.get("skiarea") and data.get("skiarea_network"):
+                return JsonResponse({"error": "A season pass must be for either a ski area or a ski area network, not both."}, status=400)
+            if data.get("skiarea_network"):
+                skiarea_network = SkiAreaNetwork.objects.filter(id=data["skiarea_network"]).first()
+            if data.get("skiarea"):
+                skiarea = SkiArea.objects.filter(id=data["skiarea"]).first()
+            valid_from = datetime.strptime(data["valid_from"], "%Y-%m-%d")
+            valid_until = datetime.strptime(data["valid_until"], "%Y-%m-%d")
+            amount   = data.get('price_0')  # string like "549.00"
+            currency = data.get('price_1')  # "CHF"
+            price = Money(amount, currency) if amount and currency else None
+            season_pass = SeasonPass.objects.create(
+                user=request.user,
+                skiarea=skiarea if data.get("skiarea") else None,
+                skiarea_network=skiarea_network if data.get("skiarea_network") else None,
+                valid_from=valid_from,
+                valid_until=valid_until,
+                price=price
+            )
+            season_pass.save()
+            return HttpResponse(status=201)
+
+        else:
+            return HttpResponse(status=400)
+
+    def patch(self, request, season_pass_id):
+        data = json.loads(request.body)
+        logger.debug("Received season pass update data: %s", data)
+        season_pass = SeasonPass.objects.filter(id=season_pass_id, user=request.user).first()
+        if not season_pass:
+            return JsonResponse({"error": "Season pass not found or does not belong to user."}, status=404)
+        if data.get("skiarea"):
+            skiarea = SkiArea.objects.filter(id=data["skiarea"]).first()
+            if not skiarea:
+                return JsonResponse({"error": "Ski area not found."}, status=404)
+            season_pass.skiarea = skiarea
+            season_pass.skiarea_network = None
+        if data.get("skiarea_network"):
+            skiarea_network = SkiAreaNetwork.objects.filter(id=data["skiarea_network"]).first()
+            if not skiarea_network:
+                return JsonResponse({"error": "Ski area network not found."}, status=404)
+            season_pass.skiarea_network = skiarea_network
+            season_pass.skiarea = None
+        if data.get("valid_from"):
+            season_pass.valid_from = datetime.strptime(data["valid_from"], "%Y-%m-%d")
+        if data.get("valid_until"):
+            season_pass.valid_until = datetime.strptime(data["valid_until"], "%Y-%m-%d")
+        amount   = data.get('price_0')  # string like "549.00"
+        currency = data.get('price_1')  # "CHF"
+        price = Money(amount, currency) if amount and currency else None
+        if price:
+            season_pass.price = price
+        season_pass.save()
+        return HttpResponse(status=204)
+    
+    def delete(self, request, season_pass_id):
+        season_pass = SeasonPass.objects.filter(id=season_pass_id, user=request.user).first()
+        if not season_pass:
+            return JsonResponse({"error": "Season pass not found or does not belong to user."}, status=404)
+        season_pass.delete()
+        return HttpResponse(status=204)

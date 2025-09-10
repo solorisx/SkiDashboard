@@ -1,0 +1,331 @@
+{% extends 'base/base.html' %}
+{% load custom_filters %}
+{% load static %}
+
+{% block pagetitle %} Cost Home {% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/tables.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card stats-card border-0 bg-primary bg-opacity-10">
+                <div class="card-body text-center p-3">
+                    <div class="badge-icon bg-primary text-white rounded-circle mb-2 mx-auto">
+                        <i class="bi bi-activity"></i>
+                    </div>
+                    <div class="fs-5 fw-bold text-primary">{{activities.count}}</div>
+                    <div class="small text-muted">Activities</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card stats-card border-0 bg-success bg-opacity-10">
+                <div class="card-body text-center p-3">
+                    <div class="badge-icon bg-success text-white rounded-circle mb-2 mx-auto">
+                        <i class="bi bi-currency-dollar"></i>
+                    </div>
+                    <div class="fs-5 fw-bold text-success">{{ season_pass.price|format_money }}</div>
+                    <div class="small text-muted">Season Pass Price</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card stats-card border-0 bg-warning bg-opacity-10">
+                <div class="card-body text-center p-3">
+                    <div class="badge-icon bg-warning text-white rounded-circle mb-2 mx-auto">
+                        <i class="bi bi-percent"></i>
+                    </div>
+                    <div class="fs-5 fw-bold text-warning">
+                        {{ cost_per_day|format_money }}
+                    </div>
+                    <div class="small text-muted">Cost per day</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modern Table -->
+    <div class="card modern-table-card">
+        <div class="card-header bg-white border-bottom-0 py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 fw-semibold">
+                    <i class="bi bi-table me-2 text-primary"></i>Activity Details
+                </h5>
+                <div class="d-flex gap-2 align-items-center">
+                    <small class="text-muted">{{activities.count}} activities</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table modern-table mb-0">
+                <thead class="modern-table-header">
+                    <tr>
+                        <th class="sortable-header">
+                            <div class="header-content">
+                                <i class="bi bi-tag me-2"></i>Name
+                                <!--<i class="bi bi-chevron-expand sort-icon"></i>-->
+                            </div>
+                        </th>
+                        <th class="sortable-header">
+                            <div class="header-content">
+                                <i class="bi bi-calendar-event me-2"></i>Date
+                                <!--<i class="bi bi-chevron-expand sort-icon"></i>-->
+                            </div>
+                        </th>
+                        <th class="sortable-header">
+                            <div class="header-content">
+                                <i class="bi bi-geo-alt me-2"></i>Ski Area
+                                <!--<i class="bi bi-chevron-expand sort-icon"></i>-->
+                            </div>
+                        </th>
+                        <th class="sortable-header text-end">
+                            <div class="header-content justify-content-end">
+                                <i class="bi bi-arrow-down me-2"></i>Vertical
+                                <!--<i class="bi bi-chevron-expand sort-icon"></i>-->
+                            </div>
+                        </th>
+                        <th class="sortable-header text-end">
+                            <div class="header-content justify-content-end">
+                                <i class="bi bi-signpost me-2"></i>Distance
+                                <!--<i class="bi bi-chevron-expand sort-icon"></i>-->
+                            </div>
+                        </th>
+                        <th class="sortable-header text-end">
+                            <div class="header-content justify-content-end">
+                                <i class="bi bi-arrow-repeat me-2"></i>Laps
+                                <!--<i class="bi bi-chevron-expand sort-icon"></i>-->
+                            </div>
+                        </th>
+                        <th class="sortable-header text-end">
+                            <div class="header-content justify-content-end">
+                                <i class="bi bi-arrow-up me-2"></i>Lifts
+                                <!--<i class="bi bi-chevron-expand sort-icon"></i>-->
+                            </div>
+                        </th>
+                        <th class="text-center">
+                            <div class="header-content justify-content-center">
+                                <i class="bi bi-link-45deg me-2"></i>Links
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activity in activities %}
+                    <tr class="modern-table-row">
+                        <td class="modern-table-cell">
+                            <div class="cell-content">
+                                <a href="{% url 'activity_detail' activity.id %}" class="activity-link fw-medium">
+                                    {{activity.name}}
+                                </a>
+                            </div>
+                        </td>
+                        <td class="modern-table-cell">
+                            <div class="cell-content">
+                                <span class="date-display">{{activity.timestamp|date:"M d, Y"}}</span>
+                                <small class="text-muted d-block">{{activity.timestamp|time:"H:i"}}</small>
+                            </div>
+                        </td>
+                        <td class="modern-table-cell">
+                            <div class="cell-content">
+                                {% if activity.ski_area %}
+                                    <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-1">
+                                        <i class="bi bi-geo-alt me-1"></i>{{activity.ski_area.name}}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="modern-table-cell text-end">
+                            <div class="cell-content">
+                                <span class="metric-value">{{activity.total_descent|round_to:0|floatformat:0}}m</span>
+                            </div>
+                        </td>
+                        <td class="modern-table-cell text-end">
+                            <div class="cell-content">
+                                <span class="metric-value">{{activity.total_distance_km}}km</span>
+                            </div>
+                        </td>
+                        <td class="modern-table-cell text-end">
+                            <div class="cell-content">
+                                {% if activity.num_laps %}
+                                    <span class="metric-value">{{activity.num_laps}}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="modern-table-cell text-end">
+                            <div class="cell-content">
+                                {% if activity.num_lift_rides %}
+                                    <span class="metric-value">{{activity.num_lift_rides}}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="modern-table-cell text-center">
+                            <div class="cell-content">
+                                {% if activity.get_strava_url %}
+                                    <a href="{{activity.get_strava_url}}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Strava
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- JavaScript for table interactivity -->
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.querySelector('.modern-table');
+    const tbody = table.querySelector('tbody');
+    const sortableHeaders = document.querySelectorAll('.sortable-header');
+    
+    // Helper function to get cell value for sorting
+    function getCellValue(row, cellIndex) {
+        const cell = row.cells[cellIndex];
+        const text = cell.textContent.trim();
+        
+        // Check if it's a currency value (starts with $)
+        if (text.startsWith('$')) {
+            return parseFloat(text.replace(/[$,]/g, '')) || 0;
+        }
+        
+        // Check if it's a number with units (like "123m" or "45km")
+        const numericMatch = text.match(/^([\d,]+(?:\.\d+)?)/);
+        if (numericMatch) {
+            return parseFloat(numericMatch[1].replace(/,/g, ''));
+        }
+        
+        // Check if it's a date
+        if (text.match(/^\w{3}\s+\d{1,2},\s+\d{4}$/)) {
+            return new Date(text).getTime();
+        }
+        
+        // Check if it's just a number (like badges)
+        if (!isNaN(text) && text !== '' && text !== '—') {
+            return parseFloat(text);
+        }
+        
+        // Return as string for text sorting (lowercase for case-insensitive)
+        return text.toLowerCase();
+    }
+
+    
+    // Add sorting functionality to headers
+    sortableHeaders.forEach((header, index) => {
+        let currentSort = 'none'; // 'none', 'asc', 'desc'
+        
+        header.addEventListener('click', function() {
+            const sortIcon = this.querySelector('.sort-icon');
+            
+            // Determine next sort direction
+            let ascending = true;
+            if (currentSort === 'none' || currentSort === 'desc') {
+                currentSort = 'asc';
+                ascending = true;
+            } else {
+                currentSort = 'desc';
+                ascending = false;
+            }
+            
+            // Reset all other sort icons
+            sortableHeaders.forEach(h => {
+                if (h !== this) {
+                    const icon = h.querySelector('.sort-icon');
+                    icon.className = 'bi bi-chevron-expand sort-icon';
+                }
+            });
+            
+            // Set current sort direction icon
+            if (currentSort === 'asc') {
+                sortIcon.className = 'bi bi-chevron-up sort-icon text-primary';
+            } else {
+                sortIcon.className = 'bi bi-chevron-down sort-icon text-primary';
+            }
+            
+            // Add visual feedback
+            this.style.backgroundColor = 'var(--bs-primary-bg-subtle)';
+            setTimeout(() => {
+                this.style.backgroundColor = '';
+            }, 200);
+            
+            // Sort the table
+            console.log('Header clicked:', index, 'Sort direction:', currentSort);
+            // TODO: add sort functionality
+        });
+    });
+    
+    // Reset sort states when other headers are clicked
+    sortableHeaders.forEach((header, index) => {
+        header.addEventListener('click', function() {
+            sortableHeaders.forEach((h, i) => {
+                if (i !== index) {
+                    h.currentSort = 'none';
+                }
+            });
+        });
+    });
+    
+    // Add row hover effects
+    function addRowHoverEffects() {
+        return; // Disabled for now
+
+        const tableRows = document.querySelectorAll('.modern-table-row');
+        
+        tableRows.forEach(row => {
+            // Remove existing listeners to avoid duplicates
+            row.replaceWith(row.cloneNode(true));
+        });
+        
+        // Re-add hover effects to current rows
+        document.querySelectorAll('.modern-table-row').forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateX(4px)';
+                this.style.boxShadow = '0 0.125rem 0.25rem rgba(0,0,0,.075)';
+            });
+            
+            row.addEventListener('mouseleave', function() {
+                this.style.transform = '';
+                this.style.boxShadow = '';
+            });
+        });
+    }
+    
+    // Initialize hover effects
+    addRowHoverEffects();
+    
+    // Re-apply hover effects after sorting
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList') {
+                addRowHoverEffects();
+            }
+        });
+    });
+    
+    observer.observe(tbody, { childList: true });
+});
+
+</script>
+{% endblock %}

@@ -1,0 +1,567 @@
+{% extends "base/base.html" %}
+{% load custom_filters %}
+
+{% block pagetitle %}Season Passes{% endblock %}
+
+{% block extra_head %}{% endblock %}
+{% block extra_css %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row g-4">
+    <!-- Intro / Help -->
+    <div class="col-12 col-lg-6">
+      <div class="card hover-shadow-lg">
+        <div class="card-body">
+          <h2 class="h4 mb-3">About Season Passes</h2>
+          <p class="mb-3">
+            Add your season passes for the ski areas you visit most often to keep a clear record of your costs and track the value you’re getting from each pass.
+          </p>
+          <p class="mb-0">
+            To get started, fill out the form with your pass details. You can select any ski area worldwide, and a number of popular networks are already supported.
+            If your network isn’t listed, reach out at
+            <a href="mailto:skidashboard@solor.dev">skidashboard@solor.dev</a> — I’d be glad to add it.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  
+
+<div class="container py-4">
+  <div class="card hover-shadow-lg">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 mb-0">Your Season Passes</h2>
+        <div class="d-flex align-items-center justify-content-between mb-3">
+  <h2 class="h5 mb-0">Your Season Passes</h2>
+  <div class="d-flex align-items-center gap-2">
+    <span class="text-muted">{{ passes|length }} total</span>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSeasonPassModal">
+      <i class="bi bi-plus-circle me-1"></i>Add Season Pass
+    </button>
+  </div>
+</div>
+
+        <span class="text-muted">{{ passes|length }} total</span>
+      </div>
+
+      {% if passes %}
+        <div class="table-responsive">
+          <table class="table align-middle table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>Pass</th>
+                <th>Type</th>
+                <th>Valid From</th>
+                <th>Valid Until</th>
+                <th># Activities</th>
+                <th class="text-end">Price</th>
+                <th>Status</th>
+                <th></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for p in passes %}
+                <tr class="table-row-hover">
+                <td>
+                    {% if p.skiarea %}
+                    {{ p.skiarea.name }}
+                    {% elif p.skiarea_network %}
+                    {{ p.skiarea_network.name }}
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if p.skiarea %}<span class="badge text-bg-primary">Ski Area</span>{% endif %}
+                    {% if p.skiarea_network %}<span class="badge text-bg-info">Network</span>{% endif %}
+                </td>
+                <td>{{ p.valid_from }}</td>
+                <td>{{ p.valid_until }}</td>
+                <td>{{ p.count_valid_activities|default:"0" }}</td>
+                <td class="text-end">{{ p.price }}</td>
+                <td>
+                    {% if p.is_active %}
+                    <span class="badge text-bg-success">Active</span>
+                    {% else %}
+                    <span class="badge text-bg-secondary">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'season_pass_detail' p.id %}" class="text-decoration-none">
+                    {% if p.skiarea %}{{ p.skiarea.name }}{% elif p.skiarea_network %}{{ p.skiarea_network.name }}{% else %}<span class="text-muted">—</span>{% endif %}
+                    </a>
+                </td>
+                <td class="text-end">
+                    <div class="btn-group" role="group" aria-label="Row actions">
+                    <button
+                        class="btn btn-outline-warning btn-sm"
+                        title="Edit"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editSeasonPassModal"
+                        data-pass-id="{{ p.id }}"
+                        data-pass-type="{% if p.skiarea %}skiarea{% elif p.skiarea_network %}network{% else %}unknown{% endif %}"
+                        data-pass-skiarea-id="{% if p.skiarea %}{{ p.skiarea.id }}{% endif %}"
+                        data-pass-network-id="{% if p.skiarea_network %}{{ p.skiarea_network.id }}{% endif %}"
+                        data-pass-valid-from="{{ p.valid_from|date:'Y-m-d' }}"
+                        data-pass-valid-until="{{ p.valid_until|date:'Y-m-d' }}"
+                        data-pass-price-currency="{% if p.price %}{{ p.price.currency }}{% else %}CHF{% endif %}"
+                        data-pass-price-amount="{% if p.price %}{{ p.price.amount }}{% endif %}"
+                        data-pass-price="{{ p.price }}"
+                        data-pass-active="{% if p.is_active %}true{% else %}false{% endif %}"
+                    >
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button
+                        class="btn btn-outline-danger btn-sm"
+                        title="Delete"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteSeasonPassModal"
+                        data-pass-id="{{ p.id }}"
+                        data-pass-name="{% if p.skiarea %}{{ p.skiarea.name }}{% elif p.skiarea_network %}{{ p.skiarea_network.name }}{% else %}Season Pass {{ p.id }}{% endif %}"
+                    >
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    </div>
+                </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+
+          </table>
+        </div>
+      {% else %}
+        <div class="alert alert-info mb-0">
+          You don’t have any season passes yet. Add your first one using the form.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- Add Season Pass Modal -->
+<div class="modal fade" id="addSeasonPassModal" tabindex="-1" aria-labelledby="addSeasonPassModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold" id="addSeasonPassModalLabel">
+          <i class="bi bi-plus-circle me-2"></i>Add Season Pass
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addSeasonPassForm">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Pass Type</label>
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="pass_type" id="addTypeSkiarea" value="skiarea" checked>
+                  <label class="form-check-label" for="addTypeSkiarea">Ski Area</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="pass_type" id="addTypeNetwork" value="network">
+                  <label class="form-check-label" for="addTypeNetwork">Network</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6" id="addSkiareaWrap">
+                <label class="form-label fw-bold">Ski Area</label>
+                {{ form.skiareaAdd }}
+            </div>
+
+            <div class="col-md-6 d-none" id="addNetworkWrap">
+              <label for="addNetworkSelect" class="form-label fw-bold">Network</label>
+              <select class="form-select" id="addNetworkSelect" name="skiarea_network">
+                <option value="">Select Network</option>
+                {% if networks_dropdown %}
+                  {% for net in networks_dropdown %}
+                    <option value="{{ net.id }}">{{ net.name }}</option>
+                  {% endfor %}
+                {% endif %}
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label for="addValidFrom" class="form-label fw-bold">Valid From</label>
+              <input type="text" class="form-control datepicker" id="addValidFrom" name="valid_from" placeholder="dd.mm.yyyy" required>
+            </div>
+            <div class="col-md-6">
+              <label for="addValidUntil" class="form-label fw-bold">Valid Until</label>
+              <input type="text" class="form-control datepicker" id="addValidUntil" name="valid_until" placeholder="dd.mm.yyyy" required>
+            </div>
+
+            <div class="col-md-6">
+              <label for="addPriceAmount" class="form-label fw-bold">Price</label>
+                {{ form.priceAdd }}
+            </div>
+
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveSeasonPass()">
+          <i class="bi bi-check-circle me-1"></i>Save Pass
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Season Pass Modal -->
+<div class="modal fade" id="editSeasonPassModal" tabindex="-1" aria-labelledby="editSeasonPassModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title fw-bold" id="editSeasonPassModalLabel">
+          <i class="bi bi-pencil me-2"></i>Edit Season Pass
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editSeasonPassForm">
+          <input type="hidden" id="editPassId">
+          <div class="row g-3">
+
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Pass Type</label>
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="edit_pass_type" id="editTypeSkiarea" value="skiarea">
+                  <label class="form-check-label" for="editTypeSkiarea">Ski Area</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="edit_pass_type" id="editTypeNetwork" value="network">
+                  <label class="form-check-label" for="editTypeNetwork">Network</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6" id="editSkiareaWrap">
+                <label class="form-label fw-bold">Ski Area</label>
+                {{ form.skiareaEdit }}
+            </div>
+
+            <div class="col-md-6 d-none" id="editNetworkWrap">
+              <label for="editNetworkSelect" class="form-label fw-bold">Network</label>
+              <select class="form-select" id="editNetworkSelect" name="skiarea_network">
+                <option value="">Select Network</option>
+                {% if networks_dropdown %}
+                  {% for net in networks_dropdown %}
+                    <option value="{{ net.id }}">{{ net.name }}</option>
+                  {% endfor %}
+                {% endif %}
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label for="editValidFrom" class="form-label fw-bold">Valid From</label>
+              <input type="text" class="form-control datepicker" id="editValidFrom" name="valid_from" placeholder="dd.mm.yyyy" required>
+            </div>
+            <div class="col-md-6">
+              <label for="editValidUntil" class="form-label fw-bold">Valid Until</label>
+              <input type="text" class="form-control datepicker" id="editValidUntil" name="valid_until" placeholder="dd.mm.yyyy" required>
+            </div>
+
+            <div class="col-md-6">
+              <label for="editPriceAmount" class="form-label fw-bold">Price</label>
+              {{ form.priceEdit }}
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning" onclick="updateSeasonPass()">
+          <i class="bi bi-check-circle me-1"></i>Update Pass
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Season Pass Modal -->
+<div class="modal fade" id="deleteSeasonPassModal" tabindex="-1" aria-labelledby="deleteSeasonPassModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title fw-bold" id="deleteSeasonPassModalLabel">
+          <i class="bi bi-exclamation-triangle me-2"></i>Delete Season Pass
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">Are you sure you want to delete <span class="fw-bold" id="deletePassName">this pass</span>? This action cannot be undone.</p>
+        <input type="hidden" id="deletePassId">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" onclick="confirmDeleteSeasonPass()">
+          <i class="bi bi-trash me-1"></i>Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Bootstrap Datepicker CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css"/>
+
+<!-- Bootstrap Datepicker JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/js/bootstrap-datepicker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.de.min.js"></script>
+<script>
+  // Toggle SkiArea vs Network controls in Add/Edit modals
+  function toggleType(sectionPrefix, type) {
+    const skiareaWrap = document.getElementById(sectionPrefix + 'SkiareaWrap');
+    const networkWrap = document.getElementById(sectionPrefix + 'NetworkWrap');
+    if (type === 'skiarea') {
+      skiareaWrap.classList.remove('d-none');
+      networkWrap.classList.add('d-none');
+    } else {
+      networkWrap.classList.remove('d-none');
+      skiareaWrap.classList.add('d-none');
+    }
+  }
+
+  // Wire radio buttons
+  document.addEventListener('change', function (e) {
+    if (e.target && (e.target.id === 'addTypeSkiarea' || e.target.id === 'addTypeNetwork')) {
+      toggleType('add', e.target.value);
+    }
+    if (e.target && (e.target.id === 'editTypeSkiarea' || e.target.id === 'editTypeNetwork')) {
+      toggleType('edit', e.target.value);
+    }
+  });
+
+  // Open & hydrate EDIT modal from data attributes
+  const editModal = document.getElementById('editSeasonPassModal');
+  editModal.addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    const modal = event.target;
+    const passId = btn.getAttribute('data-pass-id');
+    const type = btn.getAttribute('data-pass-type');
+
+    const skiareaId = btn.getAttribute('data-pass-skiarea-id');
+    const skiareaName = btn.getAttribute('data-pass-skiarea-name');
+    const networkId = btn.getAttribute('data-pass-network-id');
+    const networkName = btn.getAttribute('data-pass-network-name');
+    const validFrom = btn.getAttribute('data-pass-valid-from');
+    const validUntil = btn.getAttribute('data-pass-valid-until');
+    const amount   = btn.getAttribute('data-pass-price-amount')   || '';
+    const currency = btn.getAttribute('data-pass-price-currency') || 'CHF';
+
+    console.log("Editing pass", {passId, type, skiareaId, networkId, validFrom, validUntil, amount, currency});
+
+    document.getElementById('editPassId').value = passId;
+
+    // Type toggle + selects
+    const typeRadioId = (type === 'network') ? 'editTypeNetwork' : 'editTypeSkiarea';
+    document.getElementById(typeRadioId).checked = true;
+    toggleType('edit', type);
+
+    // Set selects if present
+    const saSel = document.getElementById('editSkiareaSelect');
+    const netSel = document.getElementById('editNetworkSelect');
+    if (saSel) setSelect2Value(saSel, skiareaId, skiareaName);
+    if (netSel) setSelect2Value(netSel, networkId, networkName);
+
+    // Dates: accept ISO (yyyy-mm-dd); datepicker normalize below
+    document.getElementById('editValidFrom').value = validFrom;
+    document.getElementById('editValidUntil').value = validUntil;
+
+    modal.querySelector('[name="priceEdit_0"]').value = amount;
+    modal.querySelector('[name="priceEdit_1"]').value = currency;
+
+    // Re-init datepicker views (in case ISO gets set)
+    setTimeout(() => {
+      $('#editValidFrom').datepicker('update');
+      $('#editValidUntil').datepicker('update');
+    });
+  });
+
+    // Helper: Set value of select2 or DAL select, creating option if needed
+    function setSelect2Value(selectEl, id, text) {
+    const $sel = window.jQuery ? jQuery(selectEl) : null;
+    if (!id) {
+        if ($sel) $sel.val(null).trigger('change');
+        else selectEl.value = '';
+        return;
+    }
+    // If option doesn't exist, create it
+    if (!Array.from(selectEl.options).some(o => String(o.value) === String(id))) {
+        const opt = new Option(text || String(id), id, true, true);
+        selectEl.append(opt);
+    }
+    // Select it and notify Select2/DAL
+    if ($sel) $sel.val(String(id)).trigger('change');
+    else selectEl.value = String(id);
+    }
+
+
+  // Open & hydrate DELETE modal
+  const deleteModal = document.getElementById('deleteSeasonPassModal');
+  deleteModal.addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    const passId = btn.getAttribute('data-pass-id');
+    const passName = btn.getAttribute('data-pass-name');
+    document.getElementById('deletePassId').value = passId;
+    document.getElementById('deletePassName').textContent = passName;
+  });
+
+  function ddmmyyyyToISO(ddmmyyyy) {
+    // accepts "dd.mm.yyyy" and "yyyy-mm-dd"
+    if (/^\d{4}-\d{2}-\d{2}$/.test(ddmmyyyy)) return ddmmyyyy;
+    const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(ddmmyyyy);
+    if (!m) return '';
+    return `${m[3]}-${m[2]}-${m[1]}`;
+  }
+
+  // Create
+  function saveSeasonPass() {
+    const type = document.querySelector('input[name="pass_type"]:checked').value;
+    const modal = document.getElementById('addSeasonPassModal');
+    const skiarea = document.getElementById('id_skiareaAdd')?.value || '';
+    const network = document.getElementById('addNetworkSelect')?.value || '';
+    const valid_from = ddmmyyyyToISO(document.getElementById('addValidFrom').value);
+    const valid_until = ddmmyyyyToISO(document.getElementById('addValidUntil').value);
+
+    const payload = {
+      valid_from,
+      valid_until,
+      price_0: modal.querySelector('[name="priceAdd_0"]').value,
+      price_1: modal.querySelector('[name="priceAdd_1"]').value,
+    };
+    if (type === 'skiarea') { payload.skiarea = skiarea || null; payload.skiarea_network = null; }
+    else { payload.skiarea_network = network || null; payload.skiarea = null; }
+
+    fetch(`/api/season-pass/`, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+    .then(r => {
+      if (!r.ok) throw new Error('Failed to create pass');
+      // TODO: Handle successful response with toast/notification
+      return null;
+    })
+    .then(() => location.reload())
+    .catch(err => {
+      console.error(err);
+      alert("❌ Failed to create season pass.");
+    });
+  }
+
+  // Update
+  function updateSeasonPass() {
+    const id = document.getElementById('editPassId').value;
+    const modal = document.getElementById('editSeasonPassModal');
+    const type = document.querySelector('input[name="edit_pass_type"]:checked').value;
+    const skiarea = document.getElementById('id_skiareaEdit')?.value || '';
+    const network = document.getElementById('editNetworkSelect')?.value || '';
+    const valid_from = ddmmyyyyToISO(document.getElementById('editValidFrom').value);
+    const valid_until = ddmmyyyyToISO(document.getElementById('editValidUntil').value);
+
+    const payload = {
+      valid_from, valid_until, 
+      price_0: modal.querySelector('[name="priceEdit_0"]').value,
+      price_1: modal.querySelector('[name="priceEdit_1"]').value,
+      skiarea: (type === 'skiarea') ? (skiarea || null) : null,
+      skiarea_network: (type === 'network') ? (network || null) : null,
+    };
+
+    fetch(`/api/season-pass/${id}/`, {
+      method: "PATCH",
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+    .then(r => {
+      if (!r.ok) throw new Error('Failed to update pass');
+      // TODO: Handle successful response with toast/notification
+      return null;
+    })
+    .then(() => location.reload())
+    .catch(err => {
+      console.error(err);
+      alert("❌ Failed to update season pass.");
+    });
+  }
+
+  // Delete via modal
+  function confirmDeleteSeasonPass() {
+    const id = document.getElementById('deletePassId').value;
+    fetch(`/api/season-pass/${id}/`, {
+      method: "DELETE",
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken"),
+        "Content-Type": "application/json",
+      },
+    })
+    .then(r => {
+      if (!r.ok) throw new Error('Failed to delete pass');
+      return null;
+    })
+    .then(() => location.reload())
+    .catch(err => {
+      console.error(err);
+      alert("❌ Failed to delete season pass.");
+    });
+  }
+
+  // Bootstrap selects: autofocus search for select2 dropdowns (kept from your code)
+  $(document).on('select2:open', () => {
+    let searchField = document.querySelector('.select2-container--open .select2-search__field');
+    if (searchField) searchField.focus();
+  });
+
+  // Initialize datepickers also inside modals
+  $('#addSeasonPassModal, #editSeasonPassModal').on('shown.bs.modal', function () {
+    $(this).find('.datepicker').datepicker({
+      format: "dd.mm.yyyy",
+      todayHighlight: true,
+      autoclose: true,
+    });
+  });
+</script>
+<script>
+
+// Helper: Get CSRF token (needed if using Django templates & CSRF middleware)
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + "=")) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}
+

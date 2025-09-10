@@ -192,6 +192,8 @@ USE_TZ = True
 
 USE_L10N = True
 
+CURRENCIES = ['CHF', 'EUR', 'USD', 'GBP', 'JPY', 'CNY']
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
@@ -253,6 +255,7 @@ LOGGING = {
         'level': 'WARNING',
     },
     'loggers': {
+        'django.db.backends': {"handlers": ["console"], "level": "DEBUG"},
         'django': {
             'handlers': ['console'],
             'level': 'WARNING', #LOG_LEVEL,

@@ -71,6 +71,21 @@
                     </ul>
                 </li>
 
+                <!-- Season Passes Dropdown -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle fw-medium px-3 py-2 rounded-3 nav-link-modern" 
+                       href="#" id="seasonPassesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-card-checklist me-2"></i>Season Passes
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-modern shadow-lg border-0 mt-2" aria-labelledby="seasonPassesDropdown">
+                        <li>
+                            <a class="dropdown-item dropdown-item-modern" href="{% url 'cost_home' %}">
+                                <i class="bi bi-list-ul me-2 text-primary"></i>Overview
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
                 <!-- Admin Dropdown (if staff) -->
                 {% if user.is_staff %}
                 <li class="nav-item dropdown">
@@ -88,6 +103,12 @@
                         <li>
                             <a class="dropdown-item dropdown-item-modern" href="{% url 'sync_osm' %}">
                                 <i class="bi bi-map me-2 text-success"></i>Sync OSM
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-2"></li>
+                        <li>
+                            <a class="dropdown-item dropdown-item-modern" href="{% url 'skiarea_network_upload' %}">
+                                <i class="bi bi-upload me-2 text-warning"></i>Upload Ski Areas
                             </a>
                         </li>
                     </ul>
