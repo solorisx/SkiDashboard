@@ -1,9 +1,11 @@
 import numpy as np
 from scipy.signal import find_peaks
 
+
 def get_turning_points(data, prominence=100):
+    """Find peaks and valleys in data using signal processing."""
     peaks = find_peaks(data, prominence=100)
-    mirror = (np.array(data) * - 1) + 10000 # only works for positive data
+    mirror = (np.array(data) * - 1) + 10000  # only works for positive data
     valleys = find_peaks(mirror, prominence=100)
     result = []
     for idx in peaks[0]:
