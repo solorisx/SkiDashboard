@@ -29,72 +29,85 @@
     {% for activity in page_obj %}
       <div class="col-12 col-lg-6 col-xl-4">
         <div class="card h-100 border-0 shadow-sm hover-shadow-lg transition-all">
-          <div class="card-body p-4">
-            <!-- Header -->
-            <div class="d-flex align-items-start justify-content-between mb-3">
-              <div>
-                <h5 class="card-title fw-bold text-dark mb-1">{{ activity.name }}</h5>
-                <small class="text-muted d-flex align-items-center">
-                  <i class="bi bi-clock me-1"></i>
-                  {{ activity.timestamp|date:"M d, Y • H:i" }}
-                </small>
-              </div>
-              <span class="badge bg-light text-primary border border-primary-subtle">
-                <i class="bi bi-snow me-1"></i>{{ activity.ski_area.name }}
-              </span>
-            </div>
-
-            <!-- Stats Grid -->
-            <div class="row g-3 mb-4">
-              <div class="col-6">
-                <div class="stats-card bg-primary bg-opacity-10 rounded-3 p-3 text-center">
-                  <div class="fs-4 fw-bold text-primary mb-1">{{ activity.total_descent|round_to:0 }}</div>
-                  <small class="text-muted fw-medium">Descent (m)</small>
+          <div class="card-body p-4 d-flex flex-column">
+            <!-- Content that can grow -->
+            <div class="flex-grow-1">
+              <!-- Header -->
+              <div class="d-flex align-items-start justify-content-between mb-3">
+                <div>
+                  <h5 class="card-title fw-bold text-dark mb-1">{{ activity.name }}</h5>
+                  <small class="text-muted d-flex align-items-center">
+                    <i class="bi bi-clock me-1"></i>
+                    {{ activity.timestamp|date:"M d, Y • H:i" }}
+                  </small>
                 </div>
-              </div>
-              <div class="col-6">
-                <div class="stats-card bg-success bg-opacity-10 rounded-3 p-3 text-center">
-                  <div class="fs-4 fw-bold text-success mb-1">{{ activity.total_distance_km }}</div>
-                  <small class="text-muted fw-medium">Distance (km)</small>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="stats-card bg-info bg-opacity-10 rounded-3 p-3 text-center">
-                  <div class="fs-4 fw-bold text-info mb-1">{{ activity.num_lift_rides }}</div>
-                  <small class="text-muted fw-medium">Lift Rides</small>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="stats-card bg-warning bg-opacity-10 rounded-3 p-3 text-center">
-                  <div class="fs-4 fw-bold text-warning mb-1">{{ activity.badges.all|length }}</div>
-                  <small class="text-muted fw-medium">Badges</small>
-                </div>
-              </div>
-            </div>
-
-            <!-- Mini Map -->
-            <div class="mb-4">
-              <div id="map{{ forloop.counter }}" class="mini-map rounded-3 shadow-sm" style="height: 180px; border: 2px solid var(--bs-border-color);"></div>
-            </div>
-
-            <!-- Badges -->
-            {% if activity.badges.all %}
-            <div class="mb-4">
-              <div class="d-flex flex-wrap gap-2">
-                {% for badge in activity.badges.all %}
-                  <span class="badge-icon bg-warning bg-opacity-20 rounded-circle p-2" 
-                        title="{{ badge.badge.name }}" 
+                <div class="d-flex flex-column gap-2">
+                  <span class="badge bg-light text-primary border border-primary-subtle">
+                    <i class="bi bi-snow me-1"></i>{{ activity.ski_area.name }}
+                  </span>
+                  {% if activity.has_season_pass %}
+                  <span class="badge bg-success text-white season-pass-badge" 
+                        title="This activity is covered by a valid season pass"
                         data-bs-toggle="tooltip" 
                         data-bs-placement="top">
-                    <i class="{{ badge.badge.icon }} text-warning fs-6"></i>
+                    <i class="bi bi-ticket-perforated me-1"></i>Season Pass
                   </span>
-                {% endfor %}
+                  {% endif %}
+                </div>
               </div>
-            </div>
-            {% endif %}
 
-            <!-- Action Button -->
-            <div class="d-grid">
+              <!-- Stats Grid -->
+              <div class="row g-3 mb-4">
+                <div class="col-6">
+                  <div class="stats-card bg-primary bg-opacity-10 rounded-3 p-3 text-center">
+                    <div class="fs-4 fw-bold text-primary mb-1">{{ activity.total_descent|round_to:0 }}</div>
+                    <small class="text-muted fw-medium">Descent (m)</small>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="stats-card bg-success bg-opacity-10 rounded-3 p-3 text-center">
+                    <div class="fs-4 fw-bold text-success mb-1">{{ activity.total_distance_km }}</div>
+                    <small class="text-muted fw-medium">Distance (km)</small>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="stats-card bg-info bg-opacity-10 rounded-3 p-3 text-center">
+                    <div class="fs-4 fw-bold text-info mb-1">{{ activity.num_lift_rides }}</div>
+                    <small class="text-muted fw-medium">Lift Rides</small>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="stats-card bg-warning bg-opacity-10 rounded-3 p-3 text-center">
+                    <div class="fs-4 fw-bold text-warning mb-1">{{ activity.badges.all|length }}</div>
+                    <small class="text-muted fw-medium">Badges</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mini Map -->
+              <div class="mb-4">
+                <div id="map{{ forloop.counter }}" class="mini-map rounded-3 shadow-sm" style="height: 180px; border: 2px solid var(--bs-border-color);"></div>
+              </div>
+
+              <!-- Badges -->
+              {% if activity.badges.all %}
+              <div class="mb-4">
+                <div class="d-flex flex-wrap gap-2">
+                  {% for badge in activity.badges.all %}
+                    <span class="badge-icon bg-warning bg-opacity-20 rounded-circle p-2" 
+                          title="{{ badge.badge.name }}" 
+                          data-bs-toggle="tooltip" 
+                          data-bs-placement="top">
+                      <i class="{{ badge.badge.icon }} text-warning fs-6"></i>
+                    </span>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Action Button - Always at bottom -->
+            <div class="d-grid mt-auto">
               <a href="{% url 'activity_detail' activity.id %}" 
                  class="btn btn-primary btn-lg fw-medium d-flex align-items-center justify-content-center gap-2">
                 <i class="bi bi-eye"></i>
@@ -201,6 +214,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Initialize maps
   {% for activity in page_obj %}
+  {% if activity.geom and activity.geom.geojson %}
   (function() {
     var map = L.map('map{{ forloop.counter }}', {
       zoomControl: false,
@@ -212,22 +226,39 @@ document.addEventListener("DOMContentLoaded", function() {
     }).addTo(map);
     
     var track = {{ activity.geom.geojson|safe }};
-    var trackLayer = L.geoJSON(track, {
-      style: { 
-        color: '#0d6efd', 
-        weight: 4,
-        opacity: 0.8,
-        lineCap: 'round',
-        lineJoin: 'round'
-      }
-    }).addTo(map);
+    if (track && track.coordinates && track.coordinates.length > 0) {
+      var trackLayer = L.geoJSON(track, {
+        style: { 
+          color: '#0d6efd', 
+          weight: 4,
+          opacity: 0.8,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }
+      }).addTo(map);
+      
+      map.fitBounds(trackLayer.getBounds(), { padding: [10, 10] });
+    }
     
-    map.fitBounds(trackLayer.getBounds(), { padding: [10, 10] });
     map.dragging.disable();
     map.touchZoom.disable();
     map.doubleClickZoom.disable();
     map.scrollWheelZoom.disable();
   })();
+  {% else %}
+  // No geometry data for activity {{ activity.id }} - hide map or show placeholder
+  (function() {
+    var mapElement = document.getElementById('map{{ forloop.counter }}');
+    if (mapElement) {
+      mapElement.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 bg-light text-muted">' +
+        '<div class="text-center">' +
+          '<i class="bi bi-geo-alt display-4 mb-2"></i><br>' +
+          '<small>No map data available</small>' +
+        '</div>' +
+      '</div>';
+    }
+  })();
+  {% endif %}
   {% endfor %}
 });
 </script>
@@ -276,6 +307,35 @@ document.addEventListener("DOMContentLoaded", function() {
 .mini-map:hover {
   transform: scale(1.02);
   box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+}
+
+.season-pass-badge {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  border: none;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+  transition: all 0.3s ease;
+}
+
+.season-pass-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.season-pass-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: all 0.5s;
+}
+
+.season-pass-badge:hover::before {
+  left: 100%;
 }
 
 .pagination .page-link {

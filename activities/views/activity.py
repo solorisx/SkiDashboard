@@ -3,13 +3,14 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.core.serializers import serialize
 from django.contrib.gis.geos import LineString, Point
-from django.db.models import F
+from django.db.models import F, Q, Exists, OuterRef
 from django.db.models.functions import Round
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from activities.models import LiftRide
 from cost.forms import CostForm
+from cost.models import SeasonPass
 from osm.models import Aerialway, Piste, PisteSegment
 from osm.osm_util import get_aerialways_with_distance
 
@@ -56,11 +57,22 @@ def activity_list(request):
 
     activities = get_user_activities_base_query(request.user).order_by("-timestamp")
     
+    # Create a subquery to check for valid season passes
+    season_pass_subquery = SeasonPass.objects.filter(
+        user=request.user,
+        valid_from__lte=OuterRef('timestamp__date'),
+        valid_until__gte=OuterRef('timestamp__date')
+    ).filter(
+        Q(skiarea=OuterRef('ski_area')) |  # Direct ski area match
+        Q(skiarea_network__members__member=OuterRef('ski_area'))  # Ski area network match through members
+    )
+    
     activities = activities.annotate(
         total_distance_km=Round(F("total_distance")/1000, 2),
-    )
+        has_season_pass=Exists(season_pass_subquery),
+    ).prefetch_related('badges__badge')
 
-    paginator = Paginator(activities, 10)
+    paginator = Paginator(activities, 12)  # Show 12 activities per page (works as 1×12, 2×6, 3×4 rows)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -71,9 +83,20 @@ def activity_list(request):
 def activity_detail(request, activity_id):
     """Show details of a single activity, including laps and lift rides."""
     try:
+        # Create a subquery to check for valid season passes
+        season_pass_subquery = SeasonPass.objects.filter(
+            user=request.user,
+            valid_from__lte=OuterRef('timestamp__date'),
+            valid_until__gte=OuterRef('timestamp__date')
+        ).filter(
+            Q(skiarea=OuterRef('ski_area')) |  # Direct ski area match
+            Q(skiarea_network__members__member=OuterRef('ski_area'))  # Ski area network match through members
+        )
+        
         activity = (
             Activity.objects.annotate(
-                total_distance_km=Round(F("total_distance") / 1000.0, 2)
+                total_distance_km=Round(F("total_distance") / 1000.0, 2),
+                has_season_pass=Exists(season_pass_subquery),
             )
             .get(id=activity_id, user=request.user)
         )

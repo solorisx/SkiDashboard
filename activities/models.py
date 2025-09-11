@@ -52,6 +52,44 @@ class Activity(models.Model):
     def get_num_lift_rides(self):
         return sum(lap.lift_rides.count() for lap in self.laps.all())
     
+    def has_valid_season_pass(self):
+        """Check if this activity is covered by a valid season pass."""
+        from cost.models import SeasonPass
+        from django.db.models import Q
+        
+        activity_date = self.timestamp.date()
+        
+        # Check for season passes that cover this activity's ski area and date
+        season_passes = SeasonPass.objects.filter(
+            user=self.user,
+            valid_from__lte=activity_date,
+            valid_until__gte=activity_date
+        ).filter(
+            Q(skiarea=self.ski_area) |  # Direct ski area match
+            Q(skiarea_network__members__member=self.ski_area)  # Ski area network match through members
+        )
+        
+        return season_passes.exists()
+    
+    def get_valid_season_pass(self):
+        """Get the valid season pass for this activity if one exists."""
+        from cost.models import SeasonPass
+        from django.db.models import Q
+        
+        activity_date = self.timestamp.date()
+        
+        # Check for season passes that cover this activity's ski area and date
+        season_pass = SeasonPass.objects.filter(
+            user=self.user,
+            valid_from__lte=activity_date,
+            valid_until__gte=activity_date
+        ).filter(
+            Q(skiarea=self.ski_area) |  # Direct ski area match
+            Q(skiarea_network__members__member=self.ski_area)  # Ski area network match through members
+        ).first()
+        
+        return season_pass
+    
 
 class Lap(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='laps')
