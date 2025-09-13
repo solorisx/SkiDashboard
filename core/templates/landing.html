@@ -1,12 +1,336 @@
-{% include 'base/head.html' %}
+{% extends "base/base.html" %}
 
-<body>
-{% block content %}
-    <h1>Welcome to the Ski Analytics Dashboard</h1>
-    <p>This is a dashboard for tracking skiing activities on Strava. Please login or signup with the link below.</p>
+{% block title %}Ski Dashboard - Track Your Adventures{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/layouts/page-header.css">
+<style>
+  :root {
+    --ski-primary: #2563eb;
+    --ski-secondary: #1e40af;
+    --ski-accent: #06b6d4;
+    --ski-success: #10b981;
+    --ski-warning: #f59e0b;
+    --ski-glass-bg: rgba(0, 0, 0, 0.03);
+    --ski-glass-border: rgba(0, 0, 0, 0.06);
+  }
+
+  .landing-hero {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(6, 182, 212, 0.05) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--ski-glass-border);
+    border-radius: 24px;
+    padding: 4rem 2rem;
+    margin: 2rem 0;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.12);
+  }
+
+  .hero-title {
+    background: linear-gradient(135deg, var(--ski-primary) 0%, var(--ski-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 3.5rem;
+    font-weight: 900;
+    margin-bottom: 1.5rem;
+    line-height: 1.2;
+  }
+
+  .hero-subtitle {
+    font-size: 1.25rem;
+    color: #6b7280;
+    margin-bottom: 3rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
+
+  .feature-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--ski-glass-border);
+    border-radius: 20px;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    height: 100%;
+  }
+
+  .feature-icon {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.8;
+    display: block;
+  }
+
+  .feature-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 1rem;
+  }
+
+  .feature-description {
+    color: #6b7280;
+    line-height: 1.6;
+  }
+
+  .cta-section {
+    background: linear-gradient(135deg, var(--ski-glass-bg) 0%, rgba(0, 0, 0, 0.015) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--ski-glass-border);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    margin: 3rem 0;
+    text-align: center;
+  }
+
+  .cta-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 1rem;
+  }
+
+  .cta-description {
+    color: #6b7280;
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+  }
+
+  .btn-hero {
+    background: linear-gradient(135deg, var(--ski-primary) 0%, var(--ski-secondary) 100%);
+    border: none;
+    color: white;
+    padding: 1rem 2.5rem;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+  }
+
+  .btn-hero:hover {
+    box-shadow: 0 12px 30px rgba(37, 99, 235, 0.4);
+    color: white;
+  }
+
+  .btn-secondary {
+    background: rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--ski-glass-border);
+    color: #1f2937;
+    padding: 1rem 2.5rem;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+  }
+
+  .btn-secondary:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #111827;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  .stats-preview {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--ski-glass-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+
+  .preview-stat {
+    text-align: center;
+  }
+
+  .preview-stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--ski-primary);
+    display: block;
+  }
+
+  .preview-stat-label {
+    color: #6b7280;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.8s ease-out;
+  }
+
+  .slide-up {
+    animation: slideUp 0.6s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 768px) {
+    .hero-title {
+      font-size: 2.5rem;
+    }
+    
+    .landing-hero {
+      padding: 3rem 1.5rem;
+    }
+    
+    .feature-card {
+      margin-bottom: 1.5rem;
+    }
+    
+    .btn-hero, .btn-secondary {
+      width: 100%;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+  }
+</style>
 {% endblock %}
 
-{% include 'base/footer.html' %}
-{% include 'base/scripts.html' %}
+{% block pagetitle %}{% endblock %}
 
-</body>
+{% block content %}
+<div class="container-fluid px-4 py-2">
+  <!-- Hero Section -->
+  <div class="landing-hero fade-in">
+    <h1 class="hero-title">
+      Track Your Ski Adventures ⛷️
+    </h1>
+    <p class="hero-subtitle">
+      Connect your Strava account and transform your skiing data into beautiful insights. 
+      Track your progress, discover new resorts, and relive your best powder days.
+    </p>
+    
+    <div class="d-flex flex-column flex-md-row gap-3 justify-content-center align-items-center">
+      <a href="{% url 'account_signup' %}" class="btn-hero">
+        <i class="bi bi-person-plus"></i>
+        Get Started Free
+      </a>
+      <a href="{% url 'account_login' %}" class="btn-secondary">
+        <i class="bi bi-box-arrow-in-right"></i>
+        Sign In
+      </a>
+    </div>
+
+    <!-- Quick Stats Preview -->
+    <div class="stats-preview">
+      <div class="preview-stat">
+        <span class="preview-stat-number">1000+</span>
+        <span class="preview-stat-label">Activities Tracked</span>
+      </div>
+      <div class="preview-stat">
+        <span class="preview-stat-number">50+</span>
+        <span class="preview-stat-label">Ski Resorts</span>
+      </div>
+      <div class="preview-stat">
+        <span class="preview-stat-number">24/7</span>
+        <span class="preview-stat-label">Automatic Sync</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features Section -->
+  <div class="row g-4 mb-5 slide-up">
+    <div class="col-md-4">
+      <div class="feature-card">
+        <i class="feature-icon bi bi-activity text-primary"></i>
+        <h3 class="feature-title">Strava Integration</h3>
+        <p class="feature-description">
+          Automatically sync your skiing activities from Strava. No manual data entry required—just ski and let us handle the rest.
+        </p>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div class="feature-card">
+        <i class="feature-icon bi bi-geo-alt text-success"></i>
+        <h3 class="feature-title">Resort Analytics</h3>
+        <p class="feature-description">
+          Track your performance across different ski resorts. See which mountains you've conquered and discover new favorites.
+        </p>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div class="feature-card">
+        <i class="feature-icon bi bi-graph-up text-warning"></i>
+        <h3 class="feature-title">Season Insights</h3>
+        <p class="feature-description">
+          Visualize your skiing progress over time. Compare seasons, track improvements, and set goals for your next adventure.
+        </p>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="feature-card">
+        <i class="feature-icon bi bi-arrow-up-circle text-info"></i>
+        <h3 class="feature-title">Lift Tracking</h3>
+        <p class="feature-description">
+          Detailed lift ride analytics help you understand your skiing patterns and optimize your time on the mountain.
+        </p>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div class="feature-card">
+        <i class="feature-icon bi bi-card-checklist text-purple"></i>
+        <h3 class="feature-title">Season Pass ROI</h3>
+        <p class="feature-description">
+          Track your season pass value and see how much you're saving. Make smarter decisions for next season's pass purchases.
+        </p>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div class="feature-card">
+        <i class="feature-icon bi bi-trophy text-danger"></i>
+        <h3 class="feature-title">Achievements</h3>
+        <p class="feature-description">
+          Earn badges and achievements as you explore new resorts and hit skiing milestones. Gamify your mountain adventures.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Call to Action -->
+  <div class="cta-section">
+    <h2 class="cta-title">Ready to Elevate Your Skiing Experience?</h2>
+    <p class="cta-description">
+      Join fellow skiing enthusiasts who are already tracking their adventures with Ski Dashboard. 
+      Connect your Strava account in seconds and start discovering insights about your skiing journey.
+    </p>
+    <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
+      <a href="{% url 'account_signup' %}" class="btn-hero">
+        <i class="bi bi-snow"></i>
+        Start Your Journey
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
