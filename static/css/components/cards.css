@@ -1,0 +1,165 @@
+/**
+ * Reusable Card Components
+ * Generic cards that can replace table layouts across the application
+ */
+
+/* Enhanced card with hover effects */
+.hover-shadow-lg {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-shadow-lg:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Data card - replaces table rows with card layout */
+.data-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: white;
+}
+
+.data-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  border-color: #007bff;
+}
+
+.data-card-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid #dee2e6;
+  padding: 1rem;
+  display: flex;
+  justify-content: between;
+  align-items: center;
+}
+
+.data-card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.data-card-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.data-card-body {
+  padding: 1.25rem;
+}
+
+.data-card-footer {
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  padding: 0.75rem 1rem;
+}
+
+/* Metrics grid - for displaying data points */
+.metrics-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.metric-item {
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.metric-value {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #495057;
+  line-height: 1.2;
+}
+
+.metric-label {
+  display: block;
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Action buttons for cards */
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.card-actions.full-width .btn-group {
+  width: 100%;
+}
+
+/* Status badges - reusable for any status */
+.status-active {
+  background-color: #28a745 !important;
+  color: white !important;
+}
+
+.status-inactive {
+  background-color: #6c757d !important;
+  color: white !important;
+}
+
+.status-pending {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+.status-error {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+/* Type/category badges */
+.type-primary {
+  background-color: #007bff !important;
+  color: white !important;
+}
+
+.type-secondary {
+  background-color: #6c757d !important;
+  color: white !important;
+}
+
+.type-info {
+  background-color: #17a2b8 !important;
+  color: white !important;
+}
+
+.type-success {
+  background-color: #28a745 !important;
+  color: white !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .data-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .card-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .card-actions .btn {
+    width: 100%;
+  }
+}

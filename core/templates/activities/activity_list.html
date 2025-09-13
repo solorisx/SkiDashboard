@@ -1,5 +1,6 @@
 {% extends '../base/base.html' %}
 {% load custom_filters %}
+{% load l10n %}
 
 {% block pagetitle %} All Activities {% endblock %}
 {% block extra_head %}
@@ -38,7 +39,7 @@
                   <h5 class="card-title fw-bold text-dark mb-1">{{ activity.name }}</h5>
                   <small class="text-muted d-flex align-items-center">
                     <i class="bi bi-clock me-1"></i>
-                    {{ activity.timestamp|date:"M d, Y • H:i" }}
+                    {{ activity.timestamp|date:"DATETIME_FORMAT" }}
                   </small>
                 </div>
                 <div class="d-flex flex-column gap-2">
@@ -219,8 +220,8 @@ document.addEventListener("DOMContentLoaded", function() {
     var map = L.map('map{{ forloop.counter }}', {
       zoomControl: false,
       attributionControl: false
-    }).setView([{{ activity.geom.centroid.y }}, {{ activity.geom.centroid.x }}], 13);
-    
+    }).setView([{{ activity.geom.centroid.y|unlocalize }}, {{ activity.geom.centroid.x|unlocalize }}], 13);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: false
     }).addTo(map);

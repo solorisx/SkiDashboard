@@ -1,0 +1,75 @@
+/**
+ * Reusable Empty State Components
+ */
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: #f8f9fa;
+  border-radius: 0.5rem;
+  border: 2px dashed #dee2e6;
+  margin: 2rem 0;
+}
+
+.empty-state-icon {
+  margin-bottom: 1.5rem;
+}
+
+.empty-state-icon i {
+  opacity: 0.3;
+  color: #6c757d;
+}
+
+.empty-state h3, .empty-state h4 {
+  color: #495057;
+  margin-bottom: 1rem;
+}
+
+.empty-state p {
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.empty-state .btn {
+  margin-top: 0.5rem;
+}
+
+/* Different empty state variants */
+.empty-state.compact {
+  padding: 2rem 1rem;
+  margin: 1rem 0;
+}
+
+.empty-state.compact .empty-state-icon {
+  margin-bottom: 1rem;
+}
+
+.empty-state.compact h4 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state.compact p {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+/* Loading state variant */
+.empty-state.loading {
+  background: white;
+  border-style: solid;
+  border-color: #e9ecef;
+}
+
+.empty-state.loading .empty-state-icon i {
+  animation: spin 2s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
