@@ -109,9 +109,21 @@ SILKY_AUTHORISATION = True  # User must have permissions
 SOCIALACCOUNT_STORE_TOKENS = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
-EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
-EMAIL_FILE_PATH = BASE_DIR / "tmp/emails"
-DEFAULT_FROM_EMAIL = "no-reply@skidashboard.local"
+# Email Configuration
+if os.getenv('SMTP_HOST'):
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.getenv('SMTP_HOST')
+    EMAIL_PORT = int(os.getenv('SMTP_PORT', 587))
+    EMAIL_USE_TLS = os.getenv('SMTP_USE_TLS', 'True').lower() == 'true'
+    EMAIL_USE_SSL = os.getenv('SMTP_USE_SSL', 'False').lower() == 'true'
+    EMAIL_HOST_USER = os.getenv('SMTP_USER')
+    EMAIL_HOST_PASSWORD = os.getenv('SMTP_PASSWORD')
+    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@skidashboard.app')
+else:
+    # Fallback to file-based backend for development
+    EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
+    EMAIL_FILE_PATH = BASE_DIR / "tmp/emails"
+    DEFAULT_FROM_EMAIL = "no-reply@skidashboard.local"
 
 TEMPLATES = [
     {
