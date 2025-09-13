@@ -26,36 +26,18 @@
       </div>
     </div>
     <div class="page-header-actions">
+      <button class="btn btn-outline-secondary me-2" data-bs-toggle="modal" data-bs-target="#helpModal">
+        <i class="bi bi-question-circle me-2"></i>Help
+      </button>
       <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSeasonPassModal">
         <i class="bi bi-plus-circle me-2"></i>Add Season Pass
       </button>
     </div>
   </div>
 
-  <div class="row g-4">
-    <!-- Help Section -->
-    <div class="col-12 col-lg-4">
-      <div class="card hover-shadow-lg h-100">
-        <div class="card-body">
-          <h3 class="h5 mb-3">
-            <i class="bi bi-question-circle me-2 text-primary"></i>About Season Passes
-          </h3>
-          <p class="mb-3">
-            Add your season passes to track costs and see the value you're getting from each pass.
-          </p>
-          <p class="mb-3">
-            Select any ski area worldwide. Popular networks are already supported.
-          </p>
-          <p class="mb-0 small text-muted">
-            Missing a network? Contact us at 
-            <a href="mailto:skidashboard@solor.dev">skidashboard@solor.dev</a>
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Season Passes Content -->
-    <div class="col-12 col-lg-8">
+  <!-- Season Passes Content -->
+  <div class="row">
+    <div class="col-12">
 
       {% if passes %}
         <div class="row g-3">
@@ -63,29 +45,30 @@
           <div class="col-12">
             <div class="data-card">
               <div class="data-card-header">
-                <div class="data-card-title">
-                  <a href="{% url 'season_pass_detail' p.id %}" class="text-decoration-none">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div class="data-card-title">
+                    <a href="{% url 'season_pass_detail' p.id %}" class="text-decoration-none">
+                      {% if p.skiarea %}
+                        {{ p.skiarea.name }}
+                      {% elif p.skiarea_network %}
+                        {{ p.skiarea_network.name }}
+                      {% else %}
+                        Season Pass {{ p.id }}
+                      {% endif %}
+                    </a>
+                  </div>
+                  <div class="d-flex gap-2">
                     {% if p.skiarea %}
-                      {{ p.skiarea.name }}
+                      <span class="badge type-primary data-card-badge">Ski Area</span>
                     {% elif p.skiarea_network %}
-                      {{ p.skiarea_network.name }}
-                    {% else %}
-                      Season Pass {{ p.id }}
+                      <span class="badge type-info data-card-badge">Network</span>
                     {% endif %}
-                  </a>
-                </div>
-                <div class="d-flex gap-2">
-                  {% if p.skiarea %}
-                    <span class="badge type-primary data-card-badge">Ski Area</span>
-                  {% elif p.skiarea_network %}
-                    <span class="badge type-info data-card-badge">Network</span>
-                  {% endif %}
-                  <span class="badge {% if p.is_active %}status-active{% else %}status-inactive{% endif %} data-card-badge">
-                    {{ p.is_active|yesno:'Active,Inactive' }}
-                  </span>
+                    <span class="badge {% if p.is_active %}status-active{% else %}status-inactive{% endif %} data-card-badge">
+                      {{ p.is_active|yesno:'Active,Inactive' }}
+                    </span>
+                  </div>
                 </div>
               </div>
-              
               <div class="data-card-body">
                 <div class="metrics-grid">
                   <div class="metric-item">
@@ -155,6 +138,101 @@
           </button>
         </div>
       {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title fw-bold" id="helpModalLabel">
+          <i class="bi bi-question-circle me-2"></i>About Season Passes
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-4">
+          <div class="col-12">
+            <h6 class="fw-bold text-primary mb-3">
+              <i class="bi bi-credit-card me-2"></i>What are Season Passes?
+            </h6>
+            <p class="mb-4">
+              Season passes help you track your ski investments and see the value you're getting from each pass. 
+              Add your passes to monitor costs and calculate your cost per skiing day.
+            </p>
+          </div>
+          
+          <div class="col-md-6">
+            <h6 class="fw-bold text-success mb-3">
+              <i class="bi bi-geo-alt me-2"></i>Ski Areas
+            </h6>
+            <ul class="list-unstyled">
+              <li class="mb-2">
+                <i class="bi bi-check-circle text-success me-2"></i>
+                Select any ski area worldwide
+              </li>
+              <li class="mb-2">
+                <i class="bi bi-check-circle text-success me-2"></i>
+                Track individual resort passes
+              </li>
+              <li class="mb-2">
+                <i class="bi bi-check-circle text-success me-2"></i>
+                Monitor cost per activity
+              </li>
+            </ul>
+          </div>
+          
+          <div class="col-md-6">
+            <h6 class="fw-bold text-info mb-3">
+              <i class="bi bi-collection me-2"></i>Networks
+            </h6>
+            <ul class="list-unstyled">
+              <li class="mb-2">
+                <i class="bi bi-check-circle text-info me-2"></i>
+                Multi-resort pass networks
+              </li>
+              <li class="mb-2">
+                <i class="bi bi-check-circle text-info me-2"></i>
+                Popular networks pre-loaded
+              </li>
+              <li class="mb-2">
+                <i class="bi bi-check-circle text-info me-2"></i>
+                Track value across multiple areas
+              </li>
+            </ul>
+          </div>
+          
+          <div class="col-12">
+            <div class="alert alert-light border-start border-warning border-4 mb-0">
+              <div class="d-flex align-items-start">
+                <i class="bi bi-lightbulb text-warning me-3 mt-1"></i>
+                <div>
+                  <h6 class="fw-bold mb-2">Getting Started</h6>
+                  <ol class="mb-2">
+                    <li>Click "Add Season Pass" to create your first pass</li>
+                    <li>Choose between individual ski area or network pass</li>
+                    <li>Enter the validity dates and price</li>
+                    <li>Watch your activities get tracked automatically!</li>
+                  </ol>
+                  <p class="small text-muted mb-0">
+                    <strong>Missing a network?</strong> Contact us at 
+                    <a href="mailto:skidashboard@solor.dev" class="text-decoration-none">skidashboard@solor.dev</a> 
+                    — we'd be glad to add it.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#addSeasonPassModal">
+          <i class="bi bi-plus-circle me-2"></i>Add My First Pass
+        </button>
+      </div>
     </div>
   </div>
 </div>

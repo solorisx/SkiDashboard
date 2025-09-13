@@ -32,9 +32,6 @@
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border-bottom: 1px solid #dee2e6;
   padding: 1rem;
-  display: flex;
-  justify-content: between;
-  align-items: center;
 }
 
 .data-card-title {
@@ -150,8 +147,12 @@
   
   .data-card-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 0.5rem;
+  }
+  
+  .data-card-header .d-flex {
+    justify-content: space-between;
   }
   
   .card-actions {
