@@ -1,0 +1,78 @@
+/**
+ * Reusable Display Toggle Components
+ * For switching between different view modes (list, grouped, etc.)
+ */
+
+/* Collapsible sections */
+.collapsible-section {
+  transition: all 0.3s ease;
+}
+
+.collapsible-section.collapsed {
+  max-height: 0;
+  overflow: hidden;
+  margin-bottom: 0 !important;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Toggle buttons for collapsible sections */
+.section-toggle-btn {
+  transition: all 0.3s ease;
+}
+
+.section-toggle-btn i {
+  transition: transform 0.3s ease;
+}
+
+.section-toggle-btn.collapsed i {
+  transform: rotate(-90deg);
+}
+
+/* Display mode transitions */
+.display-mode-container {
+  transition: opacity 0.2s ease;
+}
+
+.display-mode-container.fade-out {
+  opacity: 0;
+}
+
+/* Display mode toggle controls */
+.display-mode-controls {
+  margin-bottom: 1rem;
+}
+
+.display-mode-controls .btn-group-sm .btn {
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+/* View mode specific layouts */
+.view-list .lift-card {
+  margin-bottom: 1rem;
+}
+
+.view-grouped .lift-card {
+  margin-bottom: 0.75rem;
+}
+
+.view-grouped .ski-area-group {
+  margin-bottom: 2rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .display-mode-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .display-mode-controls .btn-group {
+    width: 100%;
+  }
+  
+  .display-mode-controls .btn {
+    flex: 1;
+  }
+}

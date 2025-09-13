@@ -1,24 +1,43 @@
 {% extends "liftrides/base.html" %}
 
-{% block header %}for {{ selected_season|default:"All Seasons" }}{% endblock %}
+{% block header %}{% if selected_season %}for {{ selected_season }}{% endif %}{% endblock %}
 
 {% block navigation %}
-  <ul class="nav nav-pills gap-2">
-    <li class="nav-item">
-      <a
-        href="{% url 'lift_ride_list_season_all' %}"
-        class="nav-link {% if not selected_season %}active{% endif %}">
-        All Seasons
-      </a>
-    </li>
-    {% for season in seasons %}
-      <li class="nav-item">
-        <a
-          href="{% url 'lift_ride_list_season' season=season %}"
-          class="nav-link {% if selected_season == season %}active{% endif %}">
-          {{ season }}
+  <div class="d-flex flex-wrap gap-4 align-items-center">
+    <!-- Season Filter -->
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <span class="text-muted">
+        <i class="bi bi-snow2 me-1"></i>Filter by season:
+      </span>
+      <div class="btn-group" role="group" aria-label="Season filter">
+        <a href="{% url 'lift_ride_list_season_all' %}{% if sort_by %}?sort={{ sort_by }}{% endif %}" 
+           class="btn {% if not selected_season %}btn-primary{% else %}btn-outline-primary{% endif %}">
+          <i class="bi bi-calendar-range me-1"></i>All Seasons
         </a>
-      </li>
-    {% endfor %}
-  </ul>
+        {% for season in seasons %}
+          <a href="{% url 'lift_ride_list_season' season=season %}{% if sort_by %}?sort={{ sort_by }}{% endif %}" 
+             class="btn {% if selected_season == season %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            {{ season }}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Sort Options -->
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <span class="text-muted">
+        <i class="bi bi-sort-down me-1"></i>Sort by:
+      </span>
+      <div class="btn-group" role="group" aria-label="Sort options">
+        <a href="{% if selected_season %}{% url 'lift_ride_list_season' season=selected_season %}{% else %}{% url 'lift_ride_list_season_all' %}{% endif %}?sort=rides" 
+           class="btn {% if sort_by != 'area' %}btn-success{% else %}btn-outline-success{% endif %}">
+          <i class="bi bi-bar-chart me-1"></i>Ride Count
+        </a>
+        <a href="{% if selected_season %}{% url 'lift_ride_list_season' season=selected_season %}{% else %}{% url 'lift_ride_list_season_all' %}{% endif %}?sort=area" 
+           class="btn {% if sort_by == 'area' %}btn-success{% else %}btn-outline-success{% endif %}">
+          <i class="bi bi-geo-alt me-1"></i>Ski Area
+        </a>
+      </div>
+    </div>
+  </div>
 {% endblock %}

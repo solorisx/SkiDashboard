@@ -2,81 +2,160 @@
 {% load static %}
 
 {% block title %}Lift Rides - Ski Dashboard{% endblock %}
+
 {% block extra_css %}
-<link href="{% static 'css/tables.css' %}" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/components/cards.css">
+<link rel="stylesheet" href="/static/css/layouts/page-header.css">
+<link rel="stylesheet" href="/static/css/components/empty-states.css">
+<link rel="stylesheet" href="/static/css/components/display-toggles.css">
 {% endblock %}
 
+{% block pagetitle %}Lift Ride Statistics {% block header %}{% endblock %}{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-    <h1 class="m-0 text-primary">Lift Ride Statistics {% block header %}{% endblock %}</h1>
-    {# Optional spot for quick stats, badges, etc. #}
-  </div>
+<div class="container-fluid px-4 py-2">
+  
+  <!-- Statistics Summary -->
+  {% block stats_summary %}
+    {% if lift_stats %}
+    <div class="stats-summary mb-4">
+      <div class="stats-summary-item">
+        <span class="stats-summary-value">{{ lift_stats|length }}</span>
+        <span class="stats-summary-label">Unique Lifts</span>
+      </div>
+      <div class="stats-summary-item">
+        <span class="stats-summary-value">{{ total_rides|default:"0" }}</span>
+        <span class="stats-summary-label">Total Rides</span>
+      </div>
+      <div class="stats-summary-item">
+        <span class="stats-summary-value">{{ unique_resorts|default:"0" }}</span>
+        <span class="stats-summary-label">Ski Areas</span>
+      </div>
+      <div class="stats-summary-item">
+        <span class="stats-summary-value">{{ top_lift.total_rides|default:"0" }}</span>
+        <span class="stats-summary-label">Most Ridden</span>
+      </div>
+    </div>
+    {% endif %}
+  {% endblock %}
 
   <!-- Season/Year Navigation -->
   <nav class="mb-4">
     {% block navigation %}{% endblock %}
   </nav>
 
-  <!-- Table Card -->
-  <div class="modern-table-card">
-    <div class="table-responsive">
-      <table class="table modern-table modern-table-striped">
-        <thead class="modern-table-header">
-          <tr>
-            <th scope="col" class="sortable-header">
-              <div class="header-content">
-                <span>Aerialway</span>
-                <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
-              </div>
-            </th>
-            <th scope="col" class="text-end sortable-header">
-              <div class="header-content justify-content-end">
-                <span>Location</span>
-                <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
-              </div>
-            <th scope="col" class="text-end sortable-header">
-              <div class="header-content justify-content-end">
-                <span>Total Rides</span>
-                <i class="bi bi-arrow-down-up sort-icon" aria-hidden="true"></i>
-              </div>
-            </th>
-          </tr>
-        </thead>
 
-        <tbody>
-          {% block table_data %}
-            {% if lift_stats %}
-              {% for lift in lift_stats %}
-                <tr class="modern-table-row">
-                  <td class="modern-table-cell" data-label="Aerialway">
-                    <div class="cell-content">
+  <!-- Lift Rides Data -->
+  {% block lift_data %}
+    {% if lift_stats %}
+      {% if group_by_area %}
+        <!-- Grouped by Ski Area View -->
+        {% regroup lift_stats by location_name as ski_areas %}
+        {% for ski_area in ski_areas %}
+          <div class="section-header with-actions mb-4">
+            <div class="section-header-content">
+              <h2 class="d-flex align-items-center gap-2">
+                <i class="bi bi-geo-alt text-success"></i>
+                {{ ski_area.grouper|default:"Unknown Location" }}
+              </h2>
+              {% with ski_area.list as lifts %}
+                <p class="mb-0">{{ lifts|length }} lift{{ lifts|length|pluralize }} • {{ lifts.0.total_rides_area|default:"0" }} total ride{{ lifts.0.total_rides_area|default:"0"|pluralize }}</p>
+              {% endwith %}
+            </div>
+            <div class="section-header-actions">
+              <button class="btn btn-sm btn-outline-secondary section-toggle-btn" onclick="toggleSection('{{ ski_area.grouper|slugify|default:"unknown" }}')">
+                <i class="bi bi-chevron-down" id="toggle-{{ ski_area.grouper|slugify|default:"unknown" }}"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div id="section-{{ ski_area.grouper|slugify|default:"unknown" }}" class="collapsible-section ski-area-group mb-5">
+            <div class="row g-3">
+              {% for lift in ski_area.list %}
+              <div class="col-12 col-lg-6">
+                <div class="data-card">
+                  <div class="data-card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div class="data-card-title">
+                        <div class="d-flex align-items-center gap-2">
+                          <i class="bi bi-arrow-up-circle text-primary fs-5"></i>
+                          <span class="fw-semibold">{{ lift.aerialway_name }}</span>
+                        </div>
+                      </div>
+                      <div class="d-flex gap-2 align-items-center">
+                        <span class="badge type-info data-card-badge">
+                          {{ lift.total_rides }} ride{{ lift.total_rides|pluralize }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <!-- List View -->
+        <div class="row g-3">
+          {% for lift in lift_stats %}
+          <div class="col-12">
+            <div class="data-card">
+              <div class="data-card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div class="data-card-title">
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="bi bi-arrow-up-circle text-primary fs-5"></i>
                       <span class="fw-semibold">{{ lift.aerialway_name }}</span>
                     </div>
-                  </td>
-                  <td class="modern-table-cell text-end" data-label="Location">
-                    <span class="metric-value">{% if lift.location_name %}{{ lift.location_name }}{% endif %}</span>
-                  </td>
-                  <td class="modern-table-cell text-end" data-label="Total Rides">
-                    <span class="metric-value">{{ lift.total_rides }}</span>
-                  </td>
-                </tr>
-              {% endfor %}
-            {% else %}
-              <tr>
-                <td colspan="2" class="modern-table-cell">
-                  <div class="table-empty">
-                    <i class="bi bi-table"></i>
-                    <div>No data available.</div>
+                    {% if lift.location_name %}
+                      <small class="text-muted">
+                        <i class="bi bi-geo-alt me-1"></i>{{ lift.location_name }}
+                      </small>
+                    {% endif %}
                   </div>
-                </td>
-              </tr>
-            {% endif %}
-          {% endblock %}
-        </tbody>
-
-      </table>
-    </div>
-  </div>
+                  <div class="d-flex gap-2 align-items-center">
+                    <span class="badge type-info data-card-badge">
+                      {{ lift.total_rides }} ride{{ lift.total_rides|pluralize }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% else %}
+      <!-- Enhanced Empty State -->
+      <div class="empty-state-container">
+        <div class="empty-state-icon">
+          <i class="bi bi-arrow-up-circle"></i>
+        </div>
+        <h3 class="empty-state-title">No Lift Rides Found</h3>
+        <p class="empty-state-description">
+          {% if selected_year or selected_season %}
+            No lift ride data for this time period. Try selecting a different year or season.
+          {% else %}
+            Start tracking your skiing activities to see lift ride statistics here.
+          {% endif %}
+        </p>
+        <div class="empty-state-actions">
+          <a href="{% url 'activity_list' %}" class="btn btn-primary">
+            <i class="bi bi-activity me-2"></i>View Activities
+          </a>
+          {% if selected_year or selected_season %}
+          <a href="{% url 'lift_ride_list_all' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-clockwise me-2"></i>View All Periods
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  {% endblock %}
 </div>
+
+{% block extra_scripts %}
+<script src="/static/js/display-toggles.js"></script>
+{% endblock %}
 {% endblock %}

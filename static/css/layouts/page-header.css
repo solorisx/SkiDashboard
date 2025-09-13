@@ -74,7 +74,7 @@
 
 .section-header.with-actions {
   display: flex;
-  justify-content: between;
+  justify-content: space-between;
   align-items: flex-end;
   gap: 1rem;
 }

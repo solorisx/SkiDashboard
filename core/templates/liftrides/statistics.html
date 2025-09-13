@@ -1,24 +1,43 @@
 {% extends "liftrides/base.html" %}
 
-{% block header %}for {{ selected_year|default:"All Years" }}{% endblock %}
+{% block header %}{% if selected_year %}for {{ selected_year }}{% endif %}{% endblock %}
 
 {% block navigation %}
-  <ul class="nav nav-pills gap-2">
-    <li class="nav-item">
-      <a
-        href="{% url 'lift_ride_list_all' %}"
-        class="nav-link {% if not selected_year %}active{% endif %}">
-        All Years
-      </a>
-    </li>
-    {% for year in years %}
-      <li class="nav-item">
-        <a
-          href="{% url 'lift_ride_list_year' year=year %}"
-          class="nav-link {% if selected_year == year %}active{% endif %}">
-          {{ year }}
+  <div class="d-flex flex-wrap gap-4 align-items-center">
+    <!-- Year Filter -->
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <span class="text-muted">
+        <i class="bi bi-calendar-year me-1"></i>Filter by year:
+      </span>
+      <div class="btn-group" role="group" aria-label="Year filter">
+        <a href="{% url 'lift_ride_list_all' %}{% if sort_by %}?sort={{ sort_by }}{% endif %}" 
+           class="btn {% if not selected_year %}btn-primary{% else %}btn-outline-primary{% endif %}">
+          <i class="bi bi-calendar3 me-1"></i>All Years
         </a>
-      </li>
-    {% endfor %}
-  </ul>
+        {% for year in years %}
+          <a href="{% url 'lift_ride_list_year' year=year %}{% if sort_by %}?sort={{ sort_by }}{% endif %}" 
+             class="btn {% if selected_year == year %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            {{ year }}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Sort Options -->
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <span class="text-muted">
+        <i class="bi bi-sort-down me-1"></i>Sort by:
+      </span>
+      <div class="btn-group" role="group" aria-label="Sort options">
+        <a href="{% if selected_year %}{% url 'lift_ride_list_year' year=selected_year %}{% else %}{% url 'lift_ride_list_all' %}{% endif %}?sort=rides" 
+           class="btn {% if sort_by != 'area' %}btn-success{% else %}btn-outline-success{% endif %}">
+          <i class="bi bi-bar-chart me-1"></i>Ride Count
+        </a>
+        <a href="{% if selected_year %}{% url 'lift_ride_list_year' year=selected_year %}{% else %}{% url 'lift_ride_list_all' %}{% endif %}?sort=area" 
+           class="btn {% if sort_by == 'area' %}btn-success{% else %}btn-outline-success{% endif %}">
+          <i class="bi bi-geo-alt me-1"></i>Ski Area
+        </a>
+      </div>
+    </div>
+  </div>
 {% endblock %}
