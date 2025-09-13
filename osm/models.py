@@ -327,6 +327,34 @@ class SkiAreaNetwork(models.Model):
     def __str__(self):
         return f"Ski Area Network {self.name}"
     
+    def list_members_array(self, valid_from=None, valid_to=None):
+        if valid_from and valid_to:
+            members = self.members.filter(
+                models.Q(valid_from__isnull=True) | models.Q(valid_from__lte=valid_to),
+                models.Q(valid_to__isnull=True) | models.Q(valid_to__gte=valid_from)
+            )
+        elif valid_from:
+            members = self.members.filter(
+                models.Q(valid_from__isnull=True) | models.Q(valid_from__lte=valid_from)
+            )
+        elif valid_to:
+            members = self.members.filter(
+                models.Q(valid_to__isnull=True) | models.Q(valid_to__gte=valid_to)
+            )
+        else:
+            members = self.members.all()
+        return members
+    
+    def list_members(self, valid_from=None, valid_to=None):
+        members = self.list_members_array(valid_from, valid_to)
+        names = []
+        for member in members:
+            name_str = f"{member.member.name}"
+            if member.max_days and member.max_days < 365:
+                name_str += f" (max {member.max_days} days)"
+            names.append(name_str)
+        unique_names = list(set(names))  # Remove duplicates
+        return ", ".join(unique_names)
     
 class SkiAreaNetworkMember(models.Model):
     ski_area_network = models.ForeignKey(SkiAreaNetwork, on_delete=models.CASCADE, related_name='members')

@@ -213,8 +213,8 @@ class SkiAreaNetworkUploadView(View):
         try:
             data = json_file.read().decode('utf-8')
             result = self.process_data(data)
-            if result and result['created'] > 0:
-                messages.success(request, f"Successfully created {result['created']} ski area networks.")
+            if result and (result['created'] > 0 or result['updated'] > 0):
+                messages.success(request, f"Successfully created {result['created']} and updated {result['updated']} ski area networks.")
                 return redirect("skiarea_network_upload")
             else:
                 messages.error(request, "No new ski area networks were created.")
@@ -248,6 +248,7 @@ class SkiAreaNetworkUploadView(View):
         """
 
         created_networks = 0
+        updated_networks = 0
         created_members = 0
 
         try:
@@ -265,6 +266,9 @@ class SkiAreaNetworkUploadView(View):
                         skiarea_network, created = SkiAreaNetwork.objects.get_or_create(name=net['name'])
                         if created:
                             created_networks += 1
+                        else:
+                            updated_networks += 1
+                            skiarea_network.members.all().delete()  # Clear existing members to avoid duplicates
                     else:
                         raise json.JSONDecodeError("Network must have at least an 'id' or 'name' field.", data, 0)
 
@@ -282,19 +286,21 @@ class SkiAreaNetworkUploadView(View):
                         
                         valid_from = member.get('valid_from')
                         valid_until = member.get('valid_until')
+                        max_days = member.get('max_days', 365)
 
                         for skiarea in skiarea:
                             _, created = SkiAreaNetworkMember.objects.get_or_create(
                                 ski_area_network=skiarea_network,
                                 member=skiarea,
                                 valid_from=valid_from,
-                                valid_to=valid_until
+                                valid_to=valid_until,
+                                max_days=max_days
                             )
                             if created:
                                 logger.debug(f"Added {skiarea} to network {skiarea_network}")
                                 created_members += 1
-                        
-            return {'created': created_networks, 'members_created': created_members}
+
+            return {'created': created_networks, 'updated': updated_networks, 'members_created': created_members}
 
         except Exception as e:
             logger.error(f"Error processing ski area network data: {e}")

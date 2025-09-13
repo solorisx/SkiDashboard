@@ -87,12 +87,31 @@ class SeasonPass(models.Model):
             timestamp__range=(start_date, end_date),
             ski_area_id__in=ski_areas_in_network  # Activities from ski areas in the network
         )
+    
+    def get_valid_areas(self):
+        '''
+        Returns a comma-separated string representation of the ski area or ski area network this season pass is valid for.
+        '''
+        if self.skiarea_network:
+            return self.skiarea_network.list_members(self.valid_from, self.valid_until)
+        elif self.skiarea:
+            return self.skiarea.name
+        else:
+            return "None"
 
     def count_valid_activities(self, date_from: datetime = make_aware(datetime.min), date_until: datetime = make_aware(datetime.max)):
         return self.get_valid_activities(date_from, date_until).count()
 
     def __str__(self):
         return f'{self.user} - {self.skiarea}{self.skiarea_network} - {self.valid_from} - {self.valid_until}'
+    
+    def name(self):
+        if self.skiarea:
+            return f'Season Pass {self.skiarea.name} ({self.valid_from} to {self.valid_until})'
+        elif self.skiarea_network:
+            return f'Season Pass {self.skiarea_network.name} ({self.valid_from} to {self.valid_until})'
+        else:
+            return f'Season Pass (No Ski Area) ({self.valid_from} to {self.valid_until})'
 
     def clean(self):
         if self.skiarea and self.skiarea_network:

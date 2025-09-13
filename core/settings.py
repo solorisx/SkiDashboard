@@ -255,7 +255,6 @@ LOGGING = {
         'level': 'WARNING',
     },
     'loggers': {
-        'django.db.backends': {"handlers": ["console"], "level": "DEBUG"},
         'django': {
             'handlers': ['console'],
             'level': 'WARNING', #LOG_LEVEL,

@@ -11,6 +11,16 @@
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2 fw-bold text-dark mb-2">{{ season_pass.name }}</h1>
+            {% if season_pass.skiarea_network %}
+            <p class="text-muted mb-0">
+                <i class="bi bi-network-wired me-2"></i>Valid in: {{ season_pass.get_valid_areas }}
+            </p>
+            {% endif %}
+        </div>
+    </div>
     
 
     <!-- Stats Cards -->
@@ -37,6 +47,7 @@
                 </div>
             </div>
         </div>
+        {% if cost_per_day %}
         <div class="col-md-3 col-6">
             <div class="card stats-card border-0 bg-warning bg-opacity-10">
                 <div class="card-body text-center p-3">
@@ -50,6 +61,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
     <!-- Modern Table -->
