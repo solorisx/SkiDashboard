@@ -113,7 +113,7 @@ class ActivityParser:
         self.config = config or ActivityParserConfig()
         self.profiler = ProfileManager()
         self._cached_ski_areas: Dict[str, SkiArea] = {}
-        self._cached_stations: Dict[str, List[Station]] = {}
+        self._cached_station_ids: Dict[str, List[int]] = {}
         self._cached_graphs: Dict[str, Dict] = {}
 
     def apply_exceptions(self, aerialway: Aerialway) -> Aerialway:
@@ -307,9 +307,19 @@ class ActivityParser:
 
         # Check cache first
         cache_key = f"stations_{point.x:.6f}_{point.y:.6f}_{max_distance}_{bottom_only}_{top_only}"
-        if cache_key in self._cached_stations:
+        if cache_key in self._cached_station_ids:
+            # Cache hit: retrieve stations by IDs to maintain order
+            station_ids = self._cached_station_ids[cache_key]
+            if station_ids:
+                # Preserve order from cache using id__in and a custom ordering
+                id_order = {id_: index for index, id_ in enumerate(station_ids)}
+                cached_stations = Station.objects.filter(id__in=station_ids)
+                result_list = sorted(cached_stations, key=lambda s: id_order[s.id])
+            else:
+                result_list = []
+
             self.profiler.end_operation('get_closest_stations')
-            return self._cached_stations[cache_key]
+            return result_list
 
         stations = Station.objects.all()
 
@@ -331,16 +341,17 @@ class ActivityParser:
 
         duration = self.profiler.end_operation('get_closest_stations')
 
-        # Cache the result as list for performance
+        # Cache only the IDs to save memory
         result_list = list(closest_stations)
-        self._cached_stations[cache_key] = result_list
+        station_ids = [station.id for station in result_list]
+        self._cached_station_ids[cache_key] = station_ids
 
         if result_list:
             logger.debug(f"Found closest stations: {result_list} (took {duration:.4f} seconds)")
         else:
             logger.debug(f"No closest stations found (took {duration:.4f} seconds)")
 
-        return closest_stations
+        return result_list
 
 
     def get_closest_aerialway(self, point: Point, in_ski_area: bool = False,
