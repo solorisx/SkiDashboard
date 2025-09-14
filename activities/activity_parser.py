@@ -124,23 +124,11 @@ class ActivityParser:
 
         return aerialway
 
+
     def get_osm_url(self, point: Point) -> str:
         """Generate OSM URL for a given point."""
         return f"https://www.openstreetmap.org/?mlat={point.y}&mlon={point.x}#map=17/{point.y}/{point.x}"
 
-    def extract_data(self, message, model_fields: List[str]) -> Dict[str, Any]:
-        """
-        Extract data from a FIT message based on the fields available in the corresponding Django model.
-        """
-        self.profiler.start_operation('extract_data')
-        data = {
-            field: message.get_value(field)
-            for field in model_fields
-            if message.get_value(field) is not None
-        }
-        duration = self.profiler.end_operation('extract_data')
-        logger.debug(f"Extracted data: {data} (took {duration:.4f} seconds)")
-        return data
 
     def create_point(self, lat_field: str, lon_field: str, data: Dict[str, Any]) -> Optional[Point]:
         """Create a Point from latitude and longitude fields in data."""
