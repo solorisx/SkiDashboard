@@ -173,6 +173,23 @@ else:
 _db["ENGINE"] = "django.contrib.gis.db.backends.postgis"
 DATABASES = {"default": _db}
 
+
+# Cache configuration
+# https://docs.djangoproject.com/en/5.0/topics/cache/
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'django_cache_table',
+        'TIMEOUT': 900,  # 15 minutes
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+            'CULL_FREQUENCY': 3,
+        }
+    }
+}
+
+
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 

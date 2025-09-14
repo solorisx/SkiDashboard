@@ -1,4 +1,5 @@
 import heapq
+import hashlib
 import logging
 import time
 from datetime import timedelta, datetime
@@ -11,6 +12,7 @@ from django.contrib.gis.geos import Point, LineString
 from django.db.models import F, Count
 from django.contrib.gis.db.models.functions import Distance
 from django.db.models import Exists, OuterRef, Subquery
+from django.core.cache import cache
 import numpy as np
 from .utils import get_turning_points
 from .badges import assign_badges
@@ -254,16 +256,76 @@ def find_direct_lift(start: Point, end: Point):
     return direct_lift, uphill
 
 
-def build_lift_graph(start: Point, max_area: int = 20_000, max_distance: int = 500):
+def _find_nearby_cached_graph(start_point, max_area, max_distance, max_walking_connections, cache_radius):
+    """Find cached graph for nearby points within cache_radius"""
+    # Get spatial cache index
+    spatial_index_key = f"spatial_cache_index_{max_area}_{max_distance}_{max_walking_connections}"
+    spatial_index = cache.get(spatial_index_key, [])
+
+    for entry in spatial_index:
+        cached_point = Point(entry['x'], entry['y'])
+        distance = start_point.distance(cached_point) * 111320  # Convert degrees to meters (approximate)
+
+        if distance <= cache_radius:
+            # Try to get the cached graph
+            cached_data = cache.get(entry['cache_key'])
+            if cached_data and isinstance(cached_data, dict) and 'graph' in cached_data:
+                return {
+                    'graph': cached_data['graph'],
+                    'cache_point': f"{entry['x']:.6f}, {entry['y']:.6f}",
+                    'distance': distance
+                }
+
+    return None
+
+
+def _store_spatial_cache_entry(point, cache_key, max_area, max_distance, max_walking_connections):
+    """Store cache entry in spatial index for nearby lookups"""
+    spatial_index_key = f"spatial_cache_index_{max_area}_{max_distance}_{max_walking_connections}"
+    spatial_index = cache.get(spatial_index_key, [])
+
+    # Add new entry
+    new_entry = {
+        'x': point.x,
+        'y': point.y,
+        'cache_key': cache_key,
+        'created_at': time.time()
+    }
+
+    # Remove old entries (keep only last 50 to prevent memory bloat)
+    spatial_index = [entry for entry in spatial_index if time.time() - entry.get('created_at', 0) < 900]  # 15 minutes
+    spatial_index.append(new_entry)
+
+    if len(spatial_index) > 50:
+        # Keep only the most recent entries
+        spatial_index = sorted(spatial_index, key=lambda x: x.get('created_at', 0))[-50:]
+
+    # Store back in cache
+    cache.set(spatial_index_key, spatial_index, 900)
+
+
+def build_lift_graph(start: Point, max_area: int = 20_000, max_distance: int = 500, max_walking_connections: int = 10):
     """Builds a graph of aerialways and walking connections within 20 km of the start position."""
+
+    # Try to find cached graph for nearby points (within 1km radius)
+    cache_radius = 1000  # meters
+    cached_result = _find_nearby_cached_graph(start, max_area, max_distance, max_walking_connections, cache_radius)
+    if cached_result:
+        logger.info(f"Retrieved nearby cached lift graph for {start} (cache point: {cached_result['cache_point']})")
+        return cached_result['graph']
+
+    # Create cache key for this exact location
+    cache_data = f"{start.x:.6f}_{start.y:.6f}_{max_area}_{max_distance}_{max_walking_connections}"
+    cache_key = f"lift_graph_{hashlib.md5(cache_data.encode()).hexdigest()}"
+
     startTime = time.time()
-    logger.info("Building lift graph")   
-    
+    logger.info("Building lift graph")
+
     graph = {}
 
     # **Filter stations within 20km of start**
     logger.info(f"Filtering stations within {max_area}m of start position")
-    nearby_stations = Station.objects.annotate(
+    nearby_stations = Station.objects.select_related('node').annotate(
         distance=Distance("node__geom", start)
     ).filter(distance__lte=max_area)
 
@@ -285,14 +347,22 @@ def build_lift_graph(start: Point, max_area: int = 20_000, max_distance: int = 5
             graph.setdefault(station_a, []).append((distance, station_b, aerialway))
             graph.setdefault(station_b, []).append((distance, station_a, aerialway))
 
-    # **Add walking connections within max_distance**
+    # **Add walking connections within max_distance (limited to prevent O(n²) scaling)**
     logger.info("Adding walking connections")
     for station in nearby_stations:
+        # Skip stations that already have many lift connections
+        existing_connections = len(graph.get(station, []))
+        if existing_connections >= 3:  # Already well-connected via lifts
+            continue
+
+        # Get only the closest walking connections to prevent O(n²) scaling
         nearby_walkable_stations = (
             nearby_stations.annotate(distance=Distance(F("node__geom"), station.node.geom))
             .filter(distance__lte=max_distance)
             .exclude(id=station.id)  # Exclude itself
+            .order_by('distance')[:max_walking_connections]  # Limit to closest N connections
         )
+
         for nearby_station in nearby_walkable_stations:
             distance = station.node.geom.distance(nearby_station.node.geom)
             graph.setdefault(station, []).append((distance, nearby_station, None))
@@ -300,6 +370,23 @@ def build_lift_graph(start: Point, max_area: int = 20_000, max_distance: int = 5
 
     duration = time.time() - startTime
     logger.info(f"Built lift graph in {duration:.4f} seconds")
+
+    # Cache the graph with metadata for 15 minutes
+    cache_data = {
+        'graph': graph,
+        'center_point': {'x': start.x, 'y': start.y},
+        'max_area': max_area,
+        'max_distance': max_distance,
+        'max_walking_connections': max_walking_connections,
+        'created_at': time.time()
+    }
+    cache.set(cache_key, cache_data, 900)
+
+    # Also store in a spatial index for nearby lookups
+    _store_spatial_cache_entry(start, cache_key, max_area, max_distance, max_walking_connections)
+
+    logger.info(f"Cached lift graph for {start}")
+
     return graph
 
 def dijkstra(start_nodes, end_nodes, graph):
@@ -328,7 +415,7 @@ def dijkstra(start_nodes, end_nodes, graph):
     logger.warning("No path found in %s seconds", time.time() - startTime)
     return []  # No path found
 
-def get_aerialways(start: Point, end: Point = None) -> list[tuple[Aerialway, bool]]:
+def get_aerialways(start: Point, end: Point = None, start_activity: Point = None) -> list[tuple[Aerialway, bool]]:
     
     uphill = True
     if start is None or end is None:
@@ -404,11 +491,20 @@ def get_aerialways(start: Point, end: Point = None) -> list[tuple[Aerialway, boo
         else:
             return []  # No valid stations found
 
-    graph = build_lift_graph(start)
-    logger.debug("graph built")
+    if start_activity:
+        graph = build_lift_graph(start_activity)
+        logger.debug("graph built from activity start point")
+    else:
+        graph = build_lift_graph(start)
+        logger.debug("graph built from start point")
 
     # Get the shortest station path from multiple start and end stations
     station_path = dijkstra(start_stations, end_stations, graph)
+    if not station_path and start_activity:
+        # try again with start point if path not found on graph centered on activity start
+        logger.debug("No path found, trying again with graph centered on start point")
+        graph = build_lift_graph(start)
+        station_path = dijkstra(start_stations, end_stations, graph)
 
     logger.debug(f"Station path: {station_path}")
 
@@ -713,7 +809,7 @@ def sync_strava_activity(user, activity_id, update=False):
             lift_start_pos = None
             lift_start_time = lap.start_time
         #lift_start_pos = Lap.objects.filter(activity=activity_instance, lap_index=lap.lap_index-1).first().end_position if lap.lap_index > 1 else None
-        lift_rides = get_aerialways(lift_start_pos, lift_end_pos)
+        lift_rides = get_aerialways(lift_start_pos, lift_end_pos, start_activity=activity_instance.start_position)
         for (lift_ride, uphill) in lift_rides:
             logger.debug(lift_rides)
 
