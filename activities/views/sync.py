@@ -1,10 +1,12 @@
 import logging
+import time
+import os
 from allauth.socialaccount.models import SocialAccount
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from ..batch import parse_strava_activities, parse_strava_activity
 from ..forms import GlobalSyncForm, PerUserSyncForm, StravaSyncForm
@@ -16,6 +18,23 @@ from ..tasks import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Track activities currently being reprocessed with timestamps to avoid duplicates
+_reprocessing_activities = {}
+
+
+def _clean_completed_reprocessing_tasks():
+    """Clean up completed reprocessing tasks from tracking dict."""
+    current_time = time.time()
+    timeout = os.getenv("REPROCESSING_TIMEOUT", 300)  # Default to 5 minutes
+    # Remove entries older than timeout
+    expired_keys = [key for key, timestamp in _reprocessing_activities.items()
+                   if current_time - timestamp > timeout]
+    for key in expired_keys:
+        _reprocessing_activities.pop(key, None)
+
+    if expired_keys:
+        logger.info(f"Cleaned up {len(expired_keys)} expired reprocessing entries")
 
 
 @staff_member_required
@@ -122,11 +141,35 @@ def sync_strava_all(request):
 @login_required
 def reprocess_activity(request, activity_id, background=True):
     """Reprocess an activity to update its laps and lift rides."""
-    from django.shortcuts import get_object_or_404
-    
+    # Clean up expired entries first
+    _clean_completed_reprocessing_tasks()
+
     activity = get_object_or_404(Activity, id=activity_id, user=request.user)
-    if activity.strava_id:
+
+    if not activity.strava_id:
+        messages.error(request, f"Activity '{activity.name}' has no Strava ID and cannot be reprocessed.")
+        return redirect("activity_detail", activity_id=activity_id)
+
+    # Check if activity is already being processed
+    activity_key = f"{request.user.id}_{activity.strava_id}"
+    if activity_key in _reprocessing_activities:
+        messages.info(request, f"Activity '{activity.name}' is already queued for reprocessing.")
+        return redirect("activity_detail", activity_id=activity_id)
+
+    try:
+        # Add to reprocessing dict with timestamp to prevent duplicates
+        _reprocessing_activities[activity_key] = time.time()
+
+        # Queue the reprocessing task
         parse_strava_activity(user=request.user, activity_id=activity.strava_id, update=True, background=background)
-        return HttpResponse(f"Activity {activity_id} reprocessed.")
-    else:
-        return HttpResponse(f"Activity {activity_id} has no Strava ID.")
+
+        messages.success(request, f"Activity '{activity.name}' has been queued for reprocessing. This may take a few minutes.")
+        logger.info(f"Queued activity {activity_id} (Strava ID: {activity.strava_id}) for reprocessing by user {request.user.username}")
+
+    except Exception as e:
+        # Remove from dict if queuing failed
+        _reprocessing_activities.pop(activity_key, None)
+        messages.error(request, f"Failed to queue activity '{activity.name}' for reprocessing: {e}")
+        logger.error(f"Failed to queue activity {activity_id} for reprocessing: {e}")
+
+    return redirect("activity_detail", activity_id=activity_id)
