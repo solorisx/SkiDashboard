@@ -5,11 +5,7 @@ from django.contrib.gis.geos import Point
 from django.conf import settings
 from django.core.management import call_command
 
-from activities.activity_parser import (
-    build_lift_graph,
-    get_closest_aerialway,
-    get_aerialways
-)
+from activities.activity_parser import ActivityParser
 from osm.models import Node, Station, Aerialway, SkiArea
 
 
@@ -98,6 +94,9 @@ class RealDataPerformanceTestCase(TestCase):
                 cls.test_points = []
 
     def setUp(self):
+        # Create parser instance
+        self.parser = ActivityParser()
+
         if not hasattr(self, 'test_points') or not self.test_points:
             self.skipTest("No real data available for performance testing")
 
@@ -125,7 +124,7 @@ class RealDataPerformanceTestCase(TestCase):
             ).count()
             
             start_time = time.time()
-            graph = build_lift_graph(test_point, max_area=max_area, max_distance=500)
+            graph = self.parser.build_lift_graph(test_point, max_area=max_area, max_distance=500)
             build_time = time.time() - start_time
             
             result = {
@@ -179,7 +178,7 @@ class RealDataPerformanceTestCase(TestCase):
             
             for max_distance in search_distances:
                 start_time = time.time()
-                aerialway = get_closest_aerialway(test_point, max_distance=max_distance)
+                aerialway = self.parser.get_closest_aerialway(test_point, max_distance=max_distance)
                 query_time = time.time() - start_time
                 
                 print(f"  {max_distance}m search: {query_time:.4f}s -> {'Found' if aerialway else 'None'}")
@@ -200,7 +199,7 @@ class RealDataPerformanceTestCase(TestCase):
         print(f"Finding route from {start_point} to {end_point}")
         
         start_time = time.time()
-        aerialways = get_aerialways(start_point, end_point)
+        aerialways = self.parser.get_aerialways(start_point, end_point)
         pathfinding_time = time.time() - start_time
         
         print(f"Pathfinding completed in {pathfinding_time:.4f}s")
@@ -235,7 +234,7 @@ class RealDataPerformanceTestCase(TestCase):
         graphs = []
         for i in range(num_concurrent_requests):
             print(f"Building graph {i+1}/{num_concurrent_requests}...")
-            graph = build_lift_graph(test_point, max_area=20000)
+            graph = self.parser.build_lift_graph(test_point, max_area=20000)
             graphs.append(graph)
         
         total_time = time.time() - start_time
@@ -259,7 +258,7 @@ class RealDataPerformanceTestCase(TestCase):
         test_point = self.test_points[0]
         
         # Build a moderate-sized graph
-        graph = build_lift_graph(test_point, max_area=20000)
+        graph = self.parser.build_lift_graph(test_point, max_area=20000)
         
         # Estimate memory usage
         station_count = len(graph)
@@ -295,7 +294,7 @@ class RealDataPerformanceTestCase(TestCase):
         connection.queries_log.clear()
         
         start_time = time.time()
-        graph = build_lift_graph(test_point, max_area=20000)
+        graph = self.parser.build_lift_graph(test_point, max_area=20000)
         build_time = time.time() - start_time
         
         query_count = len(connection.queries)

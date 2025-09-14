@@ -2,7 +2,8 @@ import os
 from django.core.management.base import BaseCommand, CommandError
 from activities.models import Activity
 from osm.osm_segments import update_piste_segments
-from activities.activity_parser import parse_strava_activities, calc_ridden_segments
+from activities.activity_parser import calc_ridden_segments
+from activities.batch import parse_strava_activities
 from django.contrib.auth.models import User
 import logging
 

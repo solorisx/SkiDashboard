@@ -4,21 +4,7 @@ from django.test import TestCase
 from django.contrib.gis.geos import Point, LineString
 from django.contrib.auth.models import User
 
-from activities.activity_parser import (
-    build_lift_graph,
-    dijkstra,
-    get_aerialways,
-    find_direct_lift,
-    get_closest_aerialways,
-    get_closest_aerialway,
-    get_closest_stations,
-    get_ski_area,
-    get_ski_area_boundary,
-    apply_exceptions,
-    get_osm_url,
-    extract_data,
-    create_point,
-)
+from activities.activity_parser import ActivityParser
 from activities.models import Activity, Lap, LiftRide
 from osm.models import Node, Way, Aerialway, Station, SkiArea, SkiAreaBoundary
 
@@ -26,12 +12,15 @@ from osm.models import Node, Way, Aerialway, Station, SkiArea, SkiAreaBoundary
 class ActivityParserTestCase(TestCase):
     
     def setUp(self):
+        # Create parser instance
+        self.parser = ActivityParser()
+
         # Create test points
         self.test_point_1 = Point(7.1234, 46.5678)  # Bottom Station 1
-        self.test_point_2 = Point(7.1244, 46.5688)  # Middle Station  
+        self.test_point_2 = Point(7.1244, 46.5688)  # Middle Station
         self.test_point_3 = Point(7.1254, 46.5698)  # Top Station 2
         self.test_point_outside = Point(7.2000, 46.6000)  # Outside test area
-        
+
         # Create test user
         self.user = User.objects.create_user(
             username='testuser',
@@ -122,7 +111,7 @@ class ActivityParserTestCase(TestCase):
 
     def test_get_osm_url(self):
         """Test OSM URL generation"""
-        url = get_osm_url(self.test_point_1)
+        url = self.parser.get_osm_url(self.test_point_1)
         expected = f"https://www.openstreetmap.org/?mlat={self.test_point_1.y}&mlon={self.test_point_1.x}#map=17/{self.test_point_1.y}/{self.test_point_1.x}"
         self.assertEqual(url, expected)
 
@@ -137,7 +126,7 @@ class ActivityParserTestCase(TestCase):
         }.get(field)
         
         model_fields = ['latitude', 'longitude', 'altitude', 'invalid_field']
-        result = extract_data(mock_message, model_fields)
+        result = self.parser.extract_data(mock_message, model_fields)
         
         expected = {
             'latitude': 465678000,
@@ -157,7 +146,7 @@ class ActivityParserTestCase(TestCase):
             'position_long': lon_semicircles
         }
         
-        point = create_point('position_lat', 'position_long', data)
+        point = self.parser.create_point('position_lat', 'position_long', data)
         self.assertIsInstance(point, Point)
         # Allow some precision loss in the conversion
         self.assertAlmostEqual(point.x, 7.1234, places=2)
@@ -165,12 +154,12 @@ class ActivityParserTestCase(TestCase):
         
         # Test with missing data
         incomplete_data = {'position_lat': 555567800}
-        point = create_point('position_lat', 'position_long', incomplete_data)
+        point = self.parser.create_point('position_lat', 'position_long', incomplete_data)
         self.assertIsNone(point)
 
     def test_get_closest_stations_basic(self):
         """Test finding closest stations"""
-        stations = get_closest_stations(self.test_point_1, max_distance=100)
+        stations = self.parser.get_closest_stations(self.test_point_1, max_distance=100)
         self.assertTrue(stations.exists())
         
         closest = stations.first()
@@ -180,27 +169,27 @@ class ActivityParserTestCase(TestCase):
     def test_get_closest_stations_filters(self):
         """Test station filtering by type"""
         # Test bottom only
-        bottom_stations = get_closest_stations(self.test_point_2, bottom_only=True, max_distance=100)
+        bottom_stations = self.parser.get_closest_stations(self.test_point_2, bottom_only=True, max_distance=100)
         for station in bottom_stations:
             self.assertEqual(station.station, "bottom")
         
         # Test top only
-        top_stations = get_closest_stations(self.test_point_2, top_only=True, max_distance=100)
+        top_stations = self.parser.get_closest_stations(self.test_point_2, top_only=True, max_distance=100)
         for station in top_stations:
             self.assertEqual(station.station, "top")
         
         # Test invalid combination
         with self.assertRaises(ValueError):
-            get_closest_stations(self.test_point_1, bottom_only=True, top_only=True)
+            self.parser.get_closest_stations(self.test_point_1, bottom_only=True, top_only=True)
 
     def test_get_closest_stations_no_results(self):
         """Test when no stations are found"""
-        stations = get_closest_stations(self.test_point_outside, max_distance=10)
+        stations = self.parser.get_closest_stations(self.test_point_outside, max_distance=10)
         self.assertFalse(stations.exists())
 
     def test_get_closest_aerialways_basic(self):
         """Test finding closest aerialways"""
-        aerialways = get_closest_aerialways(self.test_point_1, max_distance=100)
+        aerialways = self.parser.get_closest_aerialways(self.test_point_1, max_distance=100)
         self.assertTrue(aerialways.exists())
         
         closest = aerialways.first()
@@ -208,53 +197,53 @@ class ActivityParserTestCase(TestCase):
 
     def test_get_closest_aerialways_in_ski_area(self):
         """Test filtering aerialways by ski area"""
-        aerialways = get_closest_aerialways(
-            self.test_point_1, 
-            in_ski_area=True, 
+        aerialways = self.parser.get_closest_aerialways(
+            self.test_point_1,
+            in_ski_area=True,
             max_distance=1000
         )
         self.assertTrue(aerialways.exists())
 
     def test_get_closest_aerialway_single(self):
         """Test getting single closest aerialway"""
-        aerialway = get_closest_aerialway(self.test_point_1, max_distance=100)
+        aerialway = self.parser.get_closest_aerialway(self.test_point_1, max_distance=100)
         self.assertIsNotNone(aerialway)
         self.assertEqual(aerialway.name, "Test Chairlift 1")
 
     def test_get_ski_area(self):
         """Test finding ski area containing point"""
-        ski_area = get_ski_area(self.test_point_1)
+        ski_area = self.parser.get_ski_area(self.test_point_1)
         self.assertIsNotNone(ski_area)
         self.assertEqual(ski_area.name, "Test Ski Area")
         
         # Test point outside ski area
-        ski_area_outside = get_ski_area(self.test_point_outside)
+        ski_area_outside = self.parser.get_ski_area(self.test_point_outside)
         self.assertIsNone(ski_area_outside)
 
     def test_get_ski_area_with_buffer(self):
         """Test ski area finding with buffer distance"""
         # Point slightly outside but within buffer
         point_near = Point(7.1280, 46.5720)  # Just outside the test area
-        ski_area = get_ski_area(point_near, buffer=1000)  # 1km buffer
+        ski_area = self.parser.get_ski_area(point_near, buffer=1000)  # 1km buffer
         self.assertIsNotNone(ski_area)
 
     def test_find_direct_lift(self):
         """Test finding direct lift between two points"""
         # Test direct connection
-        direct_lift, uphill = find_direct_lift(self.test_point_1, self.test_point_2)
+        direct_lift, uphill = self.parser.find_direct_lift(self.test_point_1, self.test_point_2)
         self.assertIsNotNone(direct_lift)
         self.assertEqual(direct_lift.name, "Test Chairlift 1")
         self.assertTrue(uphill)
         
         # Test reverse direction
-        direct_lift_down, uphill_down = find_direct_lift(self.test_point_2, self.test_point_1)
+        direct_lift_down, uphill_down = self.parser.find_direct_lift(self.test_point_2, self.test_point_1)
         self.assertIsNotNone(direct_lift_down)
         self.assertEqual(direct_lift_down.name, "Test Chairlift 1")
         self.assertFalse(uphill_down)
 
     def test_find_direct_lift_no_connection(self):
         """Test when no direct lift exists"""
-        direct_lift, uphill = find_direct_lift(self.test_point_1, self.test_point_outside)
+        direct_lift, uphill = self.parser.find_direct_lift(self.test_point_1, self.test_point_outside)
         self.assertIsNone(direct_lift)
 
     def test_apply_exceptions(self):
@@ -262,7 +251,7 @@ class ActivityParserTestCase(TestCase):
         aerialway = Aerialway.objects.first()
         
         # Test normal case (no exception)
-        result = apply_exceptions(aerialway)
+        result = self.parser.apply_exceptions(aerialway)
         self.assertEqual(result, aerialway)
         
         # Test specific exception case
@@ -271,7 +260,7 @@ class ActivityParserTestCase(TestCase):
                 mock_replacement = Mock()
                 mock_get.return_value = mock_replacement
                 
-                result = apply_exceptions(aerialway)
+                result = self.parser.apply_exceptions(aerialway)
                 self.assertEqual(result, mock_replacement)
                 mock_get.assert_called_once_with(way__osm_id=20011874)
 
@@ -279,6 +268,9 @@ class ActivityParserTestCase(TestCase):
 class GraphBuildingTestCase(TestCase):
     
     def setUp(self):
+        # Create parser instance
+        self.parser = ActivityParser()
+
         # Use same setup as ActivityParserTestCase
         self.start_point = Point(7.1234, 46.5678)
         self.end_point = Point(7.1254, 46.5698)
@@ -316,7 +308,7 @@ class GraphBuildingTestCase(TestCase):
     def test_build_lift_graph_structure(self):
         """Test lift graph building returns correct structure"""
         start_time = time.time()
-        graph = build_lift_graph(self.start_point, max_area=5000, max_distance=500)
+        graph = self.parser.build_lift_graph(self.start_point, max_area=5000, max_distance=500)
         build_time = time.time() - start_time
         
         self.assertIsInstance(graph, dict)
@@ -340,7 +332,7 @@ class GraphBuildingTestCase(TestCase):
 
     def test_build_lift_graph_contains_expected_stations(self):
         """Test graph contains expected stations from fixtures"""
-        graph = build_lift_graph(self.start_point, max_area=5000)
+        graph = self.parser.build_lift_graph(self.start_point, max_area=5000)
         
         station_names = []
         for station in graph.keys():
@@ -354,7 +346,7 @@ class GraphBuildingTestCase(TestCase):
 
     def test_dijkstra_pathfinding(self):
         """Test Dijkstra algorithm with known start and end points"""
-        graph = build_lift_graph(self.start_point, max_area=5000)
+        graph = self.parser.build_lift_graph(self.start_point, max_area=5000)
         
         # Get start and end stations
         start_stations = [station for station in graph.keys() 
@@ -363,7 +355,7 @@ class GraphBuildingTestCase(TestCase):
                        if hasattr(station, 'station') and station.station == 'top']
         
         if start_stations and end_stations:
-            path = dijkstra(start_stations[:1], end_stations[:1], graph)
+            path = self.parser.dijkstra(start_stations[:1], end_stations[:1], graph)
             
             self.assertIsInstance(path, list)
             if path:  # Path found
@@ -384,7 +376,7 @@ class GraphBuildingTestCase(TestCase):
             isolated_graph[start_station] = []
             isolated_graph[end_station] = []
             
-            path = dijkstra([start_station], [end_station], isolated_graph)
+            path = self.parser.dijkstra([start_station], [end_station], isolated_graph)
             self.assertEqual(path, [], "Should return empty path when no connection exists")
 
     def test_get_aerialways_direct_connection(self):
@@ -392,7 +384,7 @@ class GraphBuildingTestCase(TestCase):
         start_point = Point(7.1234, 46.5678)  # Bottom Station 1
         end_point = Point(7.1244, 46.5688)    # Middle Station
         
-        aerialways = get_aerialways(start_point, end_point)
+        aerialways = self.parser.get_aerialways(start_point, end_point)
         
         self.assertIsInstance(aerialways, list)
         if aerialways:
@@ -403,18 +395,18 @@ class GraphBuildingTestCase(TestCase):
     def test_get_aerialways_single_point(self):
         """Test get_aerialways with only start or end point"""
         # Only start point
-        aerialways_start = get_aerialways(self.start_point, None)
+        aerialways_start = self.parser.get_aerialways(self.start_point, None)
         self.assertIsInstance(aerialways_start, list)
         
         # Only end point  
-        aerialways_end = get_aerialways(None, self.end_point)
+        aerialways_end = self.parser.get_aerialways(None, self.end_point)
         self.assertIsInstance(aerialways_end, list)
 
     def test_get_aerialways_no_connection(self):
         """Test get_aerialways when no connection exists"""
         far_point = Point(8.0000, 47.0000)  # Very far from test data
         
-        aerialways = get_aerialways(self.start_point, far_point)
+        aerialways = self.parser.get_aerialways(self.start_point, far_point)
         
         # Should return empty list or fallback results
         self.assertIsInstance(aerialways, list)
@@ -423,6 +415,9 @@ class GraphBuildingTestCase(TestCase):
 class PerformanceTestCase(TestCase):
     
     def setUp(self):
+        # Create parser instance
+        self.parser = ActivityParser()
+
         # Create minimal test data
         self.start_point = Point(7.1234, 46.5678)
         
@@ -449,11 +444,11 @@ class PerformanceTestCase(TestCase):
         start_point = Point(7.1234, 46.5678, srid=4326)
         
         # Warm-up run
-        build_lift_graph(start_point, max_area=1000)
+        self.parser.build_lift_graph(start_point, max_area=1000)
         
         # Measure performance
         start_time = time.time()
-        graph = build_lift_graph(start_point, max_area=5000, max_distance=500)
+        graph = self.parser.build_lift_graph(start_point, max_area=5000, max_distance=500)
         build_time = time.time() - start_time
         
         self.assertIsInstance(graph, dict)
@@ -466,7 +461,7 @@ class PerformanceTestCase(TestCase):
         test_point = Point(7.1234, 46.5678)
         
         start_time = time.time()
-        aerialway = get_closest_aerialway(test_point, max_distance=1000)
+        aerialway = self.parser.get_closest_aerialway(test_point, max_distance=1000)
         query_time = time.time() - start_time
         
         self.assertLess(query_time, 1.0, f"Closest aerialway query took {query_time:.4f}s, expected < 1s")

@@ -1,5 +1,6 @@
 {% extends '../base/base.html' %}
 {% load custom_filters %}
+{% load l10n %}
 
 {% block pagetitle %} {{ activity.name }} - Activity Details {% endblock %}
 {% block extra_head %}
@@ -426,7 +427,7 @@
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   // Initialize main map
-  var map = L.map('mainMap').setView([{{ activity.geom.centroid.y }}, {{ activity.geom.centroid.x }}], 13);
+  var map = L.map('mainMap').setView([{{ activity.geom.centroid.y|unlocalize }}, {{ activity.geom.centroid.x|unlocalize }}], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
