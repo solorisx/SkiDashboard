@@ -40,6 +40,11 @@ from .webhook import (
     subscribe_strava_webhook,
 )
 
+from .admin_profiling import (
+    activity_profiling_dashboard,
+    activity_profiling_detail,
+)
+
 # For backward compatibility, we also need to ensure the home_stats view 
 # returns a proper HttpResponse for template rendering
 from django.shortcuts import render
@@ -79,4 +84,8 @@ __all__ = [
     # Webhook views
     'strava_webhook',
     'subscribe_strava_webhook',
+
+    # Admin profiling views
+    'activity_profiling_dashboard',
+    'activity_profiling_detail',
 ]

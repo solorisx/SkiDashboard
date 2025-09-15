@@ -1,0 +1,159 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Activity {{ activity.id }} Profiling Details{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h1>Activity {{ activity.id }} Profiling Details</h1>
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumbs">
+        <a href="{% url 'activity_profiling_dashboard' %}">Profiling Dashboard</a>
+        &rsaquo; Activity {{ activity.id }}
+    </div>
+
+    <!-- Activity Information -->
+    <div class="module aligned">
+        <h2>Activity Information</h2>
+        <table class="table">
+            <tr>
+                <th>Activity ID:</th>
+                <td>{{ activity.id }}</td>
+            </tr>
+            <tr>
+                <th>Name:</th>
+                <td>{{ activity.name }}</td>
+            </tr>
+            <tr>
+                <th>User:</th>
+                <td>{{ activity.user.username }}</td>
+            </tr>
+            <tr>
+                <th>Ski Area:</th>
+                <td>{{ activity.ski_area.name|default:"Unknown" }}</td>
+            </tr>
+            <tr>
+                <th>Version:</th>
+                <td>{{ activity.version }}</td>
+            </tr>
+            <tr>
+                <th>Start Time:</th>
+                <td>{{ activity.start_time|date:"Y-m-d H:i:s" }}</td>
+            </tr>
+            <tr>
+                <th>Processed On:</th>
+                <td>{{ activity.processed_on|date:"Y-m-d H:i:s" }}</td>
+            </tr>
+            <tr>
+                <th>Total Processing Time:</th>
+                <td>
+                    {% if activity.processing_time %}
+                        {{ activity.processing_time.total_seconds|floatformat:2 }}s
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Number of Laps:</th>
+                <td>{{ activity.num_laps|default:"0" }}</td>
+            </tr>
+            <tr>
+                <th>Number of Lift Rides:</th>
+                <td>{{ activity.num_lift_rides|default:"0" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Performance Summary -->
+    <div class="module">
+        <h2>Performance Summary</h2>
+        <table class="table">
+            <tr>
+                <th>Total Operations</th>
+                <th>Total Time</th>
+                <th>Average Time</th>
+                <th>Max Time</th>
+                <th>Min Time</th>
+                <th>Total Calls</th>
+            </tr>
+            <tr>
+                <td>{{ summary_stats.total_operations|default:"0" }}</td>
+                <td>{{ summary_stats.total_time|floatformat:4|default:"0" }}s</td>
+                <td>{{ summary_stats.avg_time|floatformat:4|default:"0" }}s</td>
+                <td>{{ summary_stats.max_time|floatformat:4|default:"0" }}s</td>
+                <td>{{ summary_stats.min_time|floatformat:4|default:"0" }}s</td>
+                <td>{{ summary_stats.total_calls|default:"0" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Detailed Operation Breakdown -->
+    <div class="module">
+        <h2>Detailed Operation Breakdown</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Operation</th>
+                    <th>Call Count</th>
+                    <th>Total Time</th>
+                    <th>Average Time</th>
+                    <th>Max Time</th>
+                    <th>Min Time</th>
+                    <th>% of Total Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for profile in profiles %}
+                <tr>
+                    <td><code>{{ profile.operation }}</code></td>
+                    <td>{{ profile.call_count }}</td>
+                    <td>{{ profile.total_time|floatformat:4 }}s</td>
+                    <td>{{ profile.avg_time|floatformat:4 }}s</td>
+                    <td>{{ profile.max_time|floatformat:4 }}s</td>
+                    <td>{{ profile.min_time|floatformat:4 }}s</td>
+                    <td>{{ profile.percentage|floatformat:1 }}%</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7">No profiling data available for this activity</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Actions -->
+    <div class="module">
+        <h2>Actions</h2>
+        <ul class="object-tools">
+            <li><a href="{% url 'activity_detail' activity.id %}" class="viewlink">View Activity Details</a></li>
+            <li><a href="{% url 'reprocess_activity' activity.id %}" class="changelink">Reprocess Activity</a></li>
+            <li><a href="{% url 'activity_profiling_dashboard' %}" class="backlink">Back to Dashboard</a></li>
+        </ul>
+    </div>
+</div>
+
+<style>
+.table th, .table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+.table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+code {
+    background-color: #f8f8f8;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+.breadcrumbs {
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #f8f8f8;
+    border-radius: 4px;
+}
+</style>
+
+{% endblock %}

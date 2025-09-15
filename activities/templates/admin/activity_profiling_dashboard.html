@@ -1,0 +1,174 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Activity Parser Profiling Dashboard{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h1>Activity Parser Profiling Dashboard</h1>
+
+    <!-- Filter Form -->
+    <div class="module aligned">
+        <h2>Filter Options</h2>
+        <form method="get" class="form">
+            <div class="form-row">
+                <label for="days">Days to show:</label>
+                <select name="days" id="days">
+                    <option value="1" {% if days == 1 %}selected{% endif %}>Last 1 day</option>
+                    <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                    <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                    <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                </select>
+                <button type="submit" class="default">Filter</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Performance Summary -->
+    <div class="module">
+        <h2>Performance Summary (Last {{ days }} days)</h2>
+        <table class="table">
+            <tr>
+                <th>Total Operations</th>
+                <th>Average Processing Time</th>
+                <th>Max Processing Time</th>
+                <th>Total Processing Time</th>
+            </tr>
+            <tr>
+                <td>{{ period_stats.total_operations|default:"0" }}</td>
+                <td>{{ period_stats.avg_total_time|floatformat:4|default:"0" }}s</td>
+                <td>{{ period_stats.max_total_time|floatformat:4|default:"0" }}s</td>
+                <td>{{ period_stats.total_processing_time|floatformat:2|default:"0" }}s</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Slowest Operations -->
+    <div class="module">
+        <h2>Slowest Operations</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Operation</th>
+                    <th>Avg Time</th>
+                    <th>Max Time</th>
+                    <th>Total Calls</th>
+                    <th>Activities</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for op in slow_operations %}
+                <tr>
+                    <td>{{ op.operation }}</td>
+                    <td>{{ op.avg_time|floatformat:4 }}s</td>
+                    <td>{{ op.max_time|floatformat:4 }}s</td>
+                    <td>{{ op.call_count }}</td>
+                    <td>{{ op.activity_count }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5">No data available</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Slowest Activities -->
+    <div class="module">
+        <h2>Slowest Activities</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Activity ID</th>
+                    <th>User</th>
+                    <th>Ski Area</th>
+                    <th>Processing Time</th>
+                    <th>Processed On</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for activity in slowest_activities %}
+                <tr>
+                    <td>{{ activity.id }}</td>
+                    <td>{{ activity.user.username }}</td>
+                    <td>{{ activity.ski_area.name|default:"Unknown" }}</td>
+                    <td>{{ activity.processing_time.total_seconds|floatformat:2 }}s</td>
+                    <td>{{ activity.processed_on|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        <a href="{% url 'activity_profiling_detail' activity.id %}" class="viewlink">View Details</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6">No activities found</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Recent Activities -->
+    <div class="module">
+        <h2>Recent Parsed Activities with Profiling Data</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Activity ID</th>
+                    <th>Name</th>
+                    <th>User</th>
+                    <th>Ski Area</th>
+                    <th>Version</th>
+                    <th>Processing Time</th>
+                    <th>Processed On</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for activity in activities %}
+                <tr>
+                    <td>{{ activity.id }}</td>
+                    <td>{{ activity.name|truncatechars:30 }}</td>
+                    <td>{{ activity.user.username }}</td>
+                    <td>{{ activity.ski_area.name|default:"Unknown" }}</td>
+                    <td>{{ activity.version }}</td>
+                    <td>
+                        {% if activity.processing_time %}
+                            {{ activity.processing_time.total_seconds|floatformat:2 }}s
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ activity.processed_on|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        <a href="{% url 'activity_profiling_detail' activity.id %}" class="viewlink">View Profile</a> |
+                        <a href="{% url 'activity_detail' activity.id %}" class="viewlink">View Activity</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8">No activities found with profiling data</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            <span class="step-links">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1&days={{ days }}">&laquo; first</a>
+                    <a href="?page={{ page_obj.previous_page_number }}&days={{ days }}">previous</a>
+                {% endif %}
+
+                <span class="current">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}&days={{ days }}">next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}&days={{ days }}">last &raquo;</a>
+                {% endif %}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

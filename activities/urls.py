@@ -24,4 +24,6 @@ urlpatterns = [
     path("liftrides/<str:season>", views.lift_ride_list_season, name="lift_ride_list_season"),
     path("map/<int:activity_id>/", views.segment_map, name="activity_map"),
     path("strava/webhook/subscribe/", views.subscribe_strava_webhook, name="strava_webhook_subscribe"),
+    path("admin/profiling/", views.activity_profiling_dashboard, name="activity_profiling_dashboard"),
+    path("admin/profiling/<int:activity_id>/", views.activity_profiling_detail, name="activity_profiling_detail"),
 ]
