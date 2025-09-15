@@ -37,6 +37,7 @@ class Activity(models.Model):
     modified_on = models.DateTimeField(auto_now=True)
     processed_on = models.DateTimeField(null=True)
     processing_time = models.DurationField(null=True)
+    version = models.PositiveIntegerField(default=1)
 
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
 
@@ -203,3 +204,20 @@ class StravaSyncSettings(models.Model):
     class Meta:
         verbose_name = "Strava Sync Settings"
         verbose_name_plural = "Strava Sync Settings"
+
+class ActivityParserProfile(models.Model):
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='parser_profiles')
+    version = models.PositiveIntegerField(default=1)
+    operation = models.CharField(max_length=200)
+    call_count = models.PositiveIntegerField()
+    total_time = models.FloatField(help_text="Total time in seconds")
+    avg_time = models.FloatField(help_text="Average time per call in seconds")
+    max_time = models.FloatField(help_text="Maximum time for a single call in seconds")
+    min_time = models.FloatField(help_text="Minimum time for a single call in seconds")
+    created_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('activity', 'operation', 'version')
+
+    def __str__(self):
+        return f"{self.activity} - {self.operation}"

@@ -2,6 +2,7 @@ import heapq
 import hashlib
 import logging
 import time
+import os
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import timedelta, datetime
@@ -47,15 +48,18 @@ class ActivityParserConfig:
     TURNING_POINT_PROMINENCE: int = 100
     LAP_POSITION_OFFSET: int = 5
     DEGREE_TO_METERS_APPROX: float = 111320.0
-
+    NOTIFY_ADMIN: bool = True
+    ADMIN_EMAIL: str = os.environ.get('ADMIN_EMAIL')
+    FROM_EMAIL: str = os.environ.get('DEFAULT_FROM_EMAIL')
 
 class ProfileManager:
     """Manages timing and profiling information for activity parsing operations."""
 
-    def __init__(self):
+    def __init__(self, parser: "ActivityParser"):
         self.timings: Dict[str, List[float]] = defaultdict(list)
         self.call_counts: Dict[str, int] = defaultdict(int)
         self.current_operations: Dict[str, float] = {}
+        self.parser = parser
 
     def start_operation(self, operation_name: str) -> None:
         """Start timing an operation."""
@@ -104,14 +108,61 @@ class ProfileManager:
         for operation, stats in summary.items():
             logger.info(f"  {operation}: {stats['call_count']} calls, "
                        f"total: {stats['total_time']:.4f}s, avg: {stats['avg_time']:.4f}s")
+            
+    def notify_admin(self) -> None:
+        """Notify admin with profiling summary via email."""
+        try:
+            from django.core.mail import send_mail
+            activity = self.parser.activity
+            summary = self.get_summary()
+            message_lines = [f"Activity Parser Performance Summary for activity {activity.id} v{activity.version} from user {activity.user.id}:"]
+            for operation, stats in summary.items():
+                message_lines.append(
+                    f"{operation}: {stats['call_count']} calls, "
+                    f"total: {stats['total_time']:.4f}s, avg: {stats['avg_time']:.4f}s"
+                )
+            message_lines.append(f"Total processing time: {activity.processing_time.total_seconds() if activity.processing_time else 'N/A'} seconds")
+            message = "\n".join(message_lines)
+            send_mail(
+                subject="Activity Parser Performance Summary",
+                message=message,
+                from_email=ActivityParserConfig.FROM_EMAIL,
+                recipient_list=[ActivityParserConfig.ADMIN_EMAIL],
+            )
+        except Exception as e:
+            logger.error(f"Failed to send email notification: {e}")
+
+    def persist_stats(self) -> None:
+        """Persist profiling stats to the database."""
+        try:
+            from activities.models import ActivityParserProfile
+            activity = self.parser.activity
+            summary = self.get_summary()
+            for operation, stats in summary.items():
+                ActivityParserProfile.objects.update_or_create(
+                    activity_id=activity.id,
+                    version=activity.version,
+                    operation=operation,
+                    defaults={
+                        'call_count': stats['call_count'],
+                        'total_time': stats['total_time'],
+                        'avg_time': stats['avg_time'],
+                        'min_time': stats['min_time'],
+                        'max_time': stats['max_time'],
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Failed to persist profiling stats: {e}")
 
 
 class ActivityParser:
     """Main class for parsing Strava activities with profiling and caching capabilities."""
 
     def __init__(self, config: Optional[ActivityParserConfig] = None):
+        
+        self.activity = None
         self.config = config or ActivityParserConfig()
-        self.profiler = ProfileManager()
+        self.profiler = ProfileManager(self)
         self._cached_ski_areas: Dict[str, SkiArea] = {}
         self._cached_station_ids: Dict[str, List[int]] = {}
         self._cached_graphs: Dict[str, Dict] = {}
@@ -959,12 +1010,13 @@ class ActivityParser:
             }
 
             activity_instance, created = Activity.objects.update_or_create(strava_id=activity_id, defaults=activity_data)
+            self.activity = activity_instance
             logger.info(f'{"Created" if created else "Updated"} Activity: {activity_instance.id}')
 
             if not created:
+                activity_instance.version += 1
                 activity_instance.laps.all().delete()
                 logger.info(f"Deleted existing laps for Activity: {activity_instance.id}")
-
 
             activity_start_time = activity_instance.start_time
             for lap in activity_laps:
@@ -1082,12 +1134,18 @@ class ActivityParser:
     def log_performance_summary(self) -> None:
         """Log a summary of all profiling data."""
         self.profiler.log_summary()
+        self.profiler.persist_stats()
+        if self.config.NOTIFY_ADMIN:
+            self.profiler.notify_admin()
 
 
 # Minimal compatibility functions for existing application code
 @transaction.atomic
 def sync_strava_activity(user: User, activity_id: str, update: bool = False) -> Optional[Activity]:
     """Sync a single Strava activity - compatibility function for existing application code."""
+    if Activity.objects.filter(strava_id=activity_id).exists() and not update:
+        logger.info(f"Strava activity {activity_id} already exists in the database.")
+        return Activity.objects.get(strava_id=activity_id)
     parser = ActivityParser()
     result = parser.sync_strava_activity(user, activity_id, update)
     # Log performance summary for the main operation
