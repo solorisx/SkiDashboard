@@ -320,6 +320,11 @@ LOGGING = {
             'level': LOG_LEVEL,
             'propagate': False,
         },
+        'celery': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
     },
 }
 
