@@ -59,7 +59,7 @@ def _handle_webhook_payload(request):
                 socialaccount__provider="strava"
             )
         except get_user_model().DoesNotExist:
-            logger.error(f"No user found for Strava ID {payload.get('owner_id')}")
+            logger.error(f"No user found for Strava ID {payload.get('owner_id')}", exc_info=True, stack_info=True)
             return HttpResponse("OK")
         
         if aspect_type == "create":
@@ -70,10 +70,10 @@ def _handle_webhook_payload(request):
         return HttpResponse("OK")
         
     except json.JSONDecodeError:
-        logger.error("Invalid JSON in webhook payload")
+        logger.error("Invalid JSON in webhook payload", exc_info=True, stack_info=True)
         return HttpResponse("Bad Request", status=400)
     except Exception as e:
-        logger.error(f"Error processing webhook: {e}")
+        logger.error(f"Error processing webhook: {e}", exc_info=True, stack_info=True)
         return HttpResponse("Internal Server Error", status=500)
 
 

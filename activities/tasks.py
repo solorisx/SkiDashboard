@@ -39,7 +39,8 @@ def sync_strava_activity_task(user_id, activity_id, update=False):
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Failed to sync Strava activity in task: {e}")
+        logger.error(f"Failed to sync Strava activity in task: {e}", exc_info=True, stack_info=True)
+        raise
 
 @shared_task
 def sync_user_activities_task(user_id, all=False, update=False):
@@ -68,7 +69,7 @@ def parse_strava_activities_task(user_id, all=False, update=False):
                 activity_id = activity.id
                 sync_strava_activity_task.delay(user.id, activity_id, update)
             except Exception as e:
-                logger.error(f"Failed to queue task for Strava activity {activity_id}: {e}")
+                logger.error(f"Failed to queue task for Strava activity {activity_id}: {e}", exc_info=True, stack_info=True)
                 continue
 
     UserProfile.objects.filter(user=user).update(last_strava_sync=datetime.now())

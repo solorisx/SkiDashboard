@@ -67,4 +67,4 @@ Number of Users now: {User.objects.count()}
         logger.info(f"Admin notification sent for new user: {user_id}")
         
     except Exception as e:
-        logger.error(f"Failed to send admin notification for new user {user_id}: {str(e)}")
+        logger.error(f"Failed to send admin notification for new user {user_id}: {str(e)}", exc_info=True, stack_info=True)

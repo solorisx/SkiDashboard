@@ -25,5 +25,5 @@ class StravaService:
                 socialaccount__provider="strava"
             )
         except get_user_model().DoesNotExist:
-            logger.error(f"No user found for Strava ID {strava_user_id}")
+            logger.error(f"No user found for Strava ID {strava_user_id}", exc_info=True, stack_info=True)
             return None

@@ -25,7 +25,7 @@ def refresh_strava_token(user, token, app):
             refresh_token=token.token_secret
         )
     except Exception as e:
-        logger.error(f"Failed to refresh Strava token for {user.username}: {e}")
+        logger.error(f"Failed to refresh Strava token for {user.username}: {e}", exc_info=True, stack_info=True)
         raise
 
     # Update token details

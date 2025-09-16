@@ -274,9 +274,7 @@ LOGGING = {
             'datefmt': '%Y-%m-%d %H:%M:%S',
         },
         'json': {
-            'format': '{{"timestamp": "{asctime}", "level": "{levelname}", "logger": "{name}", "message": "{message}"}}',
-            'style': '{',
-            'datefmt': '%Y-%m-%dT%H:%M:%S',
+            '()': 'core.formatters.JSONFormatter',
         },
         'simple': {
             'format': '{levelname} {message}',
@@ -292,7 +290,7 @@ LOGGING = {
     },
     'root': {   # <--- root logger catches everything not caught by other loggers
         'handlers': ['console'],
-        'level': 'WARNING',
+        'level': LOG_LEVEL,
     },
     'loggers': {
         'django': {

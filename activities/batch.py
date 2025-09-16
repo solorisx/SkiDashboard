@@ -27,7 +27,7 @@ def parse_strava_activities(user, all=False, update=False):
                 activity_id = activity.id
                 sync_strava_activity_task.delay(user.id, activity_id, update)
             except Exception as e:
-                logger.error(f"Failed to queue task for Strava activity {activity_id}: {e}")
+                logger.error(f"Failed to queue task for Strava activity {activity_id}: {e}", exc_info=True, stack_info=True)
                 continue
 
 

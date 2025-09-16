@@ -26,7 +26,7 @@ _reprocessing_activities = {}
 def _clean_completed_reprocessing_tasks():
     """Clean up completed reprocessing tasks from tracking dict."""
     current_time = time.time()
-    timeout = os.getenv("REPROCESSING_TIMEOUT", 300)  # Default to 5 minutes
+    timeout = int(os.getenv("REPROCESSING_TIMEOUT", 300))  # Default to 5 minutes
     # Remove entries older than timeout
     expired_keys = [key for key, timestamp in _reprocessing_activities.items()
                    if current_time - timestamp > timeout]
@@ -170,6 +170,6 @@ def reprocess_activity(request, activity_id, background=True):
         # Remove from dict if queuing failed
         _reprocessing_activities.pop(activity_key, None)
         messages.error(request, f"Failed to queue activity '{activity.name}' for reprocessing: {e}")
-        logger.error(f"Failed to queue activity {activity_id} for reprocessing: {e}")
+        logger.error(f"Failed to queue activity {activity_id} for reprocessing: {e}", exc_info=True, stack_info=True)
 
     return redirect("activity_detail", activity_id=activity_id)

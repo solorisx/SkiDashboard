@@ -8,6 +8,9 @@ from dataclasses import dataclass
 from datetime import timedelta, datetime
 from typing import Dict, List, Optional, Tuple, Any
 import polyline
+from django.utils import timezone
+import pytz
+import re
 from activities.models import Activity, Lap, Record, LiftRide, ActivityPisteSegment
 from osm.models import Node, Way, Aerialway, SkiArea, Station, SkiAreaBoundary, PisteSegment
 from core.models import UserProfile
@@ -130,7 +133,7 @@ class ProfileManager:
                 recipient_list=[ActivityParserConfig.ADMIN_EMAIL],
             )
         except Exception as e:
-            logger.error(f"Failed to send email notification: {e}")
+            logger.error(f"Failed to send email notification: {e}", exc_info=True, stack_info=True)
 
     def persist_stats(self) -> None:
         """Persist profiling stats to the database."""
@@ -152,7 +155,7 @@ class ProfileManager:
                     }
                 )
         except Exception as e:
-            logger.error(f"Failed to persist profiling stats: {e}")
+            logger.error(f"Failed to persist profiling stats: {e}", exc_info=True, stack_info=True)
 
 
 class ActivityParser:
@@ -166,6 +169,27 @@ class ActivityParser:
         self._cached_ski_areas: Dict[str, SkiArea] = {}
         self._cached_station_ids: Dict[str, List[int]] = {}
         self._cached_graphs: Dict[str, Dict] = {}
+
+    def _make_timezone_aware(self, dt: datetime, tz_string: Optional[str]) -> datetime:
+        """Convert naive datetime to timezone-aware using Strava timezone string."""
+        if not tz_string:
+            return timezone.make_aware(dt)
+
+        # Extract timezone name from Strava format like "(GMT+01:00) Europe/Zurich"
+        # Look for the part after ") " which should be the timezone name
+        match = re.search(r'\)\s+(.+)$', tz_string)
+        if match:
+            tz_name = match.group(1)
+        else:
+            # Fallback: use the original string
+            tz_name = tz_string
+
+        try:
+            tz = pytz.timezone(tz_name)
+            return tz.localize(dt)
+        except pytz.UnknownTimeZoneError:
+            logger.warning(f"Unknown timezone '{tz_name}' from Strava timezone '{tz_string}', using UTC")
+            return timezone.make_aware(dt)
 
     def apply_exceptions(self, aerialway: Aerialway) -> Aerialway:
 
@@ -881,7 +905,7 @@ class ActivityParser:
         elif activity.summary_polyline:
             coords = polyline.decode(activity.summary_polyline)
         else:
-            logger.error(f"No polyline found for activity: {activity.id}")
+            logger.error(f"No polyline found for activity: {activity.id}", exc_info=True, stack_info=True)
             self.profiler.end_operation('calc_line_geom')
             return
 
@@ -944,7 +968,7 @@ class ActivityParser:
 
             activity = load_activity(user, activity_id)
             if not activity:
-                logger.error(f"Strava activity {activity_id} not found")
+                logger.error(f"Strava activity {activity_id} not found", exc_info=True, stack_info=True)
                 raise ValueError(f"Strava activity {activity_id} not found")
 
             if not activity.type == 'AlpineSki':
@@ -989,8 +1013,8 @@ class ActivityParser:
             activity_data = {
                 "name": activity.name,
                 "type": activity.type,
-                "start_time": activity.start_date_local, # TODO: add timezone
-                "timestamp": activity.start_date_local, # TODO: add timezone
+                "start_time": self._make_timezone_aware(activity.start_date_local, activity.timezone),
+                "timestamp": self._make_timezone_aware(activity.start_date_local, activity.timezone),
                 "summary_polyline": activity.map.summary_polyline,
                 "polyline": None,               # TODO: would separate API call, probably summary polyline is enough
                 "total_elapsed_time": timedelta(seconds=activity.elapsed_time),
@@ -1083,7 +1107,7 @@ class ActivityParser:
 
             activity_instance.num_laps = activity_instance.laps.count()
             activity_instance.num_lift_rides = activity_instance.laps.aggregate(total_lift_rides=Count('lift_rides'))['total_lift_rides']
-            activity_instance.processed_on = datetime.now()
+            activity_instance.processed_on = timezone.now()
             activity_instance.processing_time = timedelta(seconds=time.time() - start_time)
             activity_instance.save()
 
@@ -1091,10 +1115,13 @@ class ActivityParser:
             logger.info(f"Assigned badges to activity {activity_instance.id}")
 
             logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")
+
+            raise ValueError("Testing error handling")  # For testing error handling
+
             return activity_instance
 
         except Exception as e:
-            logger.error(f"Error parsing Strava activity {activity_id}: {str(e)}", exc_info=True)
+            logger.error(f"Error parsing Strava activity {activity_id}: {str(e.with_traceback())}", exc_info=True, stack_info=True)
             raise
 
     def _finalize_activity_processing(self, activity_instance: Activity, activity_streams: Dict) -> None:
@@ -1118,7 +1145,7 @@ class ActivityParser:
         activity_instance.num_lift_rides = activity_instance.laps.aggregate(
             total_lift_rides=Count('lift_rides')
         )['total_lift_rides']
-        activity_instance.processed_on = datetime.now()
+        activity_instance.processed_on = timezone.now()
         activity_instance.save()
 
         # Assign badges
