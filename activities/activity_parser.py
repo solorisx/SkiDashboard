@@ -164,6 +164,7 @@ class ActivityParser:
     def __init__(self, config: Optional[ActivityParserConfig] = None):
         
         self.activity = None
+        self.timezone = None
         self.config = config or ActivityParserConfig()
         self.profiler = ProfileManager(self)
         self._cached_ski_areas: Dict[str, SkiArea] = {}
@@ -186,9 +187,11 @@ class ActivityParser:
 
         try:
             tz = pytz.timezone(tz_name)
+            self.timezone = tz
             return tz.localize(dt)
         except pytz.UnknownTimeZoneError:
             logger.warning(f"Unknown timezone '{tz_name}' from Strava timezone '{tz_string}', using UTC")
+            self.timezone = pytz.UTC
             return timezone.make_aware(dt)
 
     def apply_exceptions(self, aerialway: Aerialway) -> Aerialway:
@@ -1043,6 +1046,9 @@ class ActivityParser:
                 logger.info(f"Deleted existing laps for Activity: {activity_instance.id}")
 
             activity_start_time = activity_instance.start_time
+            logger.info(f"Activity start time: {activity_start_time}")
+            logger.info(f"timezone: {activity.timezone}, localtime: {activity.start_date_local}")
+            logger.info(f"tz: {self.timezone}")
             for lap in activity_laps:
                 lap_data = {
                     "start_time": activity_start_time + timedelta(seconds=activity_streams["time"].data[lap.start_index]),
@@ -1116,12 +1122,10 @@ class ActivityParser:
 
             logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")
 
-            raise ValueError("Testing error handling")  # For testing error handling
-
             return activity_instance
 
         except Exception as e:
-            logger.error(f"Error parsing Strava activity {activity_id}: {str(e.with_traceback())}", exc_info=True, stack_info=True)
+            logger.error(f"Error parsing Strava activity {activity_id}: {str(e)}", exc_info=True, stack_info=True)
             raise
 
     def _finalize_activity_processing(self, activity_instance: Activity, activity_streams: Dict) -> None:
