@@ -32,7 +32,7 @@
             </span>
             {% endif %}
             <span class="text-muted fs-5">
-              <i class="bi bi-clock me-1"></i>{{ activity.start_time|date:"M d, Y • H:i" }}
+              <i class="bi bi-clock me-1"></i>{{ activity.start_time|date:"DATETIME_FORMAT" }}
             </span>
           </div>
         </div>
@@ -220,16 +220,23 @@
             <div class="row g-3">
               {% for badge in badges %}
               <div class="col-12 col-md-6 col-lg-4">
-                <div class="badge-card bg-warning bg-opacity-10 rounded-3 p-3 h-100">
+                <div class="badge-card badge-rarity-{{ badge.badge.rarity }} rounded-3 p-3 h-100 position-relative">
                   <div class="d-flex align-items-start">
-                    <div class="badge-icon bg-warning bg-opacity-20 rounded-circle p-3 me-3 flex-shrink-0">
-                      <i class="{{ badge.badge.icon }} text-warning fs-3"></i>
+                    <div class="badge-icon badge-icon-{{ badge.badge.rarity }} rounded-circle p-3 me-3 flex-shrink-0">
+                      <i class="{{ badge.badge.icon }} fs-3"></i>
                     </div>
-                    <div>
-                      <h6 class="fw-bold mb-1">{{ badge.badge.name }}</h6>
-                      <p class="text-muted small mb-0">{{ badge.badge.description }}</p>
+                    <div class="flex-grow-1">
+                      <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="fw-bold mb-0">{{ badge.badge.name }}</h6>
+                        <span class="badge badge-rarity-pill-{{ badge.badge.rarity }} px-2 py-1 text-uppercase fw-bold" style="font-size: 0.7rem;">{{ badge.badge.rarity }}</span>
+                      </div>
+                      <p class="text-muted small mb-2">{{ badge.badge.description }}</p>
+                      <small class="text-muted" style="font-size: 0.75rem;">
+                        <i class="bi bi-calendar-event me-1"></i>{{ badge.achieved_on|date:"DATE_FORMAT" }}
+                      </small>
                     </div>
                   </div>
+                  <div class="badge-glow badge-glow-{{ badge.badge.rarity }}"></div>
                 </div>
               </div>
               {% endfor %}
@@ -624,24 +631,6 @@ function getCookie(name) {
   background-color: var(--bs-gray-50);
 }
 
-.badge-card {
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-}
-
-.badge-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--bs-warning);
-  box-shadow: 0 0.5rem 1rem rgba(0,0,0,.1);
-}
-
-.badge-icon {
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
 .card {
   transition: all 0.3s ease;

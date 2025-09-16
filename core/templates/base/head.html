@@ -14,7 +14,11 @@
     
     <!-- Leaflet CSS (if using maps) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
+
+    <!-- Custom Components CSS -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/components/badges.css' %}">
+
     {% block extra_head %}{% endblock %}
 
     <!-- Custom Styles -->
@@ -175,18 +179,6 @@
             transform: scale(1.02);
         }
 
-        .badge-icon {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-
-        .badge-icon:hover {
-            transform: scale(1.1);
-        }
 
         .mini-map {
             overflow: hidden;
@@ -203,16 +195,6 @@
             background-color: var(--bs-gray-50);
         }
 
-        .badge-card {
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-
-        .badge-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--bs-warning);
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.1);
-        }
 
         .drag-handle:hover {
             color: var(--bs-primary) !important;

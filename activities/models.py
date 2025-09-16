@@ -140,14 +140,28 @@ class LiftRide(models.Model):
 
 
 class Badge(models.Model):
+    RARITY_CHOICES = [
+        ('bronze', 'Bronze'),
+        ('silver', 'Silver'),
+        ('gold', 'Gold'),
+        ('platinum', 'Platinum'),
+        ('legendary', 'Legendary'),
+    ]
+
+    natural_key = models.CharField(max_length=100, unique=True)
     name = models.CharField(max_length=100)
     description = models.TextField()
     icon = models.CharField(max_length=100, null=True, default='fa-solid fa-medal')
+    rarity = models.CharField(max_length=20, choices=RARITY_CHOICES, default='bronze')
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.natural_key})"
+
+    @classmethod
+    def get_by_natural_key(cls, natural_key):
+        return cls.objects.get(natural_key=natural_key)
 
 
 class ActivityBadge(models.Model):

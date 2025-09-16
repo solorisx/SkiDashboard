@@ -1,0 +1,317 @@
+/* ==========================================================================
+   Badge Component Styles
+   ========================================================================== */
+
+/* Base badge card styles */
+.badge-card {
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  overflow: hidden;
+}
+
+.badge-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,.1);
+}
+
+/* ==========================================================================
+   Rarity-based Backgrounds and Borders
+   ========================================================================== */
+
+.badge-rarity-bronze {
+  background: linear-gradient(135deg, #cd7f32 5%, rgba(205, 127, 50, 0.1) 95%);
+  border-color: rgba(205, 127, 50, 0.3);
+}
+
+.badge-rarity-silver {
+  background: linear-gradient(135deg, #c0c0c0 5%, rgba(192, 192, 192, 0.1) 95%);
+  border-color: rgba(192, 192, 192, 0.3);
+}
+
+.badge-rarity-gold {
+  background: linear-gradient(135deg, #ffd700 5%, rgba(255, 215, 0, 0.1) 95%);
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.badge-rarity-platinum {
+  background: linear-gradient(135deg, #e5e4e2 5%, rgba(229, 228, 226, 0.1) 95%);
+  border-color: rgba(229, 228, 226, 0.3);
+}
+
+.badge-rarity-legendary {
+  background: linear-gradient(135deg, #9400d3 5%, rgba(148, 0, 211, 0.1) 95%);
+  border-color: rgba(148, 0, 211, 0.3);
+  animation: legendaryPulse 2s infinite alternate;
+}
+
+/* ==========================================================================
+   Badge Icon Styling by Rarity
+   ========================================================================== */
+
+.badge-icon-bronze {
+  background: linear-gradient(135deg, #cd7f32, #b8682d);
+  color: white;
+  box-shadow: 0 2px 8px rgba(205, 127, 50, 0.3);
+}
+
+.badge-icon-silver {
+  background: linear-gradient(135deg, #c0c0c0, #a8a8a8);
+  color: #333;
+  box-shadow: 0 2px 8px rgba(192, 192, 192, 0.3);
+}
+
+.badge-icon-gold {
+  background: linear-gradient(135deg, #ffd700, #e6c200);
+  color: #333;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+}
+
+.badge-icon-platinum {
+  background: linear-gradient(135deg, #e5e4e2, #d0cfcc);
+  color: #333;
+  box-shadow: 0 2px 8px rgba(229, 228, 226, 0.4);
+}
+
+.badge-icon-legendary {
+  background: linear-gradient(135deg, #9400d3, #7a00a8);
+  color: white;
+  box-shadow: 0 2px 8px rgba(148, 0, 211, 0.5);
+  animation: legendaryIconGlow 1.5s infinite alternate;
+}
+
+/* ==========================================================================
+   Rarity Pills
+   ========================================================================== */
+
+.badge-rarity-pill-bronze {
+  background-color: #cd7f32;
+  color: white;
+}
+
+.badge-rarity-pill-silver {
+  background-color: #c0c0c0;
+  color: #333;
+}
+
+.badge-rarity-pill-gold {
+  background-color: #ffd700;
+  color: #333;
+}
+
+.badge-rarity-pill-platinum {
+  background-color: #e5e4e2;
+  color: #333;
+}
+
+.badge-rarity-pill-legendary {
+  background: linear-gradient(45deg, #9400d3, #ff1493);
+  color: white;
+  animation: legendaryTextGlow 1s infinite alternate;
+}
+
+/* ==========================================================================
+   Glow Effects
+   ========================================================================== */
+
+.badge-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.badge-card:hover .badge-glow {
+  opacity: 1;
+}
+
+.badge-glow-bronze {
+  box-shadow: inset 0 0 20px rgba(205, 127, 50, 0.2);
+}
+
+.badge-glow-silver {
+  box-shadow: inset 0 0 20px rgba(192, 192, 192, 0.2);
+}
+
+.badge-glow-gold {
+  box-shadow: inset 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.badge-glow-platinum {
+  box-shadow: inset 0 0 20px rgba(229, 228, 226, 0.3);
+}
+
+.badge-glow-legendary {
+  box-shadow: inset 0 0 30px rgba(148, 0, 211, 0.4);
+}
+
+/* ==========================================================================
+   Small Badge Icons (for activity list)
+   ========================================================================== */
+
+.badge-icon-small {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.badge-icon-small:hover {
+  transform: scale(1.1);
+}
+
+/* ==========================================================================
+   Badge Card Hover Effects by Rarity
+   ========================================================================== */
+
+.badge-rarity-bronze:hover {
+  border-color: rgba(205, 127, 50, 0.6);
+  box-shadow: 0 0.5rem 1rem rgba(205, 127, 50, 0.2);
+}
+
+.badge-rarity-silver:hover {
+  border-color: rgba(192, 192, 192, 0.6);
+  box-shadow: 0 0.5rem 1rem rgba(192, 192, 192, 0.2);
+}
+
+.badge-rarity-gold:hover {
+  border-color: rgba(255, 215, 0, 0.6);
+  box-shadow: 0 0.5rem 1rem rgba(255, 215, 0, 0.3);
+}
+
+.badge-rarity-platinum:hover {
+  border-color: rgba(229, 228, 226, 0.6);
+  box-shadow: 0 0.5rem 1rem rgba(229, 228, 226, 0.3);
+}
+
+.badge-rarity-legendary:hover {
+  border-color: rgba(148, 0, 211, 0.8);
+  box-shadow: 0 0.5rem 1.5rem rgba(148, 0, 211, 0.4);
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
+@keyframes legendaryPulse {
+  0% {
+    border-color: rgba(148, 0, 211, 0.3);
+    transform: scale(1);
+  }
+  100% {
+    border-color: rgba(148, 0, 211, 0.7);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes legendaryIconGlow {
+  0% {
+    box-shadow: 0 2px 8px rgba(148, 0, 211, 0.5);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 0 4px 16px rgba(148, 0, 211, 0.8);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes legendaryTextGlow {
+  0% {
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+  }
+  100% {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  }
+}
+
+/* Badge earn animation - triggered when new badge is earned */
+@keyframes badgeEarn {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(-90deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.badge-new {
+  animation: badgeEarn 0.6s ease-out;
+}
+
+/* Progress indicator styles */
+.badge-progress {
+  height: 4px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.badge-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--bs-primary), var(--bs-success));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.badge-progress-text {
+  font-size: 0.7rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .badge-card {
+    padding: 1rem !important;
+  }
+
+  .badge-icon-bronze,
+  .badge-icon-silver,
+  .badge-icon-gold,
+  .badge-icon-platinum,
+  .badge-icon-legendary {
+    width: 50px;
+    height: 50px;
+  }
+
+  .badge-rarity-pill-bronze,
+  .badge-rarity-pill-silver,
+  .badge-rarity-pill-gold,
+  .badge-rarity-pill-platinum,
+  .badge-rarity-pill-legendary {
+    font-size: 0.6rem !important;
+    padding: 2px 6px !important;
+  }
+}
+
+/* ==========================================================================
+   Dark Mode Support
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  .badge-icon-silver,
+  .badge-icon-platinum {
+    color: #fff;
+  }
+
+  .badge-rarity-pill-silver,
+  .badge-rarity-pill-platinum {
+    color: #fff;
+  }
+}

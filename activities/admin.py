@@ -4,7 +4,20 @@ from .models import StravaSyncSettings
 
 admin.site.register(Activity)
 admin.site.register(ActivityBadge)
-admin.site.register(Badge)
+
+
+@admin.register(Badge)
+class BadgeAdmin(admin.ModelAdmin):
+    list_display = ['name', 'natural_key', 'rarity', 'created_on']
+    list_filter = ['rarity', 'created_on']
+    search_fields = ['name', 'natural_key', 'description']
+    readonly_fields = ['natural_key', 'name', 'description', 'icon', 'rarity', 'created_on', 'modified_on']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 @admin.register(StravaSyncSettings)
 class StravaSyncSettingsAdmin(admin.ModelAdmin):

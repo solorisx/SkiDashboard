@@ -95,11 +95,11 @@
               <div class="mb-4">
                 <div class="d-flex flex-wrap gap-2">
                   {% for badge in activity.badges.all %}
-                    <span class="badge-icon bg-warning bg-opacity-20 rounded-circle p-2" 
-                          title="{{ badge.badge.name }}" 
-                          data-bs-toggle="tooltip" 
+                    <span class="badge-icon badge-icon-small badge-icon-{{ badge.badge.rarity }} rounded-circle p-2"
+                          title="{{ badge.badge.name }}"
+                          data-bs-toggle="tooltip"
                           data-bs-placement="top">
-                      <i class="{{ badge.badge.icon }} text-warning fs-6"></i>
+                      <i class="{{ badge.badge.icon }} fs-6"></i>
                     </span>
                   {% endfor %}
                 </div>
@@ -286,18 +286,6 @@ document.addEventListener("DOMContentLoaded", function() {
   transform: scale(1.02);
 }
 
-.badge-icon {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.badge-icon:hover {
-  transform: scale(1.1);
-}
 
 .mini-map {
   overflow: hidden;
