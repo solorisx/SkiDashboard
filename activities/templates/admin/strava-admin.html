@@ -32,4 +32,18 @@
   </button>
 </form>
 
+<hr/>
+
+<h2>Badge Reassignment</h2>
+<form method="post" class="form">{% csrf_token %}
+  {{ badge_form.as_p }}
+  <button class="default" type="submit" name="action_reassign_badges" value="1">
+    Reassign badges
+  </button>
+</form>
+<p class="help">
+  Reassigns all badges for selected user or all users. Uses existing badge logic,
+  so it's safe to run multiple times. Useful after updating badge assignment rules.
+</p>
+
 {% endblock %}

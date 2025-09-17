@@ -102,35 +102,46 @@ def get_or_create_badge_by_natural_key(natural_key, **defaults):
 def assign_badges(activity: Activity):
 
     # 5 rides in a day
-    if activity.num_lift_rides >= 5:
+    if activity.num_lift_rides and activity.num_lift_rides >= 5:
         badge, _ = get_or_create_badge_by_natural_key('LIFTS_5_DAY')
         ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
 
     # 10 rides in a day
-    if activity.num_lift_rides >= 10:
+    if activity.num_lift_rides and activity.num_lift_rides >= 10:
         badge, _ = get_or_create_badge_by_natural_key('LIFTS_10_DAY')
         ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
 
     # 20 rides in a day
-    if activity.num_lift_rides >= 20:
+    if activity.num_lift_rides and activity.num_lift_rides >= 20:
         badge, _ = get_or_create_badge_by_natural_key('LIFTS_20_DAY')
         ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
 
     # 10'000hm in a day
-    if activity.total_ascent >= 10000:
+    if activity.total_ascent and activity.total_ascent >= 10000:
         badge, _ = get_or_create_badge_by_natural_key('ELEVATION_10K_DAY')
         ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
 
     # 20'000hm in a day
-    if activity.total_ascent >= 20000:
+    if activity.total_ascent and activity.total_ascent >= 20000:
         badge, _ = get_or_create_badge_by_natural_key('ELEVATION_20K_DAY')
         ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
 
-    # first day in a ski area
-    if Activity.objects.filter(user=activity.user, ski_area=activity.ski_area, start_time__lt=activity.start_time).count() == 0:
+    # first day in a ski area - award for first visit to each unique ski area
+    if activity.ski_area and Activity.objects.filter(user=activity.user, ski_area=activity.ski_area, start_time__lt=activity.start_time).count() == 0:
         badge, _ = get_or_create_badge_by_natural_key('FIRST_SKI_AREA')
         ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
-        ActivityBadge.objects.filter(badge=badge, activity__user=activity.user).exclude(activity=activity).delete()
+
+        # Clean up: remove this badge from any later activities in the same ski area
+        # (handles case where earlier activity gets synced after later ones)
+        later_activities_same_area = Activity.objects.filter(
+            user=activity.user,
+            ski_area=activity.ski_area,
+            start_time__gt=activity.start_time
+        )
+        ActivityBadge.objects.filter(
+            badge=badge,
+            activity__in=later_activities_same_area
+        ).delete()
 
     # x days in a row in a ski area
     i = 1
@@ -149,3 +160,54 @@ def assign_badges(activity: Activity):
         natural_key, config = get_streak_badge_config(i, ski_area_specific=False)
         badge, _ = get_or_create_badge_by_natural_key(natural_key, **config)
         ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+
+
+def reassign_all_badges(user=None):
+    """
+    Reassign all badges for all activities. Uses assign_badges which is rerunnable.
+
+    Args:
+        user: If specified, only reassign badges for this user. If None, reassign for all users.
+
+    Returns:
+        dict: Statistics about the reassignment process
+    """
+    from django.contrib.auth import get_user_model
+    import logging
+
+    logger = logging.getLogger(__name__)
+    User = get_user_model()
+
+    if user:
+        users = [user]
+    else:
+        # Get all users who have activities
+        users = User.objects.filter(activity__isnull=False).distinct()
+
+    total_activities = 0
+    badges_before = ActivityBadge.objects.count()
+
+    logger.info(f"Starting badge reassignment for {len(users)} users")
+
+    for user_obj in users:
+        # Get all activities for this user, ordered by start_time to ensure proper badge assignment
+        activities = Activity.objects.filter(user=user_obj).order_by('start_time')
+
+        logger.info(f"Processing {activities.count()} activities for user {user_obj.username}")
+
+        for activity in activities:
+            assign_badges(activity)
+            total_activities += 1
+
+    badges_after = ActivityBadge.objects.count()
+
+    result = {
+        'users_processed': len(users),
+        'activities_processed': total_activities,
+        'badges_before': badges_before,
+        'badges_after': badges_after,
+        'badges_added': badges_after - badges_before
+    }
+
+    logger.info(f"Badge reassignment complete: {result}")
+    return result

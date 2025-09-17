@@ -8,8 +8,9 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+from ..badges import reassign_all_badges
 from ..batch import parse_strava_activities, parse_strava_activity
-from ..forms import GlobalSyncForm, PerUserSyncForm, StravaSyncForm
+from ..forms import BadgeReassignmentForm, GlobalSyncForm, PerUserSyncForm, StravaSyncForm
 from ..models import Activity
 from ..tasks import (
     scheduled_strava_sync,
@@ -43,6 +44,7 @@ def sync_strava_admin(request):
     activity_form = StravaSyncForm()
     peruser_form = PerUserSyncForm()
     global_form = GlobalSyncForm()
+    badge_form = BadgeReassignmentForm()
 
     if request.method == "POST":
         # Single-activity manual sync
@@ -93,10 +95,36 @@ def sync_strava_admin(request):
                 messages.info(request, "Triggered background sync for all Strava-connected users.")
                 return redirect("sync_strava_admin")
 
+        # Badge reassignment
+        elif "action_reassign_badges" in request.POST:
+            badge_form = BadgeReassignmentForm(request.POST)
+            if badge_form.is_valid():
+                user = badge_form.cleaned_data.get("user")
+                try:
+                    result = reassign_all_badges(user=user)
+                    if user:
+                        messages.success(
+                            request,
+                            f"Reassigned badges for user {user.username}. "
+                            f"Processed {result['activities_processed']} activities, "
+                            f"added {result['badges_added']} new badges."
+                        )
+                    else:
+                        messages.success(
+                            request,
+                            f"Reassigned badges for {result['users_processed']} users. "
+                            f"Processed {result['activities_processed']} activities, "
+                            f"added {result['badges_added']} new badges."
+                        )
+                except Exception as e:
+                    messages.error(request, f"Error reassigning badges: {e}")
+                return redirect("sync_strava_admin")
+
     context = {
         "activity_form": activity_form,
         "peruser_form": peruser_form,
         "global_form": global_form,
+        "badge_form": badge_form,
     }
     return render(request, "admin/strava-admin.html", context)
 

@@ -26,4 +26,6 @@ urlpatterns = [
     path("strava/webhook/subscribe/", views.subscribe_strava_webhook, name="strava_webhook_subscribe"),
     path("admin/profiling/", views.activity_profiling_dashboard, name="activity_profiling_dashboard"),
     path("admin/profiling/<int:activity_id>/", views.activity_profiling_detail, name="activity_profiling_detail"),
+    path("insights/", views.activity_insights, name="activity_insights"),
+    path("insights/<str:season>/", views.activity_insights, name="activity_insights_season"),
 ]

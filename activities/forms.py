@@ -42,3 +42,13 @@ class PerUserSyncForm(forms.Form):
 class GlobalSyncForm(forms.Form):
     """Empty form just to carry CSRF + submit."""
     pass
+
+class BadgeReassignmentForm(forms.Form):
+    """Form for reassigning badges."""
+    user = forms.ModelChoiceField(
+        queryset=User.objects.filter(activity__isnull=False).distinct(),
+        label="User (optional)",
+        required=False,
+        empty_label="All users",
+        widget=forms.Select(attrs={"class": "form-control"})
+    )

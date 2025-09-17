@@ -45,6 +45,10 @@ from .admin_profiling import (
     activity_profiling_detail,
 )
 
+from .insights import (
+    activity_insights,
+)
+
 # For backward compatibility, we also need to ensure the home_stats view 
 # returns a proper HttpResponse for template rendering
 from django.shortcuts import render
@@ -88,4 +92,7 @@ __all__ = [
     # Admin profiling views
     'activity_profiling_dashboard',
     'activity_profiling_detail',
+
+    # Insights views
+    'activity_insights',
 ]
