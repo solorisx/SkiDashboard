@@ -90,6 +90,12 @@ BADGE_CONFIGS = {
         'icon': 'fa-solid fa-calendar-star',
         'rarity': 'gold'
     },
+    'DAILY_COMPLETENESS_100': {
+        'name': 'Daily Conqueror',
+        'description': 'You rode 100% of lifts in a ski area in one day',
+        'icon': 'fa-solid fa-calendar-crown',
+        'rarity': 'platinum'
+    },
 
     # Lift variety badges
     'LIFT_VARIETY_5': {
@@ -101,7 +107,7 @@ BADGE_CONFIGS = {
     'LIFT_VARIETY_10': {
         'name': 'Lift Collector',
         'description': 'You used 10 different lifts in one day!',
-        'icon': 'fa-solid fa-collection',
+        'icon': 'fa-solid fa-grip',
         'rarity': 'silver'
     },
     'LIFT_VARIETY_15': {
@@ -109,7 +115,19 @@ BADGE_CONFIGS = {
         'description': 'You used 15 different lifts in one day!',
         'icon': 'fa-solid fa-star',
         'rarity': 'gold'
-    }
+    },
+    'LIFT_VARIETY_20': {
+        'name': 'Lift Connoisseur',
+        'description': 'You used 20 different lifts in one day!',
+        'icon': 'fa-solid fa-gem',
+        'rarity': 'gold'
+    },
+    'LIFT_VARIETY_30': {
+        'name': 'Lift Aficionado',
+        'description': 'You used 30 different lifts in one day!',
+        'icon': 'fa-solid fa-crown',
+        'rarity': 'platinum'
+    },
 }
 
 
@@ -235,7 +253,10 @@ def assign_badges(activity: Activity):
         daily_completeness = calculate_activity_completeness(activity)
         daily_percentage = daily_completeness['daily_completion_percentage']
 
-        if daily_percentage >= 75:
+        if daily_percentage >= 100:
+            badge, _ = get_or_create_badge_by_natural_key('DAILY_COMPLETENESS_100')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+        elif daily_percentage >= 75:
             badge, _ = get_or_create_badge_by_natural_key('DAILY_COMPLETENESS_75')
             ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
         elif daily_percentage >= 50:
@@ -247,7 +268,13 @@ def assign_badges(activity: Activity):
 
         # Lift variety badges
         unique_lifts_today = daily_completeness['lifts_used_today']
-        if unique_lifts_today >= 15:
+        if unique_lifts_today >= 30:
+            badge, _ = get_or_create_badge_by_natural_key('LIFT_VARIETY_30')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+        elif unique_lifts_today >= 20:
+            badge, _ = get_or_create_badge_by_natural_key('LIFT_VARIETY_20')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+        elif unique_lifts_today >= 15:
             badge, _ = get_or_create_badge_by_natural_key('LIFT_VARIETY_15')
             ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
         elif unique_lifts_today >= 10:

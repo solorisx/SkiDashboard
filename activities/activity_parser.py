@@ -1152,13 +1152,13 @@ class ActivityParser:
         activity_instance.processed_on = timezone.now()
         activity_instance.save()
 
-        # Assign badges
-        assign_badges(activity_instance)
-        logger.info(f"Assigned badges to activity {activity_instance.id}")
-
         self.profiler.start_operation('calculate_ski_area_completeness')
         completeness.calculate_ski_area_completeness(user=activity_instance.user, ski_area=activity_instance.ski_area, force_recalc=True)
         self.profiler.end_operation('calculate_ski_area_completeness')
+
+        # Assign badges
+        assign_badges(activity_instance)
+        logger.info(f"Assigned badges to activity {activity_instance.id}")
         
         self.profiler.end_operation('finalize_activity_processing')
 

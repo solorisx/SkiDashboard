@@ -57,7 +57,7 @@
                 <h6 class="fw-bold mb-3 text-dark">{{ area_data.ski_area.name }}</h6>
 
                 <!-- Progress Ring -->
-                <div class="progress-ring progress-ring-lg completeness-ring mb-3
+                <div class="progress-ring progress-ring-lg progress-ring-center completeness-ring mb-3
                   {% if area_data.completeness.completion_percentage == 100 %}progress-ring-warning
                   {% elif area_data.completeness.completion_percentage >= 75 %}progress-ring-success
                   {% elif area_data.completeness.completion_percentage >= 50 %}progress-ring-info
@@ -165,54 +165,6 @@
   border-color: rgba(13, 110, 253, 0.2);
 }
 
-.progress-circle-container {
-  position: relative;
-}
-
-.progress-circle {
-  width: 100px;
-  height: 100px;
-  margin: 0 auto;
-  position: relative;
-  background: conic-gradient(
-    #28a745 calc(var(--percentage) * 3.6deg),
-    #e9ecef calc(var(--percentage) * 3.6deg)
-  );
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  animation: progressPulse 2s ease-in-out infinite alternate;
-}
-
-.progress-circle:hover {
-  transform: scale(1.05);
-}
-
-.progress-circle-inner {
-  width: 75px;
-  height: 75px;
-  background: white;
-  border-radius: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.percentage {
-  font-weight: bold;
-  font-size: 0.9rem;
-  color: #28a745;
-  line-height: 1;
-}
-
-.completion-status {
-  font-size: 0.7rem;
-  margin-top: 2px;
-}
 
 .stats-mini-card {
   transition: all 0.2s ease;

@@ -32,8 +32,8 @@ class LiftFilterConfig:
         'disused',          # disused lift (not existing)
         'abandoned',        # abandoned lift (not existing)
         'no',               # data error
-        'wire_cable',      # wire cable (not a ski lift)
-        'unknown',         # unknown type
+        'wire_cable',       # wire cable (not a ski lift)
+        'unknown',          # unknown type
     }
 
     @classmethod

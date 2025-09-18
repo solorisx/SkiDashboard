@@ -16,6 +16,7 @@ from ..tasks import (
     scheduled_strava_sync,
     sync_strava_activity_task,
     sync_user_activities_task as sync_user_new_activities_task,
+    reassign_badges_task,
 )
 
 logger = logging.getLogger(__name__)
@@ -101,20 +102,16 @@ def sync_strava_admin(request):
             if badge_form.is_valid():
                 user = badge_form.cleaned_data.get("user")
                 try:
-                    result = reassign_all_badges(user=user)
+                    reassign_badges_task.delay(user_id=user.id if user else None)
                     if user:
                         messages.success(
                             request,
-                            f"Reassigned badges for user {user.username}. "
-                            f"Processed {result['activities_processed']} activities, "
-                            f"added {result['badges_added']} new badges."
+                            f"Queued badge reassignment for user {user}."
                         )
                     else:
                         messages.success(
                             request,
-                            f"Reassigned badges for {result['users_processed']} users. "
-                            f"Processed {result['activities_processed']} activities, "
-                            f"added {result['badges_added']} new badges."
+                            f"Queued badge reassignment for all users."
                         )
                 except Exception as e:
                     messages.error(request, f"Error reassigning badges: {e}")

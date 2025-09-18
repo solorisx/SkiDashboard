@@ -81,3 +81,10 @@ def scheduled_strava_sync(manual=False):
     Honours the enable_scheduled_sync toggle.
     """
     return run_scheduled_strava_sync(manual)
+
+@shared_task
+def reassign_badges_task(user_id):
+    from .badges import reassign_all_badges
+    user = User.objects.get(id=user_id) if user_id else None
+    result = reassign_all_badges(user)
+    logger.info(f"Reassigned badges for {'user ' + str(user) if user else 'all users'}. Result: {result}")
