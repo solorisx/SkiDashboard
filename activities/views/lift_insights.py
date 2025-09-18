@@ -103,10 +103,21 @@ def lift_insights(request, season=None):
     visited_ski_areas = all_visited_ski_areas[:10]
 
     for ski_area in visited_ski_areas:
-        completeness = calculate_ski_area_completeness(request.user, ski_area)
+        completeness = calculate_ski_area_completeness(request.user, ski_area, season=season)
+
+        # Get number of visits (activities) for this ski area
+        visit_count_query = Activity.objects.filter(
+            user=request.user,
+            ski_area=ski_area
+        )
+        if season:
+            visit_count_query = visit_count_query.filter(filter_query)
+        visit_count = visit_count_query.count()
+
         ski_area_completeness.append({
             'ski_area': ski_area,
-            'completeness': completeness
+            'completeness': completeness,
+            'visit_count': visit_count
         })
 
     # Sort by completion percentage
@@ -165,12 +176,11 @@ def ski_area_completeness_detail(request, ski_area_id, season=None):
     filter_query = get_filter_query(request, season)
     seasons = get_seasons(user=request.user)
 
-    # Get all available lifts in this ski area
-    available_lifts = get_available_lifts_in_ski_area(ski_area)
+    # Get all available lifts in this ski area (with user exclusions)
+    available_lifts = get_available_lifts_in_ski_area(ski_area, user=request.user)
 
-    # Calculate completeness for this ski area
-    # TODO: Add season-specific completeness calculation if needed
-    completeness = calculate_ski_area_completeness(request.user, ski_area)
+    # Calculate completeness for this ski area (with season filtering)
+    completeness = calculate_ski_area_completeness(request.user, ski_area, season=season)
 
     # Get lifts the user has ridden with additional stats
     user_lift_rides = LiftRide.objects.filter(
@@ -220,15 +230,18 @@ def ski_area_completeness_detail(request, ski_area_id, season=None):
     not_ridden_lifts = available_lifts.exclude(id__in=ridden_aerialway_ids).order_by('name')
 
     # Get recent activities in this ski area
-    recent_activities = Activity.objects.filter(
+    recent_activities_query = Activity.objects.filter(
         user=request.user,
         ski_area=ski_area
     )
 
     if season:
-        recent_activities = recent_activities.filter(filter_query)
+        recent_activities_query = recent_activities_query.filter(filter_query)
 
-    recent_activities = recent_activities.order_by('-timestamp')[:10]
+    # Get total visit count for this ski area
+    total_visits = recent_activities_query.count()
+
+    recent_activities = recent_activities_query.order_by('-timestamp')[:10]
 
     context = {
         'ski_area': ski_area,
@@ -236,6 +249,7 @@ def ski_area_completeness_detail(request, ski_area_id, season=None):
         'ridden_lifts_with_stats': ridden_lifts_with_stats,
         'not_ridden_lifts': not_ridden_lifts,
         'recent_activities': recent_activities,
+        'total_visits': total_visits,
         'seasons': seasons,
         'selected_season': season,
     }
@@ -256,10 +270,23 @@ def ski_area_completeness_all(request, season=None):
     ).distinct()
 
     for ski_area in visited_ski_areas:
-        completeness = calculate_ski_area_completeness(request.user, ski_area)
+        completeness = calculate_ski_area_completeness(request.user, ski_area, season=season)
+
+        # Get number of visits (activities) for this ski area
+        visit_count_query = Activity.objects.filter(
+            user=request.user,
+            ski_area=ski_area
+        )
+        if season:
+            from ..utils.queries import get_filter_query
+            filter_query = get_filter_query(request, season)
+            visit_count_query = visit_count_query.filter(filter_query)
+        visit_count = visit_count_query.count()
+
         ski_area_completeness.append({
             'ski_area': ski_area,
-            'completeness': completeness
+            'completeness': completeness,
+            'visit_count': visit_count
         })
 
     # Sort by completion percentage
@@ -284,12 +311,17 @@ def reload_ski_area_completeness(request, ski_area_id):
     try:
         ski_area = SkiArea.objects.get(id=ski_area_id)
 
+        # Get season from request if provided
+        season = request.GET.get('season')
+
         # Clear cache for this ski area completeness
         cache_key = f"completeness_{request.user.id}_{ski_area.id}"
+        if season:
+            cache_key += f"_{season}"
         cache.delete(cache_key)
 
         # Recalculate with force_calc=True
-        completeness = calculate_ski_area_completeness(request.user, ski_area, force_calc=True)
+        completeness = calculate_ski_area_completeness(request.user, ski_area, force_calc=True, season=season)
 
         return JsonResponse({
             'success': True,

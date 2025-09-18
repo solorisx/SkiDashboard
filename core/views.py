@@ -35,7 +35,8 @@ from django.http import JsonResponse
 from allauth.socialaccount.models import SocialAccount, SocialToken
 from djmoney.money import Money
 
-from .forms import UserDeleteForm
+from .forms import UserDeleteForm, UserProfileForm
+from .models import UserProfile
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,33 @@ def privacy_policy(request):
 
 def terms_of_service(request):
     return render(request, "base/terms.html")
+
+
+@login_required
+def profile_management(request):
+    """User profile management view."""
+    try:
+        profile = request.user.userprofile
+    except UserProfile.DoesNotExist:
+        profile = UserProfile.objects.create(user=request.user)
+
+    if request.method == 'POST':
+        logger.debug("Received profile update POST data: %s", request.POST)
+        form = UserProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile settings updated successfully.')
+            return redirect('profile_management')
+        else:
+            logger.warning("UserProfileForm is not valid: %s", form.errors)
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = UserProfileForm(instance=profile)
+
+    return render(request, 'account/profile.html', {
+        'form': form,
+        'profile': profile
+    })
 
 
 # API endpoints

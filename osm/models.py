@@ -14,16 +14,14 @@ logger = logging.getLogger(__name__)
 
 
 class LiftFilterConfig:
-    """Configuration for filtering lift types globally."""
+    """Configuration for filtering lift types globally and per-user."""
 
-    # Lift types to exclude from completeness calculations and statistics
-    # These are typically non-ski lifts or very short convenience lifts
-    EXCLUDED_LIFT_TYPES = {
+    # Global exclusions - ALWAYS excluded regardless of user settings
+    # These are typically data errors or non-ski infrastructure
+    GLOBAL_EXCLUDED_LIFT_TYPES = {
         'explosive',        # Explosive lifts (not ski lifts)
         'station',          # Station (not a lift)
-        'magic_carpet',     # Magic carpet (conveyor belt)
         'goods',            # Goods lift (not for passengers)
-        'rope_tow',         # Rope tow (often very short)
         'zip_line',         # Zip line (not a ski lift)
         'construction',     # Construction lift (not for skiing)
         'yes',              # data error
@@ -33,20 +31,73 @@ class LiftFilterConfig:
         'abandoned',        # abandoned lift (not existing)
         'no',               # data error
         'wire_cable',       # wire cable (not a ski lift)
-        'unknown',          # unknown type
+        #'unknown',          # unknown type
+        'razed',            # razed lift (not existing)
+    }
+
+    # Default user exclusions - can be overridden by user preferences
+    # These are often excluded but users might want to include them
+    DEFAULT_EXCLUDED_LIFT_TYPES = {
+        'magic_carpet',     # Magic carpet (conveyor belt)
+        'rope_tow',         # Rope tow (often very short)
     }
 
     @classmethod
-    def should_include_lift(cls, aerialway_type):
+    def get_excluded_lift_types(cls, user=None):
+        """Get combined exclusion list for user."""
+        excluded = cls.GLOBAL_EXCLUDED_LIFT_TYPES.copy()
+
+        if user and hasattr(user, 'userprofile'):
+            # Add user's custom exclusions
+            try:
+                user_excluded = user.userprofile.excluded_lift_types or []
+                excluded.update(user_excluded)
+            except AttributeError:
+                # UserProfile doesn't exist, use defaults
+                excluded.update(cls.DEFAULT_EXCLUDED_LIFT_TYPES)
+        else:
+            # Use defaults for anonymous/no-profile users
+            excluded.update(cls.DEFAULT_EXCLUDED_LIFT_TYPES)
+
+        return excluded
+
+    @classmethod
+    def should_include_lift(cls, aerialway_type, user=None):
         """Check if a lift type should be included in calculations."""
         if not aerialway_type:
             return True  # Include lifts with unknown type
-        return aerialway_type not in cls.EXCLUDED_LIFT_TYPES
+        excluded_types = cls.get_excluded_lift_types(user)
+        return aerialway_type not in excluded_types
 
     @classmethod
-    def filter_lifts_queryset(cls, queryset):
+    def filter_lifts_queryset(cls, queryset, user=None):
         """Filter a queryset of Aerialway objects to exclude configured lift types."""
-        return queryset.exclude(aerialway__in=cls.EXCLUDED_LIFT_TYPES)
+        excluded_types = cls.get_excluded_lift_types(user)
+        return queryset.exclude(aerialway__in=excluded_types)
+
+    # Backward compatibility - use global + default exclusions
+    EXCLUDED_LIFT_TYPES = GLOBAL_EXCLUDED_LIFT_TYPES | DEFAULT_EXCLUDED_LIFT_TYPES
+
+    @classmethod
+    def get_popular_lift_types(cls, min_count=50):
+        """Get aerialway types that occur at least min_count times in the database.
+
+        Excludes GLOBAL_EXCLUDED_LIFT_TYPES as these should never be user-configurable.
+        Returns a list of tuples (aerialway_type, count) for use in forms.
+        """
+        from django.db.models import Count
+
+        popular_types = (
+            Aerialway.objects
+            .exclude(aerialway__in=cls.GLOBAL_EXCLUDED_LIFT_TYPES)
+            .values('aerialway')
+            .annotate(count=Count('id'))
+            .filter(count__gte=min_count)
+            .order_by('-count', 'aerialway')
+        )
+
+        return [(item['aerialway'], f"{item['aerialway'].replace('_', ' ').title()}")
+                for item in popular_types]
 
 
 class ValidDuring(models.TextChoices):

@@ -8,7 +8,7 @@ from osm.models import Aerialway, SkiArea, LiftFilterConfig
 logger = logging.getLogger(__name__)
 
 
-def _find_lifts_by_constructed_geometry(ski_area, boundary_geom):
+def _find_lifts_by_constructed_geometry(ski_area, boundary_geom, user=None):
     """Helper function to find lifts using constructed geometry intersection."""
     try:
         # First try to get a reasonable subset of aerialways near this ski area
@@ -39,8 +39,8 @@ def _find_lifts_by_constructed_geometry(ski_area, boundary_geom):
         for aerialway_id, aerialway_name in candidate_aerialways:
             try:
                 aerialway = Aerialway.objects.get(id=aerialway_id)
-                # Apply lift type filtering
-                if not LiftFilterConfig.should_include_lift(aerialway.aerialway):
+                # Apply lift type filtering with user preferences
+                if not LiftFilterConfig.should_include_lift(aerialway.aerialway, user=user):
                     continue
                 if aerialway.way and aerialway.way.constructed_geom:
                     if boundary_geom.intersects(aerialway.way.constructed_geom):
@@ -60,8 +60,8 @@ def _find_lifts_by_constructed_geometry(ski_area, boundary_geom):
         return Aerialway.objects.none()
 
 
-def get_available_lifts_in_ski_area(ski_area):
-    """Get all available lifts in a ski area."""
+def get_available_lifts_in_ski_area(ski_area, user=None):
+    """Get all available lifts in a ski area, respecting user exclusions."""
     try:
         lifts = Aerialway.objects.none()
 
@@ -71,25 +71,27 @@ def get_available_lifts_in_ski_area(ski_area):
             aerialways_with_geom = Aerialway.objects.exclude(geom__isnull=True).exists()
             if aerialways_with_geom:
                 lifts = LiftFilterConfig.filter_lifts_queryset(
-                    Aerialway.objects.filter(geom__intersects=ski_area.geom)
+                    Aerialway.objects.filter(geom__intersects=ski_area.geom),
+                    user=user
                 ).distinct()
                 logger.info(f"Using direct geometry intersection for ski area {ski_area.id}")
             else:
                 # No aerialway geometries, try constructed geometry approach
                 logger.info(f"No aerialway geometries available, using constructed geometry for ski area {ski_area.id}")
-                lifts = _find_lifts_by_constructed_geometry(ski_area, ski_area.geom)
+                lifts = _find_lifts_by_constructed_geometry(ski_area, ski_area.geom, user)
 
         # If no lifts found yet and we have a boundary way, try constructed geometry
         if not lifts.exists() and ski_area.way:
             boundary_geom = ski_area.way.constructed_geom
             logger.info(f"Ski area {ski_area.id} has way {ski_area.way.osm_id}, constructed_geom: {type(boundary_geom)}")
             if boundary_geom:
-                lifts = _find_lifts_by_constructed_geometry(ski_area, boundary_geom)
+                lifts = _find_lifts_by_constructed_geometry(ski_area, boundary_geom, user)
 
         # If still no lifts found, try way relationships as fallback
         if not lifts.exists():
             lifts = LiftFilterConfig.filter_lifts_queryset(
-                Aerialway.objects.filter(way__ski_areas=ski_area)
+                Aerialway.objects.filter(way__ski_areas=ski_area),
+                user=user
             ).distinct()
             if lifts.exists():
                 logger.info(f"Found {lifts.count()} lifts using way relationships for ski area {ski_area.id} (after filtering)")
@@ -103,11 +105,13 @@ def get_available_lifts_in_ski_area(ski_area):
             for dup in duplicate_areas:
                 if dup.geom:
                     lifts = LiftFilterConfig.filter_lifts_queryset(
-                        Aerialway.objects.filter(geom__intersects=dup.geom)
+                        Aerialway.objects.filter(geom__intersects=dup.geom),
+                        user=user
                     ).distinct()
                 elif dup.way:
                     lifts = LiftFilterConfig.filter_lifts_queryset(
-                        Aerialway.objects.filter(way__ski_areas=dup)
+                        Aerialway.objects.filter(way__ski_areas=dup),
+                        user=user
                     ).distinct()
                 if lifts.exists():
                     logger.info(f"Found lifts for ski area {ski_area.id} using duplicate area {dup.id} (after filtering)")
@@ -124,7 +128,8 @@ def get_available_lifts_in_ski_area(ski_area):
 
             if ridden_lift_ids:
                 lifts = LiftFilterConfig.filter_lifts_queryset(
-                    Aerialway.objects.filter(id__in=ridden_lift_ids)
+                    Aerialway.objects.filter(id__in=ridden_lift_ids),
+                    user=user
                 )
                 logger.info(f"Found {lifts.count()} lifts from actual ride data for ski area {ski_area.id} (after filtering)")
 
@@ -135,27 +140,35 @@ def get_available_lifts_in_ski_area(ski_area):
         return Aerialway.objects.none()
 
 
-def calculate_ski_area_completeness(user, ski_area, force_calc=False):
+def calculate_ski_area_completeness(user, ski_area, force_calc=False, season=None):
     """
     Calculate completeness statistics for a user in a specific ski area.
     Gets recalculated if force_calc is True which is used on activity import.
 
+    Args:
+        user: User object
+        ski_area: SkiArea object
+        force_calc: Whether to force recalculation
+        season: Optional season string (e.g., "2023-2024") for season-specific filtering
+
     Returns:
         dict: Completeness statistics including percentages and counts
     """
+    logger.debug(f"Calculating completeness for user {user.id} in ski area {ski_area.id}, force_calc={force_calc}, season={season}")
     
-    
+    # Include season in cache key if specified
     cache_key = f"completeness_{user.id}_{ski_area.id}"
+    if season:
+        cache_key += f"_{season}"
+
     if not force_calc:
         cached_result = cache.get(cache_key)
-
         if cached_result:
-            logger.debug(f"Using cached completeness for user {user.id} in ski area {ski_area.id}")
+            logger.debug(f"Using cached completeness for user {user.id} in ski area {ski_area.id}, season: {season}")
             return cached_result
 
-    # Get all available lifts in the ski area
-    available_lifts = get_available_lifts_in_ski_area(ski_area)
-
+    # Get all available lifts in the ski area (with user exclusions)
+    available_lifts = get_available_lifts_in_ski_area(ski_area, user=user)
     total_lifts = available_lifts.count()
 
     if total_lifts == 0:
@@ -170,12 +183,24 @@ def calculate_ski_area_completeness(user, ski_area, force_calc=False):
         cache.set(cache_key, result, 3600)  # Cache for 1 hour
         return result
 
-    # Get lifts the user has ridden
-    user_lift_rides = LiftRide.objects.filter(
+    # Get lifts the user has ridden (with optional season filtering)
+    user_lift_rides_query = LiftRide.objects.filter(
         lap__activity__user=user,
         lap__activity__ski_area=ski_area,
         aerialway__in=available_lifts
-    ).values_list('aerialway', flat=True).distinct()
+    )
+
+    # Apply season filtering if specified
+    if season:
+        from ..utils.seasons import parse_season_string
+        season_start, season_end = parse_season_string(season, user=user)
+        if season_start and season_end:
+            user_lift_rides_query = user_lift_rides_query.filter(
+                lap__activity__start_time__gte=season_start,
+                lap__activity__start_time__lte=season_end
+            )
+
+    user_lift_rides = user_lift_rides_query.values_list('aerialway', flat=True).distinct()
 
     ridden_lifts = available_lifts.filter(id__in=user_lift_rides)
     not_ridden_lifts = available_lifts.exclude(id__in=user_lift_rides)
@@ -203,9 +228,7 @@ def calculate_ski_area_completeness(user, ski_area, force_calc=False):
             )
 
     completion_percentage = round((len(user_lift_rides) / total_lifts) * 100, 1)
-    logger.debug(f"User {user.id} completeness in Ski Area {ski_area.id}: {completion_percentage}%")
-    logger.debug(f"Lifts ridden: {user_lift_rides}")
-    logger.debug(f"Available lifts: {available_lifts}")
+    logger.debug(f"User {user.id} completeness in Ski Area {ski_area.id} (season: {season}): {completion_percentage}%")
 
     result = {
         'total_available': total_lifts,
@@ -299,8 +322,8 @@ def calculate_activity_completeness(activity):
         lap__activity=activity
     ).values_list('aerialway', flat=True).distinct()
 
-    # Get all available lifts in the ski area
-    available_lifts = get_available_lifts_in_ski_area(activity.ski_area)
+    # Get all available lifts in the ski area (with user exclusions)
+    available_lifts = get_available_lifts_in_ski_area(activity.ski_area, user=activity.user)
     total_available = available_lifts.count()
 
     # Calculate daily completion percentage
@@ -368,12 +391,17 @@ def get_lift_statistics(user, ski_area=None):
     }
 
 
-def clear_completeness_cache(user_id, ski_area_id=None):
+def clear_completeness_cache(user_id, ski_area_id=None, season=None):
     """Clear completeness cache for a user."""
     cache.delete(f"overall_completeness_{user_id}")
 
     if ski_area_id:
-        cache.delete(f"completeness_{user_id}_{ski_area_id}")
+        if season:
+            cache.delete(f"completeness_{user_id}_{ski_area_id}_{season}")
+        else:
+            # Clear all season-specific caches for this ski area
+            # Note: This is a simplified approach. In production, consider cache versioning
+            cache.delete(f"completeness_{user_id}_{ski_area_id}")
     else:
         # Clear all ski area caches for this user (less efficient but comprehensive)
         # In production, you might want to use cache versioning instead

@@ -68,6 +68,7 @@ class ProfileManager:
         """Start timing an operation."""
         self.current_operations[operation_name] = time.time()
         self.call_counts[operation_name] += 1
+        logger.debug(f"Started operation '{operation_name}'")
 
     def end_operation(self, operation_name: str) -> float:
         """End timing an operation and return the duration."""
@@ -78,6 +79,7 @@ class ProfileManager:
         start_time = self.current_operations.pop(operation_name)
         duration = time.time() - start_time
         self.timings[operation_name].append(duration)
+        logger.debug(f"Ended operation '{operation_name}', duration: {duration:.4f}s")
         return duration
 
     def get_stats(self, operation_name: str) -> Dict[str, Any]:
@@ -1153,7 +1155,11 @@ class ActivityParser:
         activity_instance.save()
 
         self.profiler.start_operation('calculate_ski_area_completeness')
-        completeness.calculate_ski_area_completeness(user=activity_instance.user, ski_area=activity_instance.ski_area, force_recalc=True)
+        completeness.calculate_ski_area_completeness(user=activity_instance.user, ski_area=activity_instance.ski_area, force_calc=True)
+        from .utils.seasons import get_seasons
+        for season in get_seasons(activity_instance.user):
+            logger.debug(f"Calculating completeness for season: {season}")
+            completeness.calculate_ski_area_completeness(user=activity_instance.user, ski_area=activity_instance.ski_area, season=season, force_calc=True)
         self.profiler.end_operation('calculate_ski_area_completeness')
 
         # Assign badges

@@ -2,7 +2,7 @@
 from celery import shared_task
 from django.contrib.auth import get_user_model
 from .activity_parser import sync_strava_activity
-from .models import StravaSyncSettings
+from .models import Activity, StravaSyncSettings
 import logging
 from datetime import timedelta, datetime
 from allauth.socialaccount.models import SocialAccount
@@ -88,3 +88,17 @@ def reassign_badges_task(user_id):
     user = User.objects.get(id=user_id) if user_id else None
     result = reassign_all_badges(user)
     logger.info(f"Reassigned badges for {'user ' + str(user) if user else 'all users'}. Result: {result}")
+
+@shared_task
+def recalculate_completeness_task(user_id=None):
+    from .utils.completeness import calculate_ski_area_completeness
+    from .utils.seasons import get_seasons
+    from osm.models import SkiArea
+    user = User.objects.get(id=user_id) if user_id else None
+    for skiarea in Activity.objects.filter(user=user).values_list('ski_area', flat=True).distinct():
+        skiarea = SkiArea.objects.get(id=skiarea)
+        logger.info(f"Recalculating completeness for ski area {skiarea} and user {user}")
+        result = calculate_ski_area_completeness(user, skiarea, force_calc=True)
+        for season in get_seasons(user=user):
+            result = calculate_ski_area_completeness(user, skiarea, season=season, force_calc=True)
+        logger.info(f"Recalculated completeness for {'user ' + str(user) if user else 'all users'}. Result: {result}")

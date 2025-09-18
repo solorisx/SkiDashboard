@@ -227,13 +227,17 @@
 
                         <!-- Stats -->
                         <div class="row g-2">
-                          <div class="col-6">
+                          <div class="col-4">
                             <div class="fw-bold text-success">{{ area_data.completeness.total_ridden }}</div>
-                            <small class="text-muted">Ridden</small>
+                            <small class="text-muted" style="font-size: 0.75rem;">Ridden</small>
                           </div>
-                          <div class="col-6">
+                          <div class="col-4">
                             <div class="fw-bold text-primary">{{ area_data.completeness.total_available }}</div>
-                            <small class="text-muted">Available</small>
+                            <small class="text-muted" style="font-size: 0.75rem;">Available</small>
+                          </div>
+                          <div class="col-4">
+                            <div class="fw-bold text-info">{{ area_data.visit_count }}</div>
+                            <small class="text-muted" style="font-size: 0.75rem;">Visit{{ area_data.visit_count|pluralize }}</small>
                           </div>
                         </div>
 

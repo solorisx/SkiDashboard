@@ -100,10 +100,16 @@
                     <small class="text-muted fw-medium">Available</small>
                   </div>
                 </div>
-                <div class="col-12">
+                <div class="col-6">
                   <div class="text-center p-3 bg-warning bg-opacity-10 rounded-3">
                     <div class="fs-4 fw-bold text-warning">{{ completeness.lifts_not_ridden|length }}</div>
                     <small class="text-muted fw-medium">Still to explore</small>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="text-center p-3 bg-info bg-opacity-10 rounded-3">
+                    <div class="fs-4 fw-bold text-info">{{ total_visits }}</div>
+                    <small class="text-muted fw-medium">Visit{{ total_visits|pluralize }}</small>
                   </div>
                 </div>
               </div>
