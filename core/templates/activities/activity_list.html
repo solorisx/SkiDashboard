@@ -19,125 +19,195 @@
           <p class="text-muted fs-5 mb-0">Track your skiing adventures and achievements</p>
         </div>
         <div class="badge bg-primary fs-6 px-3 py-2">
-          {{ page_obj.paginator.count }} Activities
+          {% if is_grouped %}
+            {{ total_activities }} Activities
+          {% else %}
+            {{ page_obj.paginator.count }} Activities
+          {% endif %}
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Activities Grid -->
-  <div class="row g-4">
-    {% for activity in page_obj %}
-      <div class="col-12 col-lg-6 col-xl-4">
-        <div class="card h-100 border-0 shadow-sm hover-shadow-lg transition-all">
-          <div class="card-body p-4 d-flex flex-column">
-            <!-- Content that can grow -->
-            <div class="flex-grow-1">
-              <!-- Header -->
-              <div class="d-flex align-items-start justify-content-between mb-3">
-                <div>
-                  <h5 class="card-title fw-bold text-dark mb-1">{{ activity.name }}</h5>
-                  <small class="text-muted d-flex align-items-center">
-                    <i class="bi bi-clock me-1"></i>
-                    {{ activity.timestamp|date:"DATETIME_FORMAT" }}
-                  </small>
-                </div>
-                <div class="d-flex flex-column gap-2">
-                  <span class="badge bg-light text-primary border border-primary-subtle">
-                    <i class="bi bi-snow me-1"></i>{{ activity.ski_area.name }}
-                  </span>
-                  {% if activity.has_season_pass %}
-                  <span class="badge bg-success text-white season-pass-badge" 
-                        title="This activity is covered by a valid season pass"
-                        data-bs-toggle="tooltip" 
-                        data-bs-placement="top">
-                    <i class="bi bi-ticket-perforated me-1"></i>Season Pass
-                  </span>
-                  {% endif %}
-                </div>
-              </div>
-
-              <!-- Stats Grid -->
-              <div class="row g-3 mb-4">
-                <div class="col-6">
-                  <div class="stats-card bg-primary bg-opacity-10 rounded-3 p-3 text-center">
-                    <div class="fs-4 fw-bold text-primary mb-1">{{ activity.total_descent|round_to:0 }}</div>
-                    <small class="text-muted fw-medium">Descent (m)</small>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="stats-card bg-success bg-opacity-10 rounded-3 p-3 text-center">
-                    <div class="fs-4 fw-bold text-success mb-1">{{ activity.total_distance_km }}</div>
-                    <small class="text-muted fw-medium">Distance (km)</small>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="stats-card bg-info bg-opacity-10 rounded-3 p-3 text-center">
-                    <div class="fs-4 fw-bold text-info mb-1">{{ activity.num_lift_rides }}</div>
-                    <small class="text-muted fw-medium">Lift Rides</small>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="stats-card bg-warning bg-opacity-10 rounded-3 p-3 text-center">
-                    <div class="fs-4 fw-bold text-warning mb-1">{{ activity.badges.all|length }}</div>
-                    <small class="text-muted fw-medium">Badges</small>
-                  </div>
-                </div>
-                {% if activity.ski_area %}
-                <div class="col-12">
-                  <div class="stats-card bg-secondary bg-opacity-10 rounded-3 p-3 text-center position-relative"
-                       id="completeness-{{ activity.id }}"
-                       data-activity-id="{{ activity.id }}"
-                       data-ski-area-id="{{ activity.ski_area.id }}">
-                    <div class="d-flex align-items-center justify-content-center gap-2">
-                      <div class="spinner-border spinner-border-sm text-secondary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                      </div>
-                      <small class="text-muted fw-medium">Loading area completeness...</small>
-                    </div>
-                  </div>
-                </div>
-                {% endif %}
-              </div>
-
-              <!-- Mini Map -->
-              <div class="mb-4">
-                <div id="map{{ forloop.counter }}" class="mini-map rounded-3 shadow-sm" style="height: 180px; border: 2px solid var(--bs-border-color);"></div>
-              </div>
-
-              <!-- Badges -->
-              {% if activity.badges.all %}
-              <div class="mb-4">
-                <div class="d-flex flex-wrap gap-2">
-                  {% for badge in activity.badges.all %}
-                    <span class="badge-icon badge-icon-small badge-icon-{{ badge.badge.rarity }} rounded-circle p-2"
-                          title="{{ badge.badge.name }}"
-                          data-bs-toggle="tooltip"
-                          data-bs-placement="top">
-                      <i class="{{ badge.badge.icon }} fs-6"></i>
-                    </span>
-                  {% endfor %}
-                </div>
-              </div>
-              {% endif %}
+  <!-- Filter and Grouping Controls -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <!-- Collapsible Header -->
+        <div class="card-header bg-transparent border-0 py-3">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <button class="btn btn-link text-decoration-none p-0 fw-medium text-dark"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#filterControls"
+                      aria-expanded="{% if current_ski_area_filter or is_grouped %}true{% else %}false{% endif %}"
+                      aria-controls="filterControls">
+                <i class="bi bi-funnel me-2"></i>
+                <span>Filters & Grouping</span>
+                <i class="bi bi-chevron-down ms-2 collapse-icon"></i>
+              </button>
             </div>
 
-            <!-- Action Button - Always at bottom -->
-            <div class="d-grid mt-auto">
-              <a href="{% url 'activity_detail' activity.id %}" 
-                 class="btn btn-primary btn-lg fw-medium d-flex align-items-center justify-content-center gap-2">
-                <i class="bi bi-eye"></i>
-                View Details
-              </a>
+            <!-- Quick Active Filters Summary -->
+            {% if current_ski_area_filter or is_grouped %}
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              {% if current_ski_area_filter %}
+                {% for ski_area in available_ski_areas %}
+                  {% if ski_area.id|stringformat:"s" == current_ski_area_filter %}
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                      <i class="bi bi-geo-alt me-1"></i>{{ ski_area.name }}
+                    </span>
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+              {% if is_grouped %}
+                <span class="badge bg-info-subtle text-info border border-info-subtle">
+                  <i class="bi bi-collection me-1"></i>Grouped
+                </span>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Collapsible Content -->
+        <div class="collapse {% if current_ski_area_filter or is_grouped %}show{% endif %}" id="filterControls">
+          <div class="card-body pt-0 pb-3">
+            <form method="get" id="filterForm" class="row g-3 align-items-center">
+              <!-- Ski Area Filter -->
+              <div class="col-auto">
+                <label for="skiAreaFilter" class="form-label fw-medium text-muted small mb-1">Filter by Ski Area</label>
+                <select name="ski_area" id="skiAreaFilter" class="form-select form-select-sm">
+                  <option value="">All Ski Areas</option>
+                  {% for ski_area in available_ski_areas %}
+                    <option value="{{ ski_area.id }}" {% if current_ski_area_filter == ski_area.id|stringformat:"s" %}selected{% endif %}>
+                      {{ ski_area.name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <!-- Group Toggle -->
+              <div class="col-auto">
+                <label class="form-label fw-medium text-muted small mb-1">Display Options</label>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="groupBySkiArea" name="group_by" value="ski_area"
+                         {% if is_grouped %}checked{% endif %}>
+                  <label class="form-check-label small" for="groupBySkiArea">
+                    Group by Ski Area
+                  </label>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="col-auto ms-auto">
+                <div class="d-flex gap-2">
+                  <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-funnel me-1"></i>Apply Filters
+                  </button>
+                  <a href="{% url 'activity_list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-circle me-1"></i>Clear All
+                  </a>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activities Display -->
+  {% if is_grouped %}
+    <!-- Grouped Display -->
+    {% if grouped_activities|length > 1 %}
+    <!-- Collapse/Expand All Controls -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="d-flex justify-content-end">
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="collapseAllSkiAreas">
+              <i class="bi bi-arrows-collapse me-1"></i>Collapse All
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="expandAllSkiAreas">
+              <i class="bi bi-arrows-expand me-1"></i>Expand All
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% for group in grouped_activities %}
+      <div class="mb-5">
+        <!-- Ski Area Header -->
+        <div class="row mb-3">
+          <div class="col-12">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-transparent border-0 py-3">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="d-flex align-items-center">
+                    <button class="btn btn-link text-decoration-none p-0 fw-bold text-dark h4 mb-0"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#skiArea{{ group.ski_area.id|default:"unknown" }}"
+                            aria-expanded="true"
+                            aria-controls="skiArea{{ group.ski_area.id|default:"unknown" }}">
+                      <i class="bi bi-snow me-2 text-primary"></i>
+                      <span>{{ group.ski_area.name|default:"Unknown Ski Area" }}</span>
+                      <i class="bi bi-chevron-down ms-2 ski-area-collapse-icon"></i>
+                    </button>
+                  </div>
+                  <div class="d-flex align-items-center gap-3">
+                    {% if group.ski_area %}
+                    <a href="{% url 'ski_area_completeness_detail' group.ski_area.id %}"
+                       class="btn btn-outline-primary btn-sm">
+                      <i class="bi bi-graph-up me-1"></i>
+                      View Details
+                    </a>
+                    {% endif %}
+                    <span class="badge bg-secondary fs-6 px-3 py-2">
+                      {{ group.count }} Activities
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Collapsible Activities Content -->
+              <div class="collapse show" id="skiArea{{ group.ski_area.id|default:"unknown" }}">
+                <div class="card-body pt-0">
+                  <div class="row g-4">
+                    {% for activity in group.activities %}
+                      {% include 'activities/activity_card.html' %}
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+    {% empty %}
+      <div class="text-center py-5">
+        <div class="mb-4">
+          <i class="bi bi-snow display-1 text-muted"></i>
+        </div>
+        <h3 class="text-muted mb-3">No activities found</h3>
+        <p class="text-muted">Try adjusting your filters or link Strava to start tracking your skiing adventures!</p>
+      </div>
     {% endfor %}
-  </div>
+  {% else %}
+    <!-- Regular Grid Display -->
+    <div class="row g-4">
+      {% for activity in page_obj %}
+        {% include 'activities/activity_card.html' %}
+      {% endfor %}
+    </div>
+  {% endif %}
 
-  <!-- Empty State -->
-  {% if not page_obj %}
+  <!-- Empty State for Regular Display -->
+  {% if not is_grouped and not page_obj %}
   <div class="row">
     <div class="col-12">
       <div class="text-center py-5">
@@ -145,15 +215,15 @@
           <i class="bi bi-snow display-1 text-muted"></i>
         </div>
         <h3 class="text-muted mb-3">No activities found</h3>
-        <p class="text-muted">Link Strava and start tracking your skiing adventures!</p>
+        <p class="text-muted">{% if current_ski_area_filter %}Try adjusting your filters or{% endif %} link Strava and start tracking your skiing adventures!</p>
       </div>
     </div>
   </div>
   {% endif %}
 </div>
 
-<!-- Enhanced Pagination -->
-{% if page_obj.paginator.num_pages > 1 %}
+<!-- Enhanced Pagination (only for regular display) -->
+{% if not is_grouped and page_obj.paginator.num_pages > 1 %}
 <div class="container-fluid px-4 pb-5">
   <div class="row">
     <div class="col-12">
@@ -161,12 +231,12 @@
         <ul class="pagination pagination-lg shadow-sm">
           {% if page_obj.has_previous %}
             <li class="page-item">
-              <a class="page-link rounded-start-pill px-4" href="?page=1" aria-label="First page">
+              <a class="page-link rounded-start-pill px-4" href="?page=1{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}" aria-label="First page">
                 <i class="bi bi-chevron-double-left"></i>
               </a>
             </li>
             <li class="page-item">
-              <a class="page-link px-4" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous page">
+              <a class="page-link px-4" href="?page={{ page_obj.previous_page_number }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}" aria-label="Previous page">
                 <i class="bi bi-chevron-left"></i>
               </a>
             </li>
@@ -191,12 +261,12 @@
 
           {% if page_obj.has_next %}
             <li class="page-item">
-              <a class="page-link px-4" href="?page={{ page_obj.next_page_number }}" aria-label="Next page">
+              <a class="page-link px-4" href="?page={{ page_obj.next_page_number }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}" aria-label="Next page">
                 <i class="bi bi-chevron-right"></i>
               </a>
             </li>
             <li class="page-item">
-              <a class="page-link rounded-end-pill px-4" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last page">
+              <a class="page-link rounded-end-pill px-4" href="?page={{ page_obj.paginator.num_pages }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}" aria-label="Last page">
                 <i class="bi bi-chevron-double-right"></i>
               </a>
             </li>
@@ -229,54 +299,203 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   // Initialize maps
-  {% for activity in page_obj %}
-  {% if activity.geom and activity.geom.geojson %}
-  (function() {
-    var map = L.map('map{{ forloop.counter }}', {
-      zoomControl: false,
-      attributionControl: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      touchZoom: false,
-      dragging: false,
-      boxZoom: false,
-      keyboard: false
-    }).setView([{{ activity.geom.centroid.y|unlocalize }}, {{ activity.geom.centroid.x|unlocalize }}], 13);
+  {% if is_grouped %}
+    {% for group in grouped_activities %}
+      {% for activity in group.activities %}
+        {% if activity.geom and activity.geom.geojson %}
+        (function() {
+          var map = L.map('map{{ activity.id }}', {
+            zoomControl: false,
+            attributionControl: false,
+            scrollWheelZoom: false,
+            doubleClickZoom: false,
+            touchZoom: false,
+            dragging: false,
+            boxZoom: false,
+            keyboard: false
+          }).setView([{{ activity.geom.centroid.y|unlocalize }}, {{ activity.geom.centroid.x|unlocalize }}], 13);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: false
-    }).addTo(map);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: false
+          }).addTo(map);
 
-    var track = {{ activity.geom.geojson|safe }};
-    if (track && track.coordinates && track.coordinates.length > 0) {
-      var trackLayer = L.geoJSON(track, {
-        style: {
-          color: '#0d6efd',
-          weight: 4,
-          opacity: 0.8,
-          lineCap: 'round',
-          lineJoin: 'round'
-        }
-      }).addTo(map);
+          var track = {{ activity.geom.geojson|safe }};
+          if (track && track.coordinates && track.coordinates.length > 0) {
+            var trackLayer = L.geoJSON(track, {
+              style: {
+                color: '#0d6efd',
+                weight: 4,
+                opacity: 0.8,
+                lineCap: 'round',
+                lineJoin: 'round'
+              }
+            }).addTo(map);
 
-      map.fitBounds(trackLayer.getBounds(), { padding: [10, 10] });
-    }
-  })();
+            map.fitBounds(trackLayer.getBounds(), { padding: [10, 10] });
+          }
+        })();
+        {% else %}
+        // No geometry data for activity {{ activity.id }} - hide map or show placeholder
+        (function() {
+          var mapElement = document.getElementById('map{{ activity.id }}');
+          if (mapElement) {
+            mapElement.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 bg-light text-muted">' +
+              '<div class="text-center">' +
+                '<i class="bi bi-geo-alt display-4 mb-2"></i><br>' +
+                '<small>No map data available</small>' +
+              '</div>' +
+            '</div>';
+          }
+        })();
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
   {% else %}
-  // No geometry data for activity {{ activity.id }} - hide map or show placeholder
-  (function() {
-    var mapElement = document.getElementById('map{{ forloop.counter }}');
-    if (mapElement) {
-      mapElement.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 bg-light text-muted">' +
-        '<div class="text-center">' +
-          '<i class="bi bi-geo-alt display-4 mb-2"></i><br>' +
-          '<small>No map data available</small>' +
-        '</div>' +
-      '</div>';
-    }
-  })();
+    {% for activity in page_obj %}
+      {% if activity.geom and activity.geom.geojson %}
+      (function() {
+        var map = L.map('map{{ forloop.counter }}', {
+          zoomControl: false,
+          attributionControl: false,
+          scrollWheelZoom: false,
+          doubleClickZoom: false,
+          touchZoom: false,
+          dragging: false,
+          boxZoom: false,
+          keyboard: false
+        }).setView([{{ activity.geom.centroid.y|unlocalize }}, {{ activity.geom.centroid.x|unlocalize }}], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: false
+        }).addTo(map);
+
+        var track = {{ activity.geom.geojson|safe }};
+        if (track && track.coordinates && track.coordinates.length > 0) {
+          var trackLayer = L.geoJSON(track, {
+            style: {
+              color: '#0d6efd',
+              weight: 4,
+              opacity: 0.8,
+              lineCap: 'round',
+              lineJoin: 'round'
+            }
+          }).addTo(map);
+
+          map.fitBounds(trackLayer.getBounds(), { padding: [10, 10] });
+        }
+      })();
+      {% else %}
+      // No geometry data for activity {{ activity.id }} - hide map or show placeholder
+      (function() {
+        var mapElement = document.getElementById('map{{ forloop.counter }}');
+        if (mapElement) {
+          mapElement.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 bg-light text-muted">' +
+            '<div class="text-center">' +
+              '<i class="bi bi-geo-alt display-4 mb-2"></i><br>' +
+              '<small>No map data available</small>' +
+            '</div>' +
+          '</div>';
+        }
+      })();
+      {% endif %}
+    {% endfor %}
   {% endif %}
-  {% endfor %}
+
+  // Handle filter form interactions
+  const filterForm = document.getElementById('filterForm');
+  const skiAreaFilter = document.getElementById('skiAreaFilter');
+  const groupBySkiArea = document.getElementById('groupBySkiArea');
+
+  // Auto-submit form when ski area filter changes
+  if (skiAreaFilter) {
+    skiAreaFilter.addEventListener('change', function() {
+      filterForm.submit();
+    });
+  }
+
+  // Auto-submit form when group toggle changes
+  if (groupBySkiArea) {
+    groupBySkiArea.addEventListener('change', function() {
+      filterForm.submit();
+    });
+  }
+
+  // Handle collapse chevron rotation for filter controls
+  const filterControls = document.getElementById('filterControls');
+  if (filterControls) {
+    filterControls.addEventListener('show.bs.collapse', function() {
+      const chevron = document.querySelector('.collapse-icon');
+      if (chevron) {
+        chevron.style.transform = 'rotate(180deg)';
+        chevron.style.transition = 'transform 0.2s ease';
+      }
+    });
+
+    filterControls.addEventListener('hide.bs.collapse', function() {
+      const chevron = document.querySelector('.collapse-icon');
+      if (chevron) {
+        chevron.style.transform = 'rotate(0deg)';
+        chevron.style.transition = 'transform 0.2s ease';
+      }
+    });
+  }
+
+  // Handle collapse chevron rotation for ski area sections
+  document.addEventListener('show.bs.collapse', function(event) {
+    if (event.target.id.startsWith('skiArea')) {
+      const button = document.querySelector(`[data-bs-target="#${event.target.id}"]`);
+      if (button) {
+        const chevron = button.querySelector('.ski-area-collapse-icon');
+        if (chevron) {
+          chevron.style.transform = 'rotate(180deg)';
+          chevron.style.transition = 'transform 0.2s ease';
+        }
+      }
+    }
+  });
+
+  document.addEventListener('hide.bs.collapse', function(event) {
+    if (event.target.id.startsWith('skiArea')) {
+      const button = document.querySelector(`[data-bs-target="#${event.target.id}"]`);
+      if (button) {
+        const chevron = button.querySelector('.ski-area-collapse-icon');
+        if (chevron) {
+          chevron.style.transform = 'rotate(0deg)';
+          chevron.style.transition = 'transform 0.2s ease';
+        }
+      }
+    }
+  });
+
+  // Handle collapse/expand all buttons
+  const collapseAllBtn = document.getElementById('collapseAllSkiAreas');
+  const expandAllBtn = document.getElementById('expandAllSkiAreas');
+
+  if (collapseAllBtn) {
+    collapseAllBtn.addEventListener('click', function() {
+      document.querySelectorAll('[id^="skiArea"]').forEach(function(element) {
+        if (element.classList.contains('show')) {
+          const button = document.querySelector(`[data-bs-target="#${element.id}"]`);
+          if (button) {
+            button.click();
+          }
+        }
+      });
+    });
+  }
+
+  if (expandAllBtn) {
+    expandAllBtn.addEventListener('click', function() {
+      document.querySelectorAll('[id^="skiArea"]').forEach(function(element) {
+        if (!element.classList.contains('show')) {
+          const button = document.querySelector(`[data-bs-target="#${element.id}"]`);
+          if (button) {
+            button.click();
+          }
+        }
+      });
+    });
+  }
 
   // Load completeness data for each activity
   const completenessCards = document.querySelectorAll('[id^="completeness-"]');
@@ -320,8 +539,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 <i class="bi bi-${badgeIcon} text-${badgeClass}"></i>
                 <small class="text-muted">${liftsUsed}/${totalLifts} lifts</small>
               </div>
-              ${newLifts > 0 ? `<div class="badge bg-success text-white small">+${newLifts} new!</div>` : ''}
-              <div class="text-center mt-1">
+              <div class="mb-1" style="min-height: 20px;">
+                ${newLifts > 0 ? `<div class="badge bg-success text-white small">+${newLifts} new!</div>` : ''}
+              </div>
+              <div class="text-center">
                 <small class="text-primary fw-medium">
                   <i class="bi bi-arrow-right me-1"></i>View Details
                 </small>

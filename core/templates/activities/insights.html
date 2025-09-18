@@ -243,39 +243,24 @@
         </div>
         <div class="card-body">
           {% if total_badges_count > 0 %}
-            <!-- Enhanced Rarity Breakdown with Progress Circles -->
+            <!-- Badge Rarity Distribution -->
             <div class="row g-4 mb-4">
               <div class="col-12">
                 <h6 class="fw-bold mb-4">Badge Rarity Distribution</h6>
                 <div class="row g-4">
                   {% for rarity_name, rarity_data in rarity_breakdown.items %}
                     <div class="col-6 col-md-4 col-lg-2">
-                      <div class="rarity-card text-center p-3 rounded-3 badge-rarity-{{ rarity_name }} h-100">
-                        <!-- Progress Ring for Rarity -->
-                        <div class="progress-ring progress-ring-md rarity-ring-{{ rarity_name }} mb-3" data-percentage="{% widthratio rarity_data.count total_badges_count 100 %}" data-count="{{ rarity_data.count }}" data-max="{{ total_badges_count }}">
-                          <svg viewBox="0 0 100 100">
-                            <circle class="progress-ring__track" cx="50" cy="50" r="45"></circle>
-                            <circle class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
-                          </svg>
-                          <div class="progress-ring__label">{{ rarity_data.count }}</div>
-                        </div>
-                        <div class="small fw-bold text-uppercase">{{ rarity_data.name }}</div>
-                        <div class="rarity-percentage text-muted small mt-1">
-                          {% widthratio rarity_data.count total_badges_count 100 %}%
+                      <div class="rarity-card text-center p-4 rounded-3 badge-rarity-{{ rarity_name }} h-100 d-flex flex-column justify-content-center">
+                        <!-- Large Badge Count -->
+                        <div class="display-4 fw-bold mb-2 badge-rarity-text-{{ rarity_name }}">{{ rarity_data.count }}</div>
+                        <div class="fw-bold text-uppercase mb-1">{{ rarity_data.name }}</div>
+                        <div class="text-muted small">
+                          {% widthratio rarity_data.count total_badges_count 100 %}% of collection
                         </div>
                       </div>
                     </div>
                   {% endfor %}
                 </div>
-              </div>
-            </div>
-
-            <!-- View All Ski Areas Button -->
-            <div class="row g-3 mb-4">
-              <div class="col-12 text-center">
-                <a href="{% url 'ski_area_completeness_all' %}" class="btn btn-outline-primary btn-lg">
-                  <i class="bi bi-eye me-2"></i>View All Ski Area Completeness
-                </a>
               </div>
             </div>
 

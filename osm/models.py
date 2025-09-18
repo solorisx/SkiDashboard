@@ -233,11 +233,11 @@ class Aerialway(models.Model):
         skiarea = self.way.ski_areas.first()
         if not skiarea:
             ski_areas = SkiArea.objects.filter(geom__isnull=False)
-            point = self.way.nodes.first().geom
+            geom = self.way.constructed_geom
             try:
                 skiarea = (
                     ski_areas
-                    .filter(geom__covers=point)
+                    .filter(geom__intersects=geom)
                     .first()
                 )
             except Exception as e:

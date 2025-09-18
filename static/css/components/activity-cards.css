@@ -1,0 +1,221 @@
+/**
+ * Activity Card Components
+ * Design patterns extracted from activity_list.html for consistent reuse
+ */
+
+/* Base activity card with hover effects */
+.activity-card {
+  transition: all 0.3s ease;
+  border: 0;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.activity-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Stats cards within activity cards */
+.stats-card {
+  transition: all 0.2s ease;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+.stats-card:hover {
+  transform: scale(1.02);
+}
+
+/* Hover lift effect for small items */
+.hover-lift {
+  transition: transform 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Completeness card specific styling */
+.completeness-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 60px;
+}
+
+.hover-lift-completeness {
+  transition: all 0.2s ease;
+}
+
+.hover-lift-completeness:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+  border-radius: 0.375rem;
+}
+
+/* Mini map styling */
+.mini-map {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 2px solid var(--bs-border-color);
+  background: #f8f9fa;
+}
+
+.mini-map-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  color: #6c757d;
+}
+
+/* Badge arrangements */
+.badge-collection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.badge-icon-small {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.badge-icon-small:hover {
+  transform: scale(1.1);
+}
+
+/* Action buttons */
+.card-action-primary {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border: none;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  transition: all 0.3s ease;
+}
+
+.card-action-primary:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 123, 255, 0.3);
+}
+
+/* Flexible card body that grows */
+.card-body-flex {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-body-flex .flex-grow-1 {
+  flex-grow: 1;
+}
+
+.card-body-flex .mt-auto {
+  margin-top: auto;
+}
+
+/* Enhanced pagination */
+.pagination-enhanced {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.pagination-enhanced .page-link {
+  border: none;
+  font-weight: 500;
+  color: #495057;
+  transition: all 0.2s ease;
+}
+
+.pagination-enhanced .page-link:hover {
+  background-color: #007bff;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.pagination-enhanced .page-item.active .page-link {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border-color: #007bff;
+  font-weight: 600;
+}
+
+.pagination-enhanced .page-item.disabled .page-link {
+  background-color: #f8f9fa;
+  color: #6c757d;
+}
+
+/* Season pass badge specific styling */
+.season-pass-badge {
+  animation: subtle-pulse 2s ease-in-out infinite;
+}
+
+@keyframes subtle-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Responsive grid adjustments */
+@media (max-width: 768px) {
+  .activity-card {
+    margin-bottom: 1rem;
+  }
+
+  .stats-card {
+    padding: 0.75rem;
+  }
+
+  .badge-collection {
+    gap: 0.25rem;
+  }
+
+  .pagination-enhanced {
+    font-size: 0.875rem;
+  }
+
+  .pagination-enhanced .page-link {
+    padding: 0.375rem 0.75rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .activity-card {
+    background-color: #343a40;
+    color: #f8f9fa;
+  }
+
+  .stats-card {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .mini-map-placeholder {
+    background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+    color: #adb5bd;
+  }
+}
+
+/* Loading states */
+.loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}

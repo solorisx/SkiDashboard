@@ -1,0 +1,108 @@
+{% load custom_filters %}
+<div class="col-12 col-lg-6 col-xl-4">
+  <div class="card h-100 border-0 shadow-sm hover-shadow-lg transition-all">
+    <div class="card-body p-4 d-flex flex-column">
+      <!-- Content that can grow -->
+      <div class="flex-grow-1">
+        <!-- Header -->
+        <div class="d-flex align-items-start justify-content-between mb-3">
+          <div>
+            <h5 class="card-title fw-bold text-dark mb-1">{{ activity.name }}</h5>
+            <small class="text-muted d-flex align-items-center">
+              <i class="bi bi-clock me-1"></i>
+              {{ activity.timestamp|date:"DATETIME_FORMAT" }}
+            </small>
+          </div>
+          <div class="d-flex flex-column gap-2">
+            {% if not is_grouped %}
+            <span class="badge bg-light text-primary border border-primary-subtle">
+              <i class="bi bi-snow me-1"></i>{{ activity.ski_area.name }}
+            </span>
+            {% endif %}
+            {% if activity.has_season_pass %}
+            <span class="badge bg-success text-white season-pass-badge"
+                  title="This activity is covered by a valid season pass"
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="top">
+              <i class="bi bi-ticket-perforated me-1"></i>Season Pass
+            </span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="row g-3 mb-4">
+          <div class="col-6">
+            <div class="stats-card bg-primary bg-opacity-10 rounded-3 p-3 text-center">
+              <div class="fs-4 fw-bold text-primary mb-1">{{ activity.total_descent|round_to:0 }}</div>
+              <small class="text-muted fw-medium">Descent (m)</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="stats-card bg-success bg-opacity-10 rounded-3 p-3 text-center">
+              <div class="fs-4 fw-bold text-success mb-1">{{ activity.total_distance_km }}</div>
+              <small class="text-muted fw-medium">Distance (km)</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="stats-card bg-info bg-opacity-10 rounded-3 p-3 text-center">
+              <div class="fs-4 fw-bold text-info mb-1">{{ activity.num_lift_rides }}</div>
+              <small class="text-muted fw-medium">Lift Rides</small>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="stats-card bg-warning bg-opacity-10 rounded-3 p-3 text-center">
+              <div class="fs-4 fw-bold text-warning mb-1">{{ activity.badges.all|length }}</div>
+              <small class="text-muted fw-medium">Badges</small>
+            </div>
+          </div>
+          {% if activity.ski_area %}
+          <div class="col-12">
+            <div class="stats-card bg-secondary bg-opacity-10 rounded-3 p-3 text-center position-relative"
+                 id="completeness-{{ activity.id }}"
+                 data-activity-id="{{ activity.id }}"
+                 data-ski-area-id="{{ activity.ski_area.id }}">
+              <div class="d-flex align-items-center justify-content-center gap-2">
+                <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <small class="text-muted fw-medium">Loading area completeness...</small>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Mini Map -->
+        <div class="mb-4">
+          <div id="map{% if is_grouped %}{{ activity.id }}{% else %}{{ forloop.counter }}{% endif %}" class="mini-map rounded-3 shadow-sm" style="height: 180px; border: 2px solid var(--bs-border-color);"></div>
+        </div>
+
+        <!-- Badges -->
+        {% if activity.badges.all %}
+        <div class="mb-4">
+          <div class="d-flex flex-wrap gap-2">
+            {% for badge in activity.badges.all %}
+              <span class="badge-icon badge-icon-small badge-icon-{{ badge.badge.rarity }} rounded-circle p-2"
+                    title="{{ badge.badge.name }}"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top">
+                <i class="{{ badge.badge.icon }} fs-6"></i>
+              </span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Action Button - Always at bottom -->
+      <div class="d-grid mt-auto">
+        <a href="{% url 'activity_detail' activity.id %}"
+           class="btn btn-primary btn-lg fw-medium d-flex align-items-center justify-content-center gap-2">
+          <i class="bi bi-eye"></i>
+          View Details
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

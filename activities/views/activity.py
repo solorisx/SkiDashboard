@@ -7,11 +7,13 @@ from django.db.models import F, Q, Exists, OuterRef
 from django.db.models.functions import Round
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from itertools import groupby
+from operator import attrgetter
 
 from activities.models import LiftRide
 from cost.forms import CostForm
 from cost.models import SeasonPass
-from osm.models import Aerialway, Piste, PisteSegment
+from osm.models import Aerialway, Piste, PisteSegment, SkiArea
 from osm.osm_util import get_aerialways_with_distance
 
 from ..models import Activity
@@ -27,9 +29,9 @@ def get_unique_lift_rides(activity):
 
 @login_required
 def activity_list(request):
-    """Show all activities with pagination and cost management."""
+    """Show all activities with pagination, cost management, filtering and grouping."""
     logger.debug(f"Request method: {request.method}")
-    
+
     if request.method == 'POST':
         if 'dflt_cst' in request.POST:
             pk = request.POST.get('dflt_cst')
@@ -43,7 +45,7 @@ def activity_list(request):
                 logger.debug(f"No default cost set for ski area {activity.ski_area_main.name}.")
                 activity.cost = 75
                 activity.save()
-                
+
         elif 'set_cst' in request.POST:
             pk = request.POST.get('set_cst')
             activity = Activity.objects.get(pk=pk, user=request.user)
@@ -55,8 +57,21 @@ def activity_list(request):
                 return HttpResponse("Invalid form.")
         return redirect('activity_list')
 
+    # Get filter parameters
+    ski_area_filter = request.GET.get('ski_area')
+    group_by_ski_area = request.GET.get('group_by') == 'ski_area'
+
     activities = get_user_activities_base_query(request.user).order_by("-timestamp")
-    
+
+    # Apply ski area filter if specified
+    if ski_area_filter:
+        try:
+            ski_area_id = int(ski_area_filter)
+            activities = activities.filter(ski_area_id=ski_area_id)
+        except (ValueError, TypeError):
+            # Invalid ski_area parameter, ignore it
+            pass
+
     # Create a subquery to check for valid season passes
     season_pass_subquery = SeasonPass.objects.filter(
         user=request.user,
@@ -66,17 +81,53 @@ def activity_list(request):
         Q(skiarea=OuterRef('ski_area')) |  # Direct ski area match
         Q(skiarea_network__members__member=OuterRef('ski_area'))  # Ski area network match through members
     )
-    
+
     activities = activities.annotate(
         total_distance_km=Round(F("total_distance")/1000, 2),
         has_season_pass=Exists(season_pass_subquery),
-    ).prefetch_related('badges__badge')
+    ).prefetch_related('badges__badge', 'ski_area')
 
-    paginator = Paginator(activities, 12)  # Show 12 activities per page (works as 1×12, 2×6, 3×4 rows)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    # Get available ski areas for the filter dropdown
+    available_ski_areas = SkiArea.objects.filter(
+        activity__user=request.user
+    ).distinct().order_by('name')
 
-    return render(request, 'activities/activity_list.html', {'page_obj': page_obj})
+    # Handle grouping by ski area
+    if group_by_ski_area:
+        # For grouping, we need all activities without pagination
+        all_activities = list(activities.order_by('ski_area__name', '-timestamp'))
+
+        # Group activities by ski area
+        grouped_activities = []
+        for ski_area, group in groupby(all_activities, key=attrgetter('ski_area')):
+            activities_list = list(group)
+            grouped_activities.append({
+                'ski_area': ski_area,
+                'activities': activities_list,
+                'count': len(activities_list)
+            })
+
+        context = {
+            'grouped_activities': grouped_activities,
+            'is_grouped': True,
+            'available_ski_areas': available_ski_areas,
+            'current_ski_area_filter': ski_area_filter,
+            'total_activities': len(all_activities),
+        }
+    else:
+        # Regular pagination
+        paginator = Paginator(activities, 12)  # Show 12 activities per page (works as 1×12, 2×6, 3×4 rows)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        context = {
+            'page_obj': page_obj,
+            'is_grouped': False,
+            'available_ski_areas': available_ski_areas,
+            'current_ski_area_filter': ski_area_filter,
+        }
+
+    return render(request, 'activities/activity_list.html', context)
 
 
 @login_required

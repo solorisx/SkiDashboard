@@ -21,7 +21,6 @@ from .api import (
 )
 
 from .statistics import (
-    activity_list_skiarea,
     activity_list_skiarea_detail,
     lift_ride_list,
     lift_ride_list_season,
@@ -81,7 +80,6 @@ __all__ = [
     'season_stats',
     
     # Statistics views
-    'activity_list_skiarea',
     'activity_list_skiarea_detail',
     'lift_ride_list',
     'lift_ride_list_season',

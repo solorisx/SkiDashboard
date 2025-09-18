@@ -1,0 +1,326 @@
+{% comment %}
+Example template showing how to use the activity card components
+Copy and adapt these patterns for consistent design across the application
+{% endcomment %}
+
+{% extends '../base/base.html' %}
+{% load custom_filters %}
+
+{% block pagetitle %}Activity Cards Example{% endblock %}
+
+{% block extra_head %}
+{% load static %}
+<!-- Core component styles -->
+<link rel="stylesheet" href="{% static 'css/components/activity-cards.css' %}">
+<link rel="stylesheet" href="{% static 'css/layouts/common-layouts.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/badges.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/progress-circles.css' %}">
+
+<!-- Leaflet for maps (optional) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid container-enhanced">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="page-header-content">
+      <div>
+        <h1 class="page-header-title display-6 fw-bold text-dark">Activity Cards Example</h1>
+        <p class="page-header-subtitle">Consistent design patterns for activity displays</p>
+      </div>
+      <div class="page-header-actions">
+        <div class="badge bg-primary fs-6 px-3 py-2">
+          {{ activities|length }} Activities
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Overview -->
+  <div class="stats-overview">
+    <div class="stats-grid">
+      <div class="stat-card bg-primary bg-opacity-10">
+        <div class="stat-value text-primary">{{ total_activities }}</div>
+        <div class="stat-label">Total Activities</div>
+      </div>
+      <div class="stat-card bg-success bg-opacity-10">
+        <div class="stat-value text-success">{{ total_distance }}</div>
+        <div class="stat-label">Total Distance (km)</div>
+      </div>
+      <div class="stat-card bg-info bg-opacity-10">
+        <div class="stat-value text-info">{{ total_lifts }}</div>
+        <div class="stat-label">Total Lift Rides</div>
+      </div>
+      <div class="stat-card bg-warning bg-opacity-10">
+        <div class="stat-value text-warning">{{ total_badges }}</div>
+        <div class="stat-label">Total Badges</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activities Grid -->
+  <div class="card-grid">
+    {% for activity in activities %}
+      <div class="activity-card card h-100 shadow-sm">
+        <div class="card-body card-body-flex p-4">
+          <!-- Content that can grow -->
+          <div class="flex-grow-1">
+            <!-- Header -->
+            <div class="d-flex align-items-start justify-content-between mb-3">
+              <div>
+                <h5 class="card-title fw-bold text-dark mb-1">{{ activity.name }}</h5>
+                <small class="text-muted d-flex align-items-center">
+                  <i class="bi bi-clock me-1"></i>
+                  {{ activity.timestamp|date:"DATETIME_FORMAT" }}
+                </small>
+              </div>
+              <div class="d-flex flex-column gap-2">
+                <span class="badge bg-light text-primary border border-primary-subtle">
+                  <i class="bi bi-snow me-1"></i>{{ activity.ski_area.name }}
+                </span>
+                {% if activity.has_season_pass %}
+                <span class="badge bg-success text-white season-pass-badge"
+                      title="This activity is covered by a valid season pass"
+                      data-bs-toggle="tooltip">
+                  <i class="bi bi-ticket-perforated me-1"></i>Season Pass
+                </span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="row g-3 mb-4">
+              <div class="col-6">
+                <div class="stats-card bg-primary bg-opacity-10 rounded-3 p-3 text-center">
+                  <div class="fs-4 fw-bold text-primary mb-1">{{ activity.total_descent|round_to:0 }}</div>
+                  <small class="text-muted fw-medium">Descent (m)</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="stats-card bg-success bg-opacity-10 rounded-3 p-3 text-center">
+                  <div class="fs-4 fw-bold text-success mb-1">{{ activity.total_distance_km }}</div>
+                  <small class="text-muted fw-medium">Distance (km)</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="stats-card bg-info bg-opacity-10 rounded-3 p-3 text-center">
+                  <div class="fs-4 fw-bold text-info mb-1">{{ activity.num_lift_rides }}</div>
+                  <small class="text-muted fw-medium">Lift Rides</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="stats-card bg-warning bg-opacity-10 rounded-3 p-3 text-center">
+                  <div class="fs-4 fw-bold text-warning mb-1">{{ activity.badges.all|length }}</div>
+                  <small class="text-muted fw-medium">Badges</small>
+                </div>
+              </div>
+
+              <!-- Completeness Card (if ski area exists) -->
+              {% if activity.ski_area %}
+              <div class="col-12">
+                <div class="stats-card bg-secondary bg-opacity-10 rounded-3 p-3 text-center position-relative"
+                     id="completeness-{{ activity.id }}"
+                     data-activity-id="{{ activity.id }}"
+                     data-ski-area-id="{{ activity.ski_area.id }}">
+                  <div class="completeness-loading">
+                    <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <small class="text-muted fw-medium">Loading area completeness...</small>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Mini Map -->
+            <div class="mb-4">
+              <div id="map{{ forloop.counter }}" class="mini-map rounded-3 shadow-sm" style="height: 180px;"></div>
+            </div>
+
+            <!-- Badges -->
+            {% if activity.badges.all %}
+            <div class="mb-4">
+              <div class="badge-collection">
+                {% for badge in activity.badges.all %}
+                  <span class="badge-icon badge-icon-small badge-icon-{{ badge.badge.rarity }} rounded-circle p-2"
+                        title="{{ badge.badge.name }}"
+                        data-bs-toggle="tooltip">
+                    <i class="{{ badge.badge.icon }} fs-6"></i>
+                  </span>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Action Button - Always at bottom -->
+          <div class="d-grid mt-auto">
+            <a href="{% url 'activity_detail' activity.id %}"
+               class="btn btn-primary btn-lg card-action-primary d-flex align-items-center justify-content-center gap-2">
+              <i class="bi bi-eye"></i>
+              View Details
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Empty State -->
+  {% if not activities %}
+  <div class="empty-state">
+    <div class="empty-state-icon">
+      <i class="bi bi-snow"></i>
+    </div>
+    <h3 class="empty-state-title">No activities found</h3>
+    <p class="empty-state-text">Link Strava and start tracking your skiing adventures!</p>
+    <div class="empty-state-actions">
+      <a href="#" class="btn btn-primary">Connect Strava</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Enhanced Pagination -->
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="d-flex justify-content-center mt-5">
+    <nav aria-label="Activities pagination">
+      <ul class="pagination pagination-enhanced">
+        {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link rounded-start-pill px-4" href="?page=1">
+              <i class="bi bi-chevron-double-left"></i>
+            </a>
+          </li>
+          <li class="page-item">
+            <a class="page-link px-4" href="?page={{ page_obj.previous_page_number }}">
+              <i class="bi bi-chevron-left"></i>
+            </a>
+          </li>
+        {% else %}
+          <li class="page-item disabled">
+            <span class="page-link rounded-start-pill px-4">
+              <i class="bi bi-chevron-double-left"></i>
+            </span>
+          </li>
+          <li class="page-item disabled">
+            <span class="page-link px-4">
+              <i class="bi bi-chevron-left"></i>
+            </span>
+          </li>
+        {% endif %}
+
+        <li class="page-item active">
+          <span class="page-link bg-primary border-primary px-4 fw-bold">
+            {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+          </span>
+        </li>
+
+        {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link px-4" href="?page={{ page_obj.next_page_number }}">
+              <i class="bi bi-chevron-right"></i>
+            </a>
+          </li>
+          <li class="page-item">
+            <a class="page-link rounded-end-pill px-4" href="?page={{ page_obj.paginator.num_pages }}">
+              <i class="bi bi-chevron-double-right"></i>
+            </a>
+          </li>
+        {% else %}
+          <li class="page-item disabled">
+            <span class="page-link px-4">
+              <i class="bi bi-chevron-right"></i>
+            </span>
+          </li>
+          <li class="page-item disabled">
+            <span class="page-link rounded-end-pill px-4">
+              <i class="bi bi-chevron-double-right"></i>
+            </span>
+          </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Core component scripts -->
+<script src="{% static 'js/utils/common-utils.js' %}"></script>
+<script src="{% static 'js/components/activity-cards.js' %}"></script>
+
+<!-- Custom initialization -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Example of custom map data - replace with your actual data
+  const activitiesData = {
+    {% for activity in activities %}
+    {{ activity.id }}: {
+      {% if activity.geom and activity.geom.geojson %}
+      track: {{ activity.geom.geojson|safe }},
+      lat: {{ activity.geom.centroid.y|unlocalize }},
+      lng: {{ activity.geom.centroid.x|unlocalize }}
+      {% else %}
+      track: null,
+      lat: null,
+      lng: null
+      {% endif %}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  };
+
+  // Override the map data method
+  if (window.activityCardManager) {
+    window.activityCardManager.getActivityDataForMap = function(mapElement) {
+      const mapId = mapElement.id;
+      const activityIndex = mapId.replace('map', '');
+      const activityId = Object.keys(activitiesData)[activityIndex - 1];
+      return activitiesData[activityId];
+    };
+  }
+});
+</script>
+{% endblock %}
+
+{% comment %}
+Usage Instructions:
+===================
+
+1. Include the CSS files in your template's extra_head block:
+   - activity-cards.css (main component styles)
+   - common-layouts.css (layout utilities)
+   - Plus any existing component files (badges.css, progress-circles.css)
+
+2. Include the JS files in your extra_js block:
+   - common-utils.js (global utilities)
+   - activity-cards.js (activity-specific functionality)
+
+3. Use the CSS classes:
+   - .activity-card for main activity containers
+   - .stats-card for statistic displays
+   - .card-body-flex with .flex-grow-1 and .mt-auto for flexible layouts
+   - .page-header, .stats-overview, .card-grid for page structure
+
+4. HTML structure:
+   - Use data attributes for completeness cards: data-activity-id, data-ski-area-id
+   - Include proper ARIA labels and tooltip attributes
+   - Structure cards with flexible body layout
+
+5. JavaScript integration:
+   - The ActivityCardManager will auto-initialize
+   - Override getActivityDataForMap method for custom map data
+   - Use CommonUtils for standard functionality
+
+Key Benefits:
+=============
+- Consistent hover effects and animations
+- Responsive design with mobile-first approach
+- Accessibility features built-in
+- Performance optimizations (debouncing, lazy loading)
+- Modular and reusable components
+- Easy to customize and extend
+{% endcomment %}
