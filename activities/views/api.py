@@ -7,6 +7,8 @@ from django.http import JsonResponse
 from cost.models import SeasonPass
 from osm.models import SkiArea
 
+from ..utils.completeness import calculate_activity_completeness
+from ..models import Activity
 from ..utils.queries import get_user_activities_base_query
 from ..utils.seasons import get_season_dates
 
@@ -152,3 +154,20 @@ def home_stats(request):
         "total_stats": total_stats,
         "season_passes": season_pass_stats,
     }
+
+
+@login_required
+def activity_completeness_api(request, activity_id):
+    """API endpoint to get completeness data for a specific activity."""
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'AJAX requests only'}, status=400)
+
+    try:
+        activity = Activity.objects.get(id=activity_id, user=request.user)
+        completeness_data = calculate_activity_completeness(activity)
+        return JsonResponse(completeness_data)
+    except Activity.DoesNotExist:
+        return JsonResponse({'error': 'Activity not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error calculating completeness for activity {activity_id}: {e}")
+        return JsonResponse({'error': 'Error calculating completeness'}, status=500)

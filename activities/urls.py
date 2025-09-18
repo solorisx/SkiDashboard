@@ -1,4 +1,3 @@
-from django.contrib import admin
 from django.urls import path
 from . import views
 
@@ -28,4 +27,12 @@ urlpatterns = [
     path("admin/profiling/<int:activity_id>/", views.activity_profiling_detail, name="activity_profiling_detail"),
     path("insights/", views.activity_insights, name="activity_insights"),
     path("insights/<str:season>/", views.activity_insights, name="activity_insights_season"),
+    path("lift-insights/", views.lift_insights, name="lift_insights"),
+    path("lift-insights/<str:season>/", views.lift_insights, name="lift_insights_season"),
+    path("ski-area-completeness/<int:ski_area_id>/", views.ski_area_completeness_detail, name="ski_area_completeness_detail"),
+    path("ski-area-completeness/<int:ski_area_id>/<str:season>/", views.ski_area_completeness_detail, name="ski_area_completeness_detail_season"),
+    path("ski-area-completeness/all/", views.ski_area_completeness_all, name="ski_area_completeness_all"),
+    path("ski-area-completeness/all/<str:season>/", views.ski_area_completeness_all, name="ski_area_completeness_all_season"),
+    path("api/activity-completeness/<int:activity_id>/", views.activity_completeness_api, name="activity_completeness_api"),
+    path("api/reload-ski-area-completeness/<int:ski_area_id>/", views.reload_ski_area_completeness, name="reload_ski_area_completeness"),
 ]

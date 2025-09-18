@@ -1,0 +1,343 @@
+{% extends '../base/base.html' %}
+{% load custom_filters %}
+{% load l10n %}
+
+{% block pagetitle %}All Ski Area Completeness{% endblock %}
+{% block extra_head %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/components/badges.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/progress-circles.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-5">
+  <!-- Header Section -->
+  <div class="row mb-5">
+    <div class="col-12">
+      <div class="d-flex align-items-center justify-content-between flex-wrap">
+        <div class="mb-3 mb-md-0">
+          <!-- Back Button -->
+          <div class="mb-2">
+            <a href="{% url 'lift_insights' %}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-arrow-left me-1"></i>
+              Back to Lift Insights
+            </a>
+          </div>
+          <h1 class="display-6 fw-bold text-dark mb-2">All Ski Area Completeness</h1>
+          <p class="text-muted fs-5 mb-0">Complete overview of your exploration progress</p>
+        </div>
+
+        <!-- Season Filter -->
+        {% if seasons %}
+        <div class="dropdown">
+          <button class="btn btn-outline-primary btn-lg dropdown-toggle d-flex align-items-center gap-2" type="button" id="seasonDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-calendar-event"></i>
+            {% if selected_season %}Season {{ selected_season }}{% else %}All Seasons{% endif %}
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="seasonDropdown">
+            <li><a class="dropdown-item {% if not selected_season %}active{% endif %}" href="{% url 'ski_area_completeness_all' %}">All Seasons</a></li>
+            {% for season in seasons %}
+              <li><a class="dropdown-item {% if selected_season == season %}active{% endif %}" href="{% url 'ski_area_completeness_all_season' season %}">Season {{ season }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Ski Areas Grid -->
+  <div class="row g-4">
+    {% if ski_area_completeness %}
+      {% for area_data in ski_area_completeness %}
+        <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+          <a href="{% if selected_season %}{% url 'ski_area_completeness_detail_season' area_data.ski_area.id selected_season %}{% else %}{% url 'ski_area_completeness_detail' area_data.ski_area.id %}{% endif %}" class="text-decoration-none">
+            <div class="card border completeness-card h-100 hover-card">
+              <div class="card-body p-4 text-center">
+                <h6 class="fw-bold mb-3 text-dark">{{ area_data.ski_area.name }}</h6>
+
+                <!-- Progress Ring -->
+                <div class="progress-ring progress-ring-lg completeness-ring mb-3
+                  {% if area_data.completeness.completion_percentage == 100 %}progress-ring-warning
+                  {% elif area_data.completeness.completion_percentage >= 75 %}progress-ring-success
+                  {% elif area_data.completeness.completion_percentage >= 50 %}progress-ring-info
+                  {% elif area_data.completeness.completion_percentage >= 25 %}progress-ring-primary
+                  {% else %}progress-ring-secondary{% endif %}"
+                  data-percentage="{{ area_data.completeness.completion_percentage }}">
+                  <svg viewBox="0 0 100 100">
+                    <circle class="progress-ring__track" cx="50" cy="50" r="45"></circle>
+                    <circle class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
+                  </svg>
+                  <div class="progress-ring__label">{{ area_data.completeness.completion_percentage }}%</div>
+                </div>
+
+                <!-- Enhanced Stats -->
+                <div class="row g-3 mb-3">
+                  <div class="col-6">
+                    <div class="stats-mini-card bg-success bg-opacity-10 rounded-2 p-2">
+                      <div class="fw-bold text-success fs-5">{{ area_data.completeness.total_ridden }}</div>
+                      <small class="text-muted fw-medium">Ridden</small>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="stats-mini-card bg-primary bg-opacity-10 rounded-2 p-2">
+                      <div class="fw-bold text-primary fs-5">{{ area_data.completeness.total_available }}</div>
+                      <small class="text-muted fw-medium">Available</small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="progress mb-3" style="height: 6px;">
+                  <div class="progress-bar
+                    {% if area_data.completeness.completion_percentage == 100 %}bg-warning
+                    {% elif area_data.completeness.completion_percentage >= 75 %}bg-success
+                    {% elif area_data.completeness.completion_percentage >= 50 %}bg-info
+                    {% elif area_data.completeness.completion_percentage >= 25 %}bg-primary
+                    {% else %}bg-secondary{% endif %}"
+                    role="progressbar"
+                    style="width: {{ area_data.completeness.completion_percentage }}%"
+                    aria-valuenow="{{ area_data.completeness.completion_percentage }}"
+                    aria-valuemin="0"
+                    aria-valuemax="100">
+                  </div>
+                </div>
+
+                <!-- View Details Button -->
+                <div class="mt-auto">
+                  <span class="btn btn-outline-primary btn-sm w-100">
+                    <i class="bi bi-eye me-1"></i>View Details
+                  </span>
+                </div>
+              </div>
+            </div>
+          </a>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="col-12">
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-pie-chart display-1 mb-4"></i>
+          <h4 class="mb-3">No ski areas found</h4>
+          <p class="mb-0">Start skiing to track your exploration progress!</p>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.hover-card {
+  transition: all 0.3s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.hover-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 1rem 2rem rgba(0,0,0,.15);
+}
+
+.hover-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: all 0.5s;
+  z-index: 1;
+}
+
+.hover-card:hover::before {
+  left: 100%;
+}
+
+.completeness-card {
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.completeness-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 1rem 2rem rgba(0,0,0,.15);
+  border-color: rgba(13, 110, 253, 0.2);
+}
+
+.progress-circle-container {
+  position: relative;
+}
+
+.progress-circle {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto;
+  position: relative;
+  background: conic-gradient(
+    #28a745 calc(var(--percentage) * 3.6deg),
+    #e9ecef calc(var(--percentage) * 3.6deg)
+  );
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  animation: progressPulse 2s ease-in-out infinite alternate;
+}
+
+.progress-circle:hover {
+  transform: scale(1.05);
+}
+
+.progress-circle-inner {
+  width: 75px;
+  height: 75px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.percentage {
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: #28a745;
+  line-height: 1;
+}
+
+.completion-status {
+  font-size: 0.7rem;
+  margin-top: 2px;
+}
+
+.stats-mini-card {
+  transition: all 0.2s ease;
+}
+
+.stats-mini-card:hover {
+  transform: scale(1.05);
+}
+
+.progress-bar {
+  transition: width 1s ease-in-out;
+}
+
+@keyframes progressPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.1);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+@media (max-width: 768px) {
+  .display-6 {
+    font-size: 2rem;
+  }
+
+  .progress-circle {
+    width: 60px;
+    height: 60px;
+  }
+
+  .progress-circle-inner {
+    width: 45px;
+    height: 45px;
+  }
+
+  .percentage {
+    font-size: 0.7rem;
+  }
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Initialize progress rings (same logic as insights.html)
+  function initProgressRing(ring) {
+    const svg = ring.querySelector('svg');
+    const bar = svg.querySelector('.progress-ring__bar');
+
+    // Get the percentage from data attribute
+    const percentage = Math.max(0, Math.min(100, parseFloat(ring.dataset.percentage) || 0));
+
+    // Calculate circumference
+    const radius = 45;
+    const circumference = 2 * Math.PI * radius;
+
+    // Set up the progress bar
+    bar.style.strokeDasharray = `${circumference} ${circumference}`;
+    bar.style.strokeDashoffset = circumference; // Start at 0%
+
+    // Animate the progress after a short delay
+    setTimeout(() => {
+      const offset = circumference * (1 - percentage / 100);
+      bar.style.strokeDashoffset = offset;
+    }, 100);
+  }
+
+  // Initialize all progress rings with staggered animation
+  const progressRings = document.querySelectorAll('.progress-ring');
+  progressRings.forEach((ring, index) => {
+    setTimeout(() => {
+      initProgressRing(ring);
+    }, index * 150);
+  });
+
+  // Animate progress bars on scroll into view
+  const progressBars = document.querySelectorAll('.progress-bar');
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const progressBar = entry.target;
+          const width = progressBar.style.width;
+          progressBar.style.width = '0%';
+
+          setTimeout(() => {
+            progressBar.style.width = width;
+          }, 100);
+
+          observer.unobserve(progressBar);
+        }
+      });
+    },
+    {
+      threshold: 0.1
+    }
+  );
+
+  progressBars.forEach(bar => {
+    observer.observe(bar);
+  });
+
+  // Add staggered animation to cards
+  const cards = document.querySelectorAll('.completeness-card');
+  cards.forEach((card, index) => {
+    card.style.animationDelay = `${index * 0.1}s`;
+    card.classList.add('fade-in-up');
+  });
+});
+</script>
+
+{% endblock %}

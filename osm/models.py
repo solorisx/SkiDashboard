@@ -1,5 +1,5 @@
 from django.db import connection, models
-from django.contrib.gis.geos import LineString, Point
+from django.contrib.gis.geos import LineString, Point, Polygon
 from django.contrib.gis.db import models
 from djmoney.models.fields import MoneyField
 from django_countries.fields import CountryField
@@ -11,6 +11,43 @@ from django.utils.functional import cached_property
 from django.contrib.gis.db.models.functions import Transform
 
 logger = logging.getLogger(__name__)
+
+
+class LiftFilterConfig:
+    """Configuration for filtering lift types globally."""
+
+    # Lift types to exclude from completeness calculations and statistics
+    # These are typically non-ski lifts or very short convenience lifts
+    EXCLUDED_LIFT_TYPES = {
+        'explosive',        # Explosive lifts (not ski lifts)
+        'station',          # Station (not a lift)
+        'magic_carpet',     # Magic carpet (conveyor belt)
+        'goods',            # Goods lift (not for passengers)
+        'rope_tow',         # Rope tow (often very short)
+        'zip_line',         # Zip line (not a ski lift)
+        'construction',     # Construction lift (not for skiing)
+        'yes',              # data error
+        'proposed',         # proposed lift (not existing)
+        'planned',          # planned lift (not existing)
+        'disused',          # disused lift (not existing)
+        'abandoned',        # abandoned lift (not existing)
+        'no',               # data error
+        'wire_cable',      # wire cable (not a ski lift)
+        'unknown',         # unknown type
+    }
+
+    @classmethod
+    def should_include_lift(cls, aerialway_type):
+        """Check if a lift type should be included in calculations."""
+        if not aerialway_type:
+            return True  # Include lifts with unknown type
+        return aerialway_type not in cls.EXCLUDED_LIFT_TYPES
+
+    @classmethod
+    def filter_lifts_queryset(cls, queryset):
+        """Filter a queryset of Aerialway objects to exclude configured lift types."""
+        return queryset.exclude(aerialway__in=cls.EXCLUDED_LIFT_TYPES)
+
 
 class ValidDuring(models.TextChoices):
     winter = 'winter', 'Winter'
@@ -42,10 +79,49 @@ class Way(models.Model):
 
     def __str__(self):
         return f"Way {self.osm_id}"
-        
-    
+
+
     def get_osm_url(self):
         return f"https://www.openstreetmap.org/way/{self.osm_id}"
+
+    @cached_property
+    def constructed_geom(self):
+        """
+        Construct geometry from way nodes.
+        Returns LineString for open ways or Polygon for closed ways.
+        Result is cached until the way is modified.
+        """
+        try:
+            # Get nodes in order
+            way_nodes = self.nodes.all().order_by('waynode__sequence')
+
+            if way_nodes.count() < 2:
+                logger.warning(f"Way {self.osm_id} has insufficient nodes ({way_nodes.count()})")
+                return None
+
+            # Extract coordinates from node geometries
+            coords = []
+            for node in way_nodes:
+                if node.geom:
+                    coords.append((node.geom.x, node.geom.y))
+
+            if len(coords) < 2:
+                logger.warning(f"Way {self.osm_id} has insufficient valid coordinates ({len(coords)})")
+                return None
+
+            # Determine if way is closed (first and last nodes are the same)
+            is_closed = len(coords) >= 3 and coords[0] == coords[-1]
+
+            # For closed ways with 3+ coordinates, create a Polygon
+            if is_closed and len(coords) >= 4:  # Need at least 4 points for valid polygon (including closure)
+                return Polygon(coords)
+
+            # For open ways or insufficient points for polygon, create LineString
+            return LineString(coords)
+
+        except Exception as e:
+            logger.error(f"Error constructing geometry for way {self.osm_id}: {e}")
+            return None
 
 
 class WayNode(models.Model):

@@ -43,6 +43,72 @@ BADGE_CONFIGS = {
         'description': 'You visited a new ski area for the first time!',
         'icon': 'fa-solid fa-map-location-dot',
         'rarity': 'silver'
+    },
+
+    # Completeness badges
+    'COMPLETENESS_25': {
+        'name': 'Explorer',
+        'description': 'You rode 25% of lifts in a ski area!',
+        'icon': 'fa-solid fa-compass',
+        'rarity': 'bronze'
+    },
+    'COMPLETENESS_50': {
+        'name': 'Area Scout',
+        'description': 'You rode 50% of lifts in a ski area!',
+        'icon': 'fa-solid fa-map',
+        'rarity': 'silver'
+    },
+    'COMPLETENESS_75': {
+        'name': 'Mountain Master',
+        'description': 'You rode 75% of lifts in a ski area!',
+        'icon': 'fa-solid fa-mountain',
+        'rarity': 'gold'
+    },
+    'COMPLETENESS_100': {
+        'name': 'Area Conqueror',
+        'description': 'You rode 100% of lifts in a ski area!',
+        'icon': 'fa-solid fa-crown',
+        'rarity': 'platinum'
+    },
+
+    # Daily completeness badges
+    'DAILY_COMPLETENESS_25': {
+        'name': 'Daily Explorer',
+        'description': 'You rode 25% of lifts in a ski area in one day!',
+        'icon': 'fa-solid fa-calendar-day',
+        'rarity': 'bronze'
+    },
+    'DAILY_COMPLETENESS_50': {
+        'name': 'Daily Scout',
+        'description': 'You rode 50% of lifts in a ski area in one day!',
+        'icon': 'fa-solid fa-calendar-check',
+        'rarity': 'silver'
+    },
+    'DAILY_COMPLETENESS_75': {
+        'name': 'Daily Master',
+        'description': 'You rode 75% of lifts in a ski area in one day!',
+        'icon': 'fa-solid fa-calendar-star',
+        'rarity': 'gold'
+    },
+
+    # Lift variety badges
+    'LIFT_VARIETY_5': {
+        'name': 'Lift Sampler',
+        'description': 'You used 5 different lifts in one day!',
+        'icon': 'fa-solid fa-list',
+        'rarity': 'bronze'
+    },
+    'LIFT_VARIETY_10': {
+        'name': 'Lift Collector',
+        'description': 'You used 10 different lifts in one day!',
+        'icon': 'fa-solid fa-collection',
+        'rarity': 'silver'
+    },
+    'LIFT_VARIETY_15': {
+        'name': 'Lift Enthusiast',
+        'description': 'You used 15 different lifts in one day!',
+        'icon': 'fa-solid fa-star',
+        'rarity': 'gold'
     }
 }
 
@@ -160,6 +226,80 @@ def assign_badges(activity: Activity):
         natural_key, config = get_streak_badge_config(i, ski_area_specific=False)
         badge, _ = get_or_create_badge_by_natural_key(natural_key, **config)
         ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+
+    # Completeness and lift variety badges
+    if activity.ski_area:
+        from .utils.completeness import calculate_activity_completeness, calculate_ski_area_completeness
+
+        # Daily completeness badges
+        daily_completeness = calculate_activity_completeness(activity)
+        daily_percentage = daily_completeness['daily_completion_percentage']
+
+        if daily_percentage >= 75:
+            badge, _ = get_or_create_badge_by_natural_key('DAILY_COMPLETENESS_75')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+        elif daily_percentage >= 50:
+            badge, _ = get_or_create_badge_by_natural_key('DAILY_COMPLETENESS_50')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+        elif daily_percentage >= 25:
+            badge, _ = get_or_create_badge_by_natural_key('DAILY_COMPLETENESS_25')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+
+        # Lift variety badges
+        unique_lifts_today = daily_completeness['lifts_used_today']
+        if unique_lifts_today >= 15:
+            badge, _ = get_or_create_badge_by_natural_key('LIFT_VARIETY_15')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+        elif unique_lifts_today >= 10:
+            badge, _ = get_or_create_badge_by_natural_key('LIFT_VARIETY_10')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+        elif unique_lifts_today >= 5:
+            badge, _ = get_or_create_badge_by_natural_key('LIFT_VARIETY_5')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+
+        # Overall completeness badges (check current state after this activity)
+        overall_completeness = calculate_ski_area_completeness(activity.user, activity.ski_area)
+        completion_percentage = overall_completeness['completion_percentage']
+
+        if completion_percentage >= 100:
+            badge, _ = get_or_create_badge_by_natural_key('COMPLETENESS_100')
+            # Award to the activity that achieved 100% completion
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+            # Remove from any earlier activities in the same ski area
+            ActivityBadge.objects.filter(
+                badge=badge,
+                activity__user=activity.user,
+                activity__ski_area=activity.ski_area,
+                activity__start_time__lt=activity.start_time
+            ).delete()
+        elif completion_percentage >= 75:
+            badge, _ = get_or_create_badge_by_natural_key('COMPLETENESS_75')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+            # Remove from later activities that might have gotten it prematurely
+            ActivityBadge.objects.filter(
+                badge=badge,
+                activity__user=activity.user,
+                activity__ski_area=activity.ski_area,
+                activity__start_time__gt=activity.start_time
+            ).delete()
+        elif completion_percentage >= 50:
+            badge, _ = get_or_create_badge_by_natural_key('COMPLETENESS_50')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+            ActivityBadge.objects.filter(
+                badge=badge,
+                activity__user=activity.user,
+                activity__ski_area=activity.ski_area,
+                activity__start_time__gt=activity.start_time
+            ).delete()
+        elif completion_percentage >= 25:
+            badge, _ = get_or_create_badge_by_natural_key('COMPLETENESS_25')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+            ActivityBadge.objects.filter(
+                badge=badge,
+                activity__user=activity.user,
+                activity__ski_area=activity.ski_area,
+                activity__start_time__gt=activity.start_time
+            ).delete()
 
 
 def reassign_all_badges(user=None):

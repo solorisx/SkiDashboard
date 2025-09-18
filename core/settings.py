@@ -290,7 +290,7 @@ LOGGING = {
     },
     'root': {   # <--- root logger catches everything not caught by other loggers
         'handlers': ['console'],
-        'level': LOG_LEVEL,
+        'level': "WARNING",
     },
     'loggers': {
         'django': {

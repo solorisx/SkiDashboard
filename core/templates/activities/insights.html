@@ -6,6 +6,7 @@
 {% block extra_head %}
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/components/badges.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/progress-circles.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 {% endblock %}
@@ -40,35 +41,71 @@
     </div>
   </div>
 
-  <!-- Overall Statistics Cards -->
+  <!-- Enhanced Overall Statistics Cards -->
   <div class="row g-4 mb-5">
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm h-100 bg-primary bg-opacity-10">
+      <div class="card border-0 shadow-sm h-100 stats-card-enhanced bg-primary bg-opacity-10">
         <div class="card-body text-center p-4">
+          <div class="progress-ring progress-ring-sm progress-ring-primary stat-ring mb-3" data-percentage="{{ overall_stats.total_activities|floatformat:0 }}">
+            <svg viewBox="0 0 100 100">
+              <circle class="progress-ring__track" cx="50" cy="50" r="45"></circle>
+              <circle class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
+            </svg>
+            <div class="progress-ring__icon">
+              <i class="bi bi-snow text-primary"></i>
+            </div>
+          </div>
           <div class="fs-2 fw-bold text-primary mb-2">{{ overall_stats.total_activities }}</div>
           <div class="text-muted fw-medium">Total Activities</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm h-100 bg-success bg-opacity-10">
+      <div class="card border-0 shadow-sm h-100 stats-card-enhanced bg-success bg-opacity-10">
         <div class="card-body text-center p-4">
+          <div class="progress-ring progress-ring-sm progress-ring-success stat-ring mb-3" data-percentage="{{ overall_stats.total_distance_km|floatformat:0 }}" data-max="1000">
+            <svg viewBox="0 0 100 100">
+              <circle class="progress-ring__track" cx="50" cy="50" r="45"></circle>
+              <circle class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
+            </svg>
+            <div class="progress-ring__icon">
+              <i class="bi bi-speedometer text-success"></i>
+            </div>
+          </div>
           <div class="fs-2 fw-bold text-success mb-2">{{ overall_stats.total_distance_km }}</div>
           <div class="text-muted fw-medium">Total Distance (km)</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm h-100 bg-info bg-opacity-10">
+      <div class="card border-0 shadow-sm h-100 stats-card-enhanced bg-info bg-opacity-10">
         <div class="card-body text-center p-4">
+          <div class="progress-ring progress-ring-sm progress-ring-info stat-ring mb-3" data-percentage="{{ overall_stats.total_lift_rides|floatformat:0 }}" data-max="500">
+            <svg viewBox="0 0 100 100">
+              <circle class="progress-ring__track" cx="50" cy="50" r="45"></circle>
+              <circle class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
+            </svg>
+            <div class="progress-ring__icon">
+              <i class="bi bi-cable-car text-info"></i>
+            </div>
+          </div>
           <div class="fs-2 fw-bold text-info mb-2">{{ overall_stats.total_lift_rides }}</div>
           <div class="text-muted fw-medium">Total Lift Rides</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm h-100 bg-warning bg-opacity-10">
+      <div class="card border-0 shadow-sm h-100 stats-card-enhanced bg-warning bg-opacity-10">
         <div class="card-body text-center p-4">
+          <div class="progress-ring progress-ring-sm progress-ring-warning stat-ring mb-3" data-percentage="{{ total_badges_count|floatformat:0 }}" data-max="50">
+            <svg viewBox="0 0 100 100">
+              <circle class="progress-ring__track" cx="50" cy="50" r="45"></circle>
+              <circle class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
+            </svg>
+            <div class="progress-ring__icon">
+              <i class="bi bi-award text-warning"></i>
+            </div>
+          </div>
           <div class="fs-2 fw-bold text-warning mb-2">{{ total_badges_count }}</div>
           <div class="text-muted fw-medium">Total Badges</div>
         </div>
@@ -206,20 +243,39 @@
         </div>
         <div class="card-body">
           {% if total_badges_count > 0 %}
-            <!-- Rarity Breakdown -->
-            <div class="row g-3 mb-4">
+            <!-- Enhanced Rarity Breakdown with Progress Circles -->
+            <div class="row g-4 mb-4">
               <div class="col-12">
-                <h6 class="fw-bold mb-3">Badge Rarity Distribution</h6>
-                <div class="row g-2">
+                <h6 class="fw-bold mb-4">Badge Rarity Distribution</h6>
+                <div class="row g-4">
                   {% for rarity_name, rarity_data in rarity_breakdown.items %}
-                    <div class="col-6 col-md-2">
-                      <div class="text-center p-3 rounded-3 badge-rarity-{{ rarity_name }}">
-                        <div class="fs-4 fw-bold">{{ rarity_data.count }}</div>
-                        <div class="small fw-medium text-uppercase">{{ rarity_data.name }}</div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                      <div class="rarity-card text-center p-3 rounded-3 badge-rarity-{{ rarity_name }} h-100">
+                        <!-- Progress Ring for Rarity -->
+                        <div class="progress-ring progress-ring-md rarity-ring-{{ rarity_name }} mb-3" data-percentage="{% widthratio rarity_data.count total_badges_count 100 %}" data-count="{{ rarity_data.count }}" data-max="{{ total_badges_count }}">
+                          <svg viewBox="0 0 100 100">
+                            <circle class="progress-ring__track" cx="50" cy="50" r="45"></circle>
+                            <circle class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
+                          </svg>
+                          <div class="progress-ring__label">{{ rarity_data.count }}</div>
+                        </div>
+                        <div class="small fw-bold text-uppercase">{{ rarity_data.name }}</div>
+                        <div class="rarity-percentage text-muted small mt-1">
+                          {% widthratio rarity_data.count total_badges_count 100 %}%
+                        </div>
                       </div>
                     </div>
                   {% endfor %}
                 </div>
+              </div>
+            </div>
+
+            <!-- View All Ski Areas Button -->
+            <div class="row g-3 mb-4">
+              <div class="col-12 text-center">
+                <a href="{% url 'ski_area_completeness_all' %}" class="btn btn-outline-primary btn-lg">
+                  <i class="bi bi-eye me-2"></i>View All Ski Area Completeness
+                </a>
               </div>
             </div>
 
@@ -279,6 +335,178 @@
   box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
 }
 
+/* Enhanced Statistics Cards */
+.stats-card-enhanced {
+  transition: all 0.3s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.stats-card-enhanced:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 1rem 2rem rgba(0,0,0,.15);
+}
+
+.stats-card-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: all 0.5s;
+  z-index: 1;
+}
+
+.stats-card-enhanced:hover::before {
+  left: 100%;
+}
+
+/* Statistics Progress Circles */
+.stat-circle-container {
+  position: relative;
+}
+
+.stat-circle {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto;
+  position: relative;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.stat-circle-inner {
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stat-circle-primary {
+  background: conic-gradient(
+    #0d6efd calc(var(--stat-percentage) * 3.6deg),
+    rgba(13, 110, 253, 0.2) calc(var(--stat-percentage) * 3.6deg)
+  );
+}
+
+.stat-circle-success {
+  background: conic-gradient(
+    #198754 calc(var(--stat-percentage) * 3.6deg),
+    rgba(25, 135, 84, 0.2) calc(var(--stat-percentage) * 3.6deg)
+  );
+}
+
+.stat-circle-info {
+  background: conic-gradient(
+    #0dcaf0 calc(var(--stat-percentage) * 3.6deg),
+    rgba(13, 202, 240, 0.2) calc(var(--stat-percentage) * 3.6deg)
+  );
+}
+
+.stat-circle-warning {
+  background: conic-gradient(
+    #ffc107 calc(var(--stat-percentage) * 3.6deg),
+    rgba(255, 193, 7, 0.2) calc(var(--stat-percentage) * 3.6deg)
+  );
+}
+
+/* Rarity Cards */
+.rarity-card {
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.rarity-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+}
+
+.rarity-circle-container {
+  position: relative;
+}
+
+.rarity-circle {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  position: relative;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.rarity-circle-inner {
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.rarity-count {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.rarity-circle-bronze {
+  background: conic-gradient(
+    #cd7f32 calc(var(--rarity-percentage) * 3.6deg),
+    rgba(205, 127, 50, 0.2) calc(var(--rarity-percentage) * 3.6deg)
+  );
+}
+
+.rarity-circle-silver {
+  background: conic-gradient(
+    #c0c0c0 calc(var(--rarity-percentage) * 3.6deg),
+    rgba(192, 192, 192, 0.2) calc(var(--rarity-percentage) * 3.6deg)
+  );
+}
+
+.rarity-circle-gold {
+  background: conic-gradient(
+    #ffd700 calc(var(--rarity-percentage) * 3.6deg),
+    rgba(255, 215, 0, 0.2) calc(var(--rarity-percentage) * 3.6deg)
+  );
+}
+
+.rarity-circle-platinum {
+  background: conic-gradient(
+    #e5e4e2 calc(var(--rarity-percentage) * 3.6deg),
+    rgba(229, 228, 226, 0.2) calc(var(--rarity-percentage) * 3.6deg)
+  );
+}
+
+.rarity-circle-legendary {
+  background: conic-gradient(
+    #9400d3 calc(var(--rarity-percentage) * 3.6deg),
+    rgba(148, 0, 211, 0.2) calc(var(--rarity-percentage) * 3.6deg)
+  );
+  animation: legendaryGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes legendaryGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(148, 0, 211, 0.1);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(148, 0, 211, 0);
+  }
+}
+
 @media (max-width: 768px) {
   .display-6 {
     font-size: 2rem;
@@ -287,7 +515,107 @@
   .fs-2 {
     font-size: 1.5rem !important;
   }
+
+  .stat-circle {
+    width: 50px;
+    height: 50px;
+  }
+
+  .stat-circle-inner {
+    width: 40px;
+    height: 40px;
+  }
+
+  .rarity-circle {
+    width: 60px;
+    height: 60px;
+  }
+
+  .rarity-circle-inner {
+    width: 45px;
+    height: 45px;
+  }
 }
 </style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Initialize progress rings (based on progress_circle.html)
+  function initProgressRing(ring) {
+    const svg = ring.querySelector('svg');
+    const bar = svg.querySelector('.progress-ring__bar');
+    const track = svg.querySelector('.progress-ring__track');
+
+    // Get the percentage from data attribute
+    let percentage = parseFloat(ring.dataset.percentage) || 0;
+    const max = parseFloat(ring.dataset.max);
+
+    // If we have a max value, calculate percentage
+    if (max && percentage <= max) {
+      percentage = Math.min((percentage / max) * 100, 100);
+    }
+
+    // Ensure percentage is within bounds
+    percentage = Math.max(0, Math.min(100, percentage));
+
+    // Calculate circumference
+    const radius = 45;
+    const circumference = 2 * Math.PI * radius;
+
+    // Set up the progress bar
+    bar.style.strokeDasharray = `${circumference} ${circumference}`;
+    bar.style.strokeDashoffset = circumference; // Start at 0%
+
+    // Animate the progress after a short delay
+    setTimeout(() => {
+      const offset = circumference * (1 - percentage / 100);
+      bar.style.strokeDashoffset = offset;
+    }, 100);
+  }
+
+  // Initialize all progress rings
+  const progressRings = document.querySelectorAll('.progress-ring');
+  progressRings.forEach((ring, index) => {
+    // Add staggered animation delay
+    setTimeout(() => {
+      initProgressRing(ring);
+    }, index * 150);
+  });
+
+  // Animate cards with staggered delay
+  const cards = document.querySelectorAll('.stats-card-enhanced, .rarity-card, .badge-card');
+  cards.forEach((card, index) => {
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(20px)';
+
+    setTimeout(() => {
+      card.style.transition = 'all 0.6s ease';
+      card.style.opacity = '1';
+      card.style.transform = 'translateY(0)';
+    }, index * 100);
+  });
+
+  // Add enhanced hover effects
+  progressRings.forEach(ring => {
+    ring.addEventListener('mouseenter', function() {
+      const bar = this.querySelector('.progress-ring__bar');
+      if (bar) {
+        const currentStrokeWidth = window.getComputedStyle(bar).strokeWidth;
+        const newStrokeWidth = parseFloat(currentStrokeWidth) + 2;
+        bar.style.strokeWidth = newStrokeWidth;
+        bar.style.filter = 'brightness(1.1)';
+      }
+    });
+
+    ring.addEventListener('mouseleave', function() {
+      const bar = this.querySelector('.progress-ring__bar');
+      if (bar) {
+        bar.style.strokeWidth = '';
+        bar.style.filter = '';
+      }
+    });
+  });
+});
+</script>
 
 {% endblock %}

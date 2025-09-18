@@ -15,6 +15,7 @@ from .activity import (
 )
 
 from .api import (
+    activity_completeness_api,
     home_stats as home_stats_data,
     season_stats,
 )
@@ -49,6 +50,13 @@ from .insights import (
     activity_insights,
 )
 
+from .lift_insights import (
+    lift_insights,
+    ski_area_completeness_detail,
+    ski_area_completeness_all,
+    reload_ski_area_completeness,
+)
+
 # For backward compatibility, we also need to ensure the home_stats view 
 # returns a proper HttpResponse for template rendering
 from django.shortcuts import render
@@ -68,6 +76,7 @@ __all__ = [
     'segment_map',
     
     # API views
+    'activity_completeness_api',
     'home_stats',
     'season_stats',
     
@@ -95,4 +104,8 @@ __all__ = [
 
     # Insights views
     'activity_insights',
+    'lift_insights',
+    'ski_area_completeness_detail',
+    'ski_area_completeness_all',
+    'reload_ski_area_completeness',
 ]

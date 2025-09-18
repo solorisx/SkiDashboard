@@ -1,0 +1,407 @@
+/* ==========================================================================
+   Progress Ring Component Styles (Clean Border-Fill Design)
+   ========================================================================== */
+
+/* Base CSS Variables */
+:root {
+  --ring-track: #e9ecef;           /* background track color */
+  --ring-text: #212529;            /* text color */
+  --ring-primary: #0d6efd;         /* primary color */
+  --ring-success: #198754;         /* success color */
+  --ring-info: #0dcaf0;            /* info color */
+  --ring-warning: #ffc107;         /* warning color */
+  --ring-danger: #dc3545;          /* danger color */
+  --ring-secondary: #6c757d;       /* secondary color */
+}
+
+/* Base Progress Ring */
+.progress-ring {
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+/* Ring Label (percentage text in center) */
+.progress-ring__label {
+  position: absolute;
+  font-weight: 600;
+  color: var(--ring-text);
+  user-select: none;
+  text-align: center;
+  line-height: 1;
+}
+
+/* SVG container - rotate so 0% starts at top */
+.progress-ring svg {
+  transform: rotate(-90deg);
+  display: block;
+  overflow: visible;
+  width: 100%;
+  height: 100%;
+}
+
+/* Background track */
+.progress-ring__track {
+  stroke: var(--ring-track);
+  fill: none;
+}
+
+/* Progress bar (the filling part) */
+.progress-ring__bar {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s ease;
+}
+
+/* ==========================================================================
+   Size Variants
+   ========================================================================== */
+
+/* Extra Small - 40px */
+.progress-ring-xs {
+  width: 40px;
+  height: 40px;
+}
+
+.progress-ring-xs .progress-ring__track,
+.progress-ring-xs .progress-ring__bar {
+  stroke-width: 3;
+}
+
+.progress-ring-xs .progress-ring__label {
+  font-size: 0.6rem;
+}
+
+/* Small - 60px */
+.progress-ring-sm {
+  width: 60px;
+  height: 60px;
+}
+
+.progress-ring-sm .progress-ring__track,
+.progress-ring-sm .progress-ring__bar {
+  stroke-width: 4;
+}
+
+.progress-ring-sm .progress-ring__label {
+  font-size: 0.75rem;
+}
+
+/* Medium - 80px (default) */
+.progress-ring-md {
+  width: 80px;
+  height: 80px;
+}
+
+.progress-ring-md .progress-ring__track,
+.progress-ring-md .progress-ring__bar {
+  stroke-width: 6;
+}
+
+.progress-ring-md .progress-ring__label {
+  font-size: 0.9rem;
+}
+
+/* Large - 120px */
+.progress-ring-lg {
+  width: 120px;
+  height: 120px;
+}
+
+.progress-ring-lg .progress-ring__track,
+.progress-ring-lg .progress-ring__bar {
+  stroke-width: 8;
+}
+
+.progress-ring-lg .progress-ring__label {
+  font-size: 1.1rem;
+}
+
+/* Extra Large - 160px */
+.progress-ring-xl {
+  width: 160px;
+  height: 160px;
+}
+
+.progress-ring-xl .progress-ring__track,
+.progress-ring-xl .progress-ring__bar {
+  stroke-width: 10;
+}
+
+.progress-ring-xl .progress-ring__label {
+  font-size: 1.3rem;
+}
+
+/* ==========================================================================
+   Color Variants
+   ========================================================================== */
+
+.progress-ring-primary .progress-ring__bar {
+  stroke: var(--ring-primary);
+}
+
+.progress-ring-success .progress-ring__bar {
+  stroke: var(--ring-success);
+}
+
+.progress-ring-info .progress-ring__bar {
+  stroke: var(--ring-info);
+}
+
+.progress-ring-warning .progress-ring__bar {
+  stroke: var(--ring-warning);
+}
+
+.progress-ring-danger .progress-ring__bar {
+  stroke: var(--ring-danger);
+}
+
+.progress-ring-secondary .progress-ring__bar {
+  stroke: var(--ring-secondary);
+}
+
+/* ==========================================================================
+   Special Variants for Ski Dashboard
+   ========================================================================== */
+
+/* Statistics Rings */
+.stat-ring {
+  margin: 0 auto;
+  transition: all 0.3s ease;
+}
+
+.stat-ring:hover {
+  transform: scale(1.1);
+}
+
+/* Rarity Rings for Badges */
+.rarity-ring-bronze .progress-ring__bar {
+  stroke: #cd7f32;
+}
+
+.rarity-ring-silver .progress-ring__bar {
+  stroke: #c0c0c0;
+}
+
+.rarity-ring-gold .progress-ring__bar {
+  stroke: #ffd700;
+}
+
+.rarity-ring-platinum .progress-ring__bar {
+  stroke: #e5e4e2;
+}
+
+.rarity-ring-legendary .progress-ring__bar {
+  stroke: #9400d3;
+  animation: legendaryGlow 2s ease-in-out infinite alternate;
+}
+
+/* Completeness Rings */
+.completeness-ring {
+  transition: all 0.3s ease;
+}
+
+.completeness-ring:hover {
+  transform: scale(1.05);
+}
+
+/* ==========================================================================
+   Content Variants
+   ========================================================================== */
+
+/* Icon in center instead of percentage */
+.progress-ring__icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.progress-ring-xs .progress-ring__icon {
+  width: 30px;
+  height: 30px;
+  font-size: 0.7rem;
+}
+
+.progress-ring-sm .progress-ring__icon {
+  width: 40px;
+  height: 40px;
+  font-size: 0.9rem;
+}
+
+.progress-ring-md .progress-ring__icon {
+  width: 50px;
+  height: 50px;
+  font-size: 1.1rem;
+}
+
+.progress-ring-lg .progress-ring__icon {
+  width: 80px;
+  height: 80px;
+  font-size: 1.5rem;
+}
+
+.progress-ring-xl .progress-ring__icon {
+  width: 110px;
+  height: 110px;
+  font-size: 2rem;
+}
+
+/* ==========================================================================
+   Animations and Effects
+   ========================================================================== */
+
+/* Pulse effect for special rings */
+.progress-ring-pulse {
+  animation: ringPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes ringPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.1);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
+  }
+}
+
+/* Legendary glow effect */
+@keyframes legendaryGlow {
+  0% {
+    stroke-width: 6;
+    filter: drop-shadow(0 0 2px rgba(148, 0, 211, 0.3));
+  }
+  100% {
+    stroke-width: 8;
+    filter: drop-shadow(0 0 8px rgba(148, 0, 211, 0.6));
+  }
+}
+
+/* Completion celebration animation */
+.progress-ring-complete {
+  animation: completionCelebration 1s ease-out;
+}
+
+@keyframes completionCelebration {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Hover effects */
+.progress-ring-hover:hover .progress-ring__bar {
+  stroke-width: calc(var(--stroke-width, 6) + 2);
+  filter: brightness(1.1);
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .progress-ring-lg {
+    width: 100px;
+    height: 100px;
+  }
+
+  .progress-ring-lg .progress-ring__track,
+  .progress-ring-lg .progress-ring__bar {
+    stroke-width: 6;
+  }
+
+  .progress-ring-lg .progress-ring__label {
+    font-size: 0.9rem;
+  }
+
+  .progress-ring-xl {
+    width: 120px;
+    height: 120px;
+  }
+
+  .progress-ring-xl .progress-ring__track,
+  .progress-ring-xl .progress-ring__bar {
+    stroke-width: 8;
+  }
+
+  .progress-ring-xl .progress-ring__label {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .progress-ring-md {
+    width: 60px;
+    height: 60px;
+  }
+
+  .progress-ring-md .progress-ring__track,
+  .progress-ring-md .progress-ring__bar {
+    stroke-width: 4;
+  }
+
+  .progress-ring-md .progress-ring__label {
+    font-size: 0.75rem;
+  }
+
+  .progress-ring-lg {
+    width: 80px;
+    height: 80px;
+  }
+
+  .progress-ring-lg .progress-ring__track,
+  .progress-ring-lg .progress-ring__bar {
+    stroke-width: 6;
+  }
+
+  .progress-ring-lg .progress-ring__label {
+    font-size: 0.9rem;
+  }
+}
+
+/* ==========================================================================
+   Dark Mode Support
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ring-track: #495057;
+    --ring-text: #f8f9fa;
+  }
+
+  .progress-ring__icon {
+    background: rgba(33, 37, 41, 0.9);
+    color: #f8f9fa;
+  }
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+
+.progress-ring-center {
+  margin: 0 auto;
+}
+
+.progress-ring-animated {
+  animation: ringAppear 0.8s ease-out;
+}
+
+@keyframes ringAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(-90deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}

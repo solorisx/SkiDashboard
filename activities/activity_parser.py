@@ -22,7 +22,7 @@ from django.db.models import Exists, OuterRef, Subquery
 from django.core.cache import cache
 from django.db import transaction
 import numpy as np
-from .utils import get_turning_points
+from .utils import get_turning_points, completeness
 from .badges import assign_badges
 from cost.prices import get_daypass_price
 from cost.seasonpass import has_seasonpass
@@ -1156,6 +1156,10 @@ class ActivityParser:
         assign_badges(activity_instance)
         logger.info(f"Assigned badges to activity {activity_instance.id}")
 
+        self.profiler.start_operation('calculate_ski_area_completeness')
+        completeness.calculate_ski_area_completeness(user=activity_instance.user, ski_area=activity_instance.ski_area, force_recalc=True)
+        self.profiler.end_operation('calculate_ski_area_completeness')
+        
         self.profiler.end_operation('finalize_activity_processing')
 
     def get_performance_summary(self) -> Dict[str, Any]:
