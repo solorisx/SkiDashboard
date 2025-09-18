@@ -1192,11 +1192,12 @@ class ActivityParser:
 
         self.profiler.start_operation('calculate_ski_area_completeness')
         completeness.calculate_ski_area_completeness(user=activity_instance.user, ski_area=activity_instance.ski_area, force_calc=True)
+        self.profiler.end_operation('calculate_ski_area_completeness')
         from .utils.seasons import get_seasons
         for season in get_seasons(activity_instance.user):
-            logger.debug(f"Calculating completeness for season: {season}")
+            self.profiler.start_operation('calculate_ski_area_completeness')
             completeness.calculate_ski_area_completeness(user=activity_instance.user, ski_area=activity_instance.ski_area, season=season, force_calc=True)
-        self.profiler.end_operation('calculate_ski_area_completeness')
+            self.profiler.end_operation('calculate_ski_area_completeness')
 
         # Assign badges
         assign_badges(activity_instance)
