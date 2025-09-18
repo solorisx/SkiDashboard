@@ -8,19 +8,22 @@ BADGE_CONFIGS = {
         'name': '5 lifts in a Day',
         'description': 'You rode 5 lifts in a single day!',
         'icon': 'fa-solid fa-cable-car',
-        'rarity': 'bronze'
+        'rarity': 'bronze',
+        'sort_key': '100_lifts_5_day'
     },
     'LIFTS_10_DAY': {
         'name': '10 lifts in a Day',
         'description': 'You rode 10 lifts in a single day!',
         'icon': 'fa-solid fa-medal',
-        'rarity': 'silver'
+        'rarity': 'silver',
+        'sort_key': '200_lifts_10_day'
     },
     'LIFTS_20_DAY': {
         'name': '20 lifts in a Day',
         'description': 'You rode 20 lifts in a single day!',
         'icon': 'fa-solid fa-trophy',
-        'rarity': 'gold'
+        'rarity': 'gold',
+        'sort_key': '300_lifts_20_day'
     },
 
     # Elevation badges
@@ -28,13 +31,15 @@ BADGE_CONFIGS = {
         'name': "10'000hm in a Day",
         'description': "You climbed 10'000m in a single day!",
         'icon': 'fa-solid fa-mountain',
-        'rarity': 'gold'
+        'rarity': 'gold',
+        'sort_key': '300_elevation_10k_day'
     },
     'ELEVATION_20K_DAY': {
         'name': "20'000hm in a Day",
         'description': "You climbed 20'000m in a single day!",
         'icon': 'fa-solid fa-mountain-sun',
-        'rarity': 'platinum'
+        'rarity': 'platinum',
+        'sort_key': '400_elevation_20k_day'
     },
 
     # Exploration badges
@@ -42,7 +47,8 @@ BADGE_CONFIGS = {
         'name': 'First day in a Ski Area',
         'description': 'You visited a new ski area for the first time!',
         'icon': 'fa-solid fa-map-location-dot',
-        'rarity': 'silver'
+        'rarity': 'silver',
+        'sort_key': '200_first_ski_area'
     },
 
     # Completeness badges
@@ -50,25 +56,29 @@ BADGE_CONFIGS = {
         'name': 'Explorer',
         'description': 'You rode 25% of lifts in a ski area!',
         'icon': 'fa-solid fa-compass',
-        'rarity': 'bronze'
+        'rarity': 'bronze',
+        'sort_key': '100_completeness_25'
     },
     'COMPLETENESS_50': {
         'name': 'Area Scout',
         'description': 'You rode 50% of lifts in a ski area!',
         'icon': 'fa-solid fa-map',
-        'rarity': 'silver'
+        'rarity': 'silver',
+        'sort_key': '200_completeness_50'
     },
     'COMPLETENESS_75': {
         'name': 'Mountain Master',
         'description': 'You rode 75% of lifts in a ski area!',
         'icon': 'fa-solid fa-mountain',
-        'rarity': 'gold'
+        'rarity': 'gold',
+        'sort_key': '300_completeness_75'
     },
     'COMPLETENESS_100': {
         'name': 'Area Conqueror',
         'description': 'You rode 100% of lifts in a ski area!',
         'icon': 'fa-solid fa-crown',
-        'rarity': 'platinum'
+        'rarity': 'platinum',
+        'sort_key': '400_completeness_100'
     },
 
     # Daily completeness badges
@@ -76,24 +86,28 @@ BADGE_CONFIGS = {
         'name': 'Daily Explorer',
         'description': 'You rode 25% of lifts in a ski area in one day!',
         'icon': 'fa-solid fa-calendar-day',
-        'rarity': 'bronze'
+        'rarity': 'bronze',
+        'sort_key': '100_daily_completeness_25'
     },
     'DAILY_COMPLETENESS_50': {
         'name': 'Daily Scout',
         'description': 'You rode 50% of lifts in a ski area in one day!',
         'icon': 'fa-solid fa-calendar-check',
-        'rarity': 'silver'
+        'rarity': 'silver',
+        'sort_key': '200_daily_completeness_50'
     },
     'DAILY_COMPLETENESS_75': {
         'name': 'Daily Master',
         'description': 'You rode 75% of lifts in a ski area in one day!',
         'icon': 'fa-solid fa-calendar-star',
-        'rarity': 'gold'
+        'rarity': 'gold',
+        'sort_key': '300_daily_completeness_75'
     },
     'DAILY_COMPLETENESS_100': {
         'name': 'Daily Conqueror',
         'description': 'You rode 100% of lifts in a ski area in one day',
         'icon': 'fa-solid fa-calendar-crown',
+        'sort_key': '400_daily_completeness_100',
         'rarity': 'platinum'
     },
 
@@ -102,31 +116,36 @@ BADGE_CONFIGS = {
         'name': 'Lift Sampler',
         'description': 'You used 5 different lifts in one day!',
         'icon': 'fa-solid fa-list',
-        'rarity': 'bronze'
+        'rarity': 'bronze',
+        'sort_key': '100_lift_variety_5'
     },
     'LIFT_VARIETY_10': {
         'name': 'Lift Collector',
         'description': 'You used 10 different lifts in one day!',
         'icon': 'fa-solid fa-grip',
-        'rarity': 'silver'
+        'rarity': 'silver',
+        'sort_key': '200_lift_variety_10'
     },
     'LIFT_VARIETY_15': {
         'name': 'Lift Enthusiast',
         'description': 'You used 15 different lifts in one day!',
         'icon': 'fa-solid fa-star',
-        'rarity': 'gold'
+        'rarity': 'gold',
+        'sort_key': '300_lift_variety_15'
     },
     'LIFT_VARIETY_20': {
         'name': 'Lift Connoisseur',
         'description': 'You used 20 different lifts in one day!',
         'icon': 'fa-solid fa-gem',
+        'sort_key': '300_lift_variety_20',
         'rarity': 'gold'
     },
     'LIFT_VARIETY_30': {
         'name': 'Lift Aficionado',
         'description': 'You used 30 different lifts in one day!',
         'icon': 'fa-solid fa-crown',
-        'rarity': 'platinum'
+        'rarity': 'platinum',
+        'sort_key': '400_lift_variety_30'
     },
 }
 
@@ -137,18 +156,23 @@ def get_streak_badge_config(days, ski_area_specific=False):
     if days <= 3:
         rarity = 'bronze'
         icon = 'fa-solid fa-calendar-check'
+        sort_key = '100_streak_3d'
     elif days <= 7:
         rarity = 'silver'
         icon = 'fa-solid fa-fire' if not ski_area_specific else 'fa-solid fa-map-pin'
+        sort_key = '200_streak_7d'
     elif days <= 14:
         rarity = 'gold'
         icon = 'fa-solid fa-fire' if not ski_area_specific else 'fa-solid fa-map-pin'
+        sort_key = '300_streak_14d'
     elif days <= 30:
         rarity = 'platinum'
         icon = 'fa-solid fa-crown'
+        sort_key = '400_streak_30d'
     else:
         rarity = 'legendary'
         icon = 'fa-solid fa-gem'
+        sort_key = '500_streak_30d_plus'
 
     if ski_area_specific:
         natural_key = f'STREAK_SKI_AREA_{days}D'
@@ -163,7 +187,8 @@ def get_streak_badge_config(days, ski_area_specific=False):
         'name': name,
         'description': description,
         'icon': icon,
-        'rarity': rarity
+        'rarity': rarity,
+        'sort_key': sort_key
     }
 
 
@@ -171,16 +196,18 @@ def get_or_create_badge_by_natural_key(natural_key, **defaults):
     """Get or create a badge using its natural key"""
     if natural_key in BADGE_CONFIGS:
         config = BADGE_CONFIGS[natural_key]
-        return Badge.objects.get_or_create(
+        badge, _ = Badge.objects.update_or_create(
             natural_key=natural_key,
             defaults={**config, **defaults}
         )
+        return badge, _
     else:
         # For dynamic badges like streaks
-        return Badge.objects.get_or_create(
+        badge, _ = Badge.objects.update_or_create(
             natural_key=natural_key,
             defaults=defaults
         )
+        return badge, _
 
 
 def assign_badges(activity: Activity):

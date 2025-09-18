@@ -115,10 +115,15 @@
     <div class="col-12 col-md-4">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body p-4">
-          <h6 class="fw-bold mb-3">
-            <i class="bi bi-bar-chart me-2 text-info"></i>
-            Lift Types
-          </h6>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0">
+              <i class="bi bi-bar-chart me-2 text-info"></i>
+              Lift Types
+            </h6>
+            <button type="button" class="btn btn-link p-0 text-muted" data-bs-toggle="modal" data-bs-target="#liftTypesInfoModal" title="About lift types">
+              <i class="bi bi-info-circle"></i>
+            </button>
+          </div>
 
           {% if completeness.lift_type_breakdown %}
             <div class="row g-2">
@@ -290,6 +295,47 @@
       </div>
     </div>
     {% endif %}
+  </div>
+</div>
+
+<!-- Lift Types Info Modal -->
+<div class="modal fade" id="liftTypesInfoModal" tabindex="-1" aria-labelledby="liftTypesInfoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold" id="liftTypesInfoModalLabel">
+          <i class="bi bi-info-circle me-2 text-info"></i>
+          About Lift Types
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-4">
+          <h6 class="fw-bold mb-2">Completeness calculation</h6>
+          <p class="text-muted mb-0">
+            Your lift completeness percentage is calculated based on all available lift types in this ski area.
+            This includes chairlifts, gondolas, funiculars, surface lifts, and other aerial transportation. The type of lift is determined by the <code>aerialway</code> tag in OpenStreetMap. If a lift does not have the correct type, I encourage you to contribute to OpenStreetMap and add or correct the <code>aerialway</code> tag for better data quality.
+          </p>
+        </div>
+
+        <div class="alert alert-info border-0 bg-info bg-opacity-10">
+          <div class="d-flex align-items-start">
+            <i class="bi bi-lightbulb me-2 text-info mt-1"></i>
+            <div>
+              <h6 class="fw-bold mb-2">Adding filters</h6>
+              <p class="mb-2">
+                You can exclude specific lift types from your completeness calculations in your profile preferences.
+                For example, if you prefer to skip surface lifts such as platter lifts, magic carpets or rope tows, you can exclude them in your preferences.
+              </p>
+              <a href="{% url 'profile_management' %}" class="btn btn-info btn-sm">
+                <i class="bi bi-gear me-1"></i>
+                Manage Preferences
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 

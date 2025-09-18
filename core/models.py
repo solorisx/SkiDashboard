@@ -12,7 +12,7 @@ class UserProfile(models.Model):
     metric_units = models.BooleanField(default=True)
     dark_mode = models.BooleanField(default=False)
     last_strava_sync = models.DateTimeField(null=True)
-    max_strava_sync = models.IntegerField(default=90)
+    max_strava_sync = models.IntegerField(default=360)
 
     # Lift type preferences - list of aerialway types to exclude
     excluded_lift_types = models.JSONField(default=list, blank=True, help_text="Aerialway types to exclude from statistics")

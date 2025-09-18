@@ -3,14 +3,14 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.core.serializers import serialize
 from django.contrib.gis.geos import LineString, Point
-from django.db.models import F, Q, Exists, OuterRef
+from django.db.models import F, Q, Exists, OuterRef, Case, When, IntegerField
 from django.db.models.functions import Round
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from itertools import groupby
 from operator import attrgetter
 
-from activities.models import LiftRide
+from activities.models import LiftRide, Badge
 from cost.forms import CostForm
 from cost.models import SeasonPass
 from osm.models import Aerialway, Piste, PisteSegment, SkiArea
@@ -32,31 +32,6 @@ def get_unique_lift_rides(activity):
 def activity_list(request):
     """Show all activities with pagination, cost management, filtering and grouping."""
     logger.debug(f"Request method: {request.method}")
-
-    if request.method == 'POST':
-        if 'dflt_cst' in request.POST:
-            pk = request.POST.get('dflt_cst')
-            logger.debug(f"Activity ID: {pk}")
-            activity = Activity.objects.get(id=pk, user=request.user)
-            cost = activity.ski_area_main.daypass_price
-            if cost:
-                activity.cost = cost
-                activity.save()
-            else:
-                logger.debug(f"No default cost set for ski area {activity.ski_area_main.name}.")
-                activity.cost = 75
-                activity.save()
-
-        elif 'set_cst' in request.POST:
-            pk = request.POST.get('set_cst')
-            activity = Activity.objects.get(pk=pk, user=request.user)
-            form = CostForm(request.POST, instance=activity)
-            if form.is_valid():
-                form.save()
-            else:
-                logger.debug(f"Form is invalid.")
-                return HttpResponse("Invalid form.")
-        return redirect('activity_list')
 
     # Get filter parameters
     ski_area_filter = request.GET.get('ski_area')
@@ -97,7 +72,7 @@ def activity_list(request):
     activities = activities.annotate(
         total_distance_km=Round(F("total_distance")/1000, 2),
         has_season_pass=Exists(season_pass_subquery),
-    ).prefetch_related('badges__badge', 'ski_area')
+    ).prefetch_related('ski_area')
 
     # Get available ski areas and seasons for the filter dropdowns
     available_ski_areas = SkiArea.objects.filter(
@@ -114,6 +89,7 @@ def activity_list(request):
             selected_ski_area = SkiArea.objects.get(id=ski_area_id)
         except (ValueError, TypeError, SkiArea.DoesNotExist):
             pass
+
 
     # Handle grouping by ski area
     if group_by_ski_area:
@@ -207,6 +183,10 @@ def activity_detail(request, activity_id):
         lon=activity.start_position.x,
         distance_km=20
     )
+    badges = sorted(
+        activity.badges.all(),
+        key=lambda x: (-x.badge.rarity_order, x.badge.name)
+    )
 
     return render(
         request,
@@ -215,7 +195,7 @@ def activity_detail(request, activity_id):
             "activity": activity,
             "laps": laps,
             "lift_rides": lift_rides,
-            "badges": activity.badges.all(),
+            "badges": badges,
             "aerialways": aerialways,
             "aerialways_dropdown": aerialways_dropdown,
         },

@@ -148,13 +148,27 @@ class Badge(models.Model):
         ('legendary', 'Legendary'),
     ]
 
+    RARITY_ORDER = {
+        'bronze': 1,
+        'silver': 2,
+        'gold': 3,
+        'platinum': 4,
+        'legendary': 5,
+    }
+
     natural_key = models.CharField(max_length=100, unique=True)
     name = models.CharField(max_length=100)
     description = models.TextField()
     icon = models.CharField(max_length=100, null=True, default='fa-solid fa-medal')
     rarity = models.CharField(max_length=20, choices=RARITY_CHOICES, default='bronze')
+    sort_key = models.CharField(max_length=100, null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+
+    @property
+    def rarity_order(self):
+        """Get numeric order for rarity to enable proper sorting."""
+        return self.RARITY_ORDER.get(self.rarity, 0)
 
     def __str__(self):
         return f"{self.name} ({self.natural_key})"
