@@ -971,6 +971,7 @@ class ActivityParser:
                 logger.info(f"Strava activity {activity_id} already exists in the database.")
                 return Activity.objects.get(strava_id=activity_id)
 
+            # Load Strava data
             activity = load_activity(user, activity_id)
             if not activity:
                 logger.error(f"Strava activity {activity_id} not found", exc_info=True, stack_info=True)
@@ -981,154 +982,189 @@ class ActivityParser:
                 return None
 
             activity_streams = load_activity_streams(user, activity_id)
-
-            lat, lon = activity_streams["latlng"].data[0]
-            start_point = Point(lon, lat)
             activity_laps = load_activity_laps(user, activity_id)
-            start_lift = self.get_closest_aerialway(start_point, in_ski_area=True, max_distance=2000)
-            # if start_lift:
-            #     logger.debug(f"Found start lift: {start_lift.name}")
-            #     skiarea = SkiArea.objects.filter(ways=start_lift.way).first()
-            # else:
-            #     skiarea = None
-            #     logger.warning(f"No start lift found for activity: {activity_id}")
 
-            # try:
-            #     boundary_time = time.time()
-            #     ski_area_boundary = get_ski_area_boundary(start_point)
-            #     logger.debug(f"Found ski area boundary: {ski_area_boundary} in {time.time() - boundary_time:.4f} seconds")
-            # except Exception as e:
-            #     logger.error(f"Error getting ski area boundary: {e}")
-            #     ski_area_boundary = None
+            # Process the activity using the new structured approach
+            activity_instance = self._process_strava_activity(
+                activity, activity_streams, activity_laps, user, activity_id, update
+            )
 
-            ski_area = self.get_ski_area(start_point)
+            # Finalize processing
+            self._finalize_activity_processing(activity_instance, activity_streams)
 
-            if not ski_area:
-                logger.warning(f"No ski area found for activity: {activity_id}, searching relations")
-                if start_lift:
-                    ski_area = SkiArea.objects.filter(ways=start_lift.way).first()
-                    logger.debug(f"Found ski area from relation: {ski_area}")
-                else:
-                    logger.warning(f"No start lift found for activity: {activity_id}")
-
-            logger.debug(f"Loaded Strava activity: {activity_id}")
-
-            #skiarea_main = ski_area_boundary if ski_area_boundary else skiarea if skiarea else None
-
-            activity_data = {
-                "name": activity.name,
-                "type": activity.type,
-                "start_time": self._make_timezone_aware(activity.start_date_local, activity.timezone),
-                "timestamp": self._make_timezone_aware(activity.start_date_local, activity.timezone),
-                "summary_polyline": activity.map.summary_polyline,
-                "polyline": None,               # TODO: would separate API call, probably summary polyline is enough
-                "total_elapsed_time": timedelta(seconds=activity.elapsed_time),
-                "total_timer_time": timedelta(seconds=activity.moving_time),
-                "total_distance": activity.distance,
-                "total_ascent": activity.total_elevation_gain,
-                "avg_speed": activity.average_speed,
-                "max_speed": activity.max_speed,
-                "total_calories": activity.calories,
-                "avg_heart_rate": activity.average_heartrate,
-                "max_heart_rate": activity.max_heartrate,
-                "user": user,
-                "start_position": start_point,
-                "ski_area": ski_area if ski_area else None,
-                # "ski_area_boundary": ski_area_boundary if ski_area_boundary else None,
-                # "ski_area_main": skiarea_main
-            }
-
-            activity_instance, created = Activity.objects.update_or_create(strava_id=activity_id, defaults=activity_data)
-            self.activity = activity_instance
-            logger.info(f'{"Created" if created else "Updated"} Activity: {activity_instance.id}')
-
-            if not created:
-                activity_instance.version += 1
-                activity_instance.laps.all().delete()
-                logger.info(f"Deleted existing laps for Activity: {activity_instance.id}")
-
-            activity_start_time = activity_instance.start_time
-            logger.info(f"Activity start time: {activity_start_time}")
-            logger.info(f"timezone: {activity.timezone}, localtime: {activity.start_date_local}")
-            logger.info(f"tz: {self.timezone}")
-            for lap in activity_laps:
-                lap_data = {
-                    "start_time": activity_start_time + timedelta(seconds=activity_streams["time"].data[lap.start_index]),
-                    "timestamp": activity_start_time + timedelta(seconds=activity_streams["time"].data[lap.start_index]),
-                    "total_elapsed_time": timedelta(seconds=lap.elapsed_time),
-                    "total_timer_time": timedelta(seconds=lap.moving_time),
-                    "total_distance": lap.distance,
-                    "total_ascent": lap.total_elevation_gain,
-                    "start_index_stream": lap.start_index,
-                    "end_index_stream": lap.end_index,
-                    "avg_speed": lap.average_speed,
-                    "max_speed": lap.max_speed,
-                    "avg_heart_rate": lap.average_heartrate,
-                    "max_heart_rate": lap.max_heartrate,
-                    "start_position": Point(activity_streams["latlng"].data[lap.start_index+5][1], activity_streams["latlng"].data[lap.start_index+5][0]),
-                    "end_position": Point(activity_streams["latlng"].data[lap.end_index-5][1], activity_streams["latlng"].data[lap.end_index-5][0]),
-                    "end_time": activity_start_time + timedelta(seconds=activity_streams["time"].data[lap.end_index]),
-                }
-                lap_instance, created = Lap.objects.update_or_create(lap_index=lap.lap_index, activity=activity_instance, defaults=lap_data)
-
-                logger.debug(f"Lap data: {lap_data}")
-                logger.info(f'{"Created" if created else "Updated"} Lap: {lap_instance.lap_index}')
-
-            logger.debug(f"Number of laps: {activity_instance.laps.count()}")
-            if activity_instance.laps.count() == 1 or \
-                (activity_instance.laps.count() > 30 and \
-                activity_instance.timestamp < datetime(year=2019, month=12, day=31)):
-            # no auto pause used or old activities with bad lap data
-                activity_instance.laps.all().delete()
-                self.split_activity(activity_instance, activity_streams)
-
-            for lap in activity_instance.laps.all():
-                logger.debug(f"Processing Lap: {lap.lap_index}")
-                logger.debug(f"Start Position (Lap): {self.get_osm_url(lap.start_position)} at {lap.start_time}")
-                logger.debug(f"End Position (Lap): {self.get_osm_url(lap.end_position)} at {lap.end_time}")
-                lift_end_pos = lap.start_position
-                prev_lap = Lap.objects.filter(activity=activity_instance, lap_index=lap.lap_index-1).first()
-                if prev_lap:
-                    lift_start_pos = prev_lap.end_position
-                    lift_start_time = prev_lap.end_time
-                else:
-                    lift_start_pos = None
-                    lift_start_time = lap.start_time
-                #lift_start_pos = Lap.objects.filter(activity=activity_instance, lap_index=lap.lap_index-1).first().end_position if lap.lap_index > 1 else None
-                lift_rides = self.get_aerialways(lift_start_pos, lift_end_pos, start_activity=activity_instance.start_position)
-                for (lift_ride, uphill) in lift_rides:
-                    logger.debug(lift_rides)
-
-                    logger.debug(f"Found lift ride: {lift_ride if lift_ride else 'unnamed'}")
-                    logger.debug(f"Uphill: {uphill}")
-                    logger.debug(f"lap: {lap}, lift_ride: {lift_ride}, uphill: {uphill}, timestamp: {lift_start_time}")
-                    lift_ride = self.apply_exceptions(lift_ride)
-                    lift, _ = LiftRide.objects.update_or_create(lap=lap, aerialway=lift_ride, uphill=uphill if True else False, timestamp=lift_start_time)
-                    lift_start_time = lift_start_time + timedelta(minutes=lift.aerialway.aerialway_duration if lift.aerialway.aerialway_duration else 1)
-                    logger.info(f"Created LiftRide for Lap: {lap.lap_index} with lift {lift_ride.name if lift_ride else 'unnamed'}")
-
-            # Complete the activity processing
-            self.calc_vertical_activity(activity_instance, activity_streams["altitude"].data, update=True)
-            self.calc_line_geom(activity_instance, activity_streams["latlng"].data)
-            self.calc_ridden_segments(activity_instance)
-            self.assign_cost(activity_instance)
-
-            activity_instance.num_laps = activity_instance.laps.count()
-            activity_instance.num_lift_rides = activity_instance.laps.aggregate(total_lift_rides=Count('lift_rides'))['total_lift_rides']
-            activity_instance.processed_on = timezone.now()
+            # Update processing metadata
             activity_instance.processing_time = timedelta(seconds=time.time() - start_time)
+            activity_instance.processed_on = timezone.now()
             activity_instance.save()
 
-            assign_badges(activity_instance)
-            logger.info(f"Assigned badges to activity {activity_instance.id}")
-
             logger.info(f"Finished parsing Strava activity: {activity_id} in {time.time() - start_time:.4f} seconds")
-
             return activity_instance
 
         except Exception as e:
             logger.error(f"Error parsing Strava activity {activity_id}: {str(e)}", exc_info=True, stack_info=True)
             raise
+
+    def _process_strava_activity(self, activity, activity_streams, activity_laps, user: User, activity_id: str, update: bool) -> Activity:
+        """Process the core Strava activity data and create/update the Activity instance."""
+        self.profiler.start_operation('process_strava_activity')
+
+        # Extract start point and find ski area
+        lat, lon = activity_streams["latlng"].data[0]
+        start_point = Point(lon, lat)
+
+        start_lift = self.get_closest_aerialway(start_point, in_ski_area=True, max_distance=2000)
+        ski_area = self.get_ski_area(start_point)
+
+        if not ski_area and start_lift:
+            logger.warning(f"No ski area found for activity: {activity_id}, searching relations")
+            ski_area = SkiArea.objects.filter(ways=start_lift.way).first()
+            logger.debug(f"Found ski area from relation: {ski_area}")
+
+        # Create activity data structure
+        activity_data = {
+            "name": activity.name,
+            "type": activity.type,
+            "start_time": self._make_timezone_aware(activity.start_date_local, activity.timezone),
+            "timestamp": self._make_timezone_aware(activity.start_date_local, activity.timezone),
+            "summary_polyline": activity.map.summary_polyline,
+            "polyline": None,
+            "total_elapsed_time": timedelta(seconds=activity.elapsed_time),
+            "total_timer_time": timedelta(seconds=activity.moving_time),
+            "total_distance": activity.distance,
+            "total_ascent": activity.total_elevation_gain,
+            "avg_speed": activity.average_speed,
+            "max_speed": activity.max_speed,
+            "total_calories": activity.calories,
+            "avg_heart_rate": activity.average_heartrate,
+            "max_heart_rate": activity.max_heartrate,
+            "user": user,
+            "start_position": start_point,
+            "ski_area": ski_area,
+        }
+
+        # Create or update activity
+        activity_instance, created = Activity.objects.update_or_create(
+            strava_id=activity_id, defaults=activity_data
+        )
+        self.activity = activity_instance
+        logger.info(f'{"Created" if created else "Updated"} Activity: {activity_instance.id}')
+
+        # Handle updates
+        if not created:
+            activity_instance.version += 1
+            activity_instance.laps.all().delete()
+            logger.info(f"Deleted existing laps for Activity: {activity_instance.id}")
+
+        # Process laps
+        self._process_activity_laps(activity_instance, activity_laps, activity_streams)
+
+        # Process lift rides
+        self._process_lift_rides(activity_instance, activity_streams)
+
+        self.profiler.end_operation('process_strava_activity')
+        return activity_instance
+
+    def _process_activity_laps(self, activity_instance: Activity, activity_laps, activity_streams) -> None:
+        """Process and create lap instances from Strava lap data."""
+        self.profiler.start_operation('process_activity_laps')
+
+        activity_start_time = activity_instance.start_time
+
+        # Convert to list to get length and ensure we can iterate multiple times
+        activity_laps_list = list(activity_laps)
+        logger.info(f"Processing {len(activity_laps_list)} laps for activity {activity_instance.id}")
+
+        for lap in activity_laps_list:
+            lap_data = {
+                "start_time": activity_start_time + timedelta(seconds=activity_streams["time"].data[lap.start_index]),
+                "timestamp": activity_start_time + timedelta(seconds=activity_streams["time"].data[lap.start_index]),
+                "total_elapsed_time": timedelta(seconds=lap.elapsed_time),
+                "total_timer_time": timedelta(seconds=lap.moving_time),
+                "total_distance": lap.distance,
+                "total_ascent": lap.total_elevation_gain,
+                "start_index_stream": lap.start_index,
+                "end_index_stream": lap.end_index,
+                "avg_speed": lap.average_speed,
+                "max_speed": lap.max_speed,
+                "avg_heart_rate": lap.average_heartrate,
+                "max_heart_rate": lap.max_heartrate,
+                "start_position": Point(
+                    activity_streams["latlng"].data[lap.start_index + self.config.LAP_POSITION_OFFSET][1],
+                    activity_streams["latlng"].data[lap.start_index + self.config.LAP_POSITION_OFFSET][0]
+                ),
+                "end_position": Point(
+                    activity_streams["latlng"].data[lap.end_index - self.config.LAP_POSITION_OFFSET][1],
+                    activity_streams["latlng"].data[lap.end_index - self.config.LAP_POSITION_OFFSET][0]
+                ),
+                "end_time": activity_start_time + timedelta(seconds=activity_streams["time"].data[lap.end_index]),
+            }
+            lap_instance, created = Lap.objects.update_or_create(
+                lap_index=lap.lap_index, activity=activity_instance, defaults=lap_data
+            )
+            logger.info(f'{"Created" if created else "Updated"} Lap: {lap_instance.lap_index}')
+
+        # Handle lap splitting for activities with insufficient auto-pause data
+        if (activity_instance.laps.count() == 1 or
+            (activity_instance.laps.count() > self.config.MIN_LAPS_FOR_SPLIT and
+             activity_instance.timestamp.year < self.config.OLD_ACTIVITY_CUTOFF_YEAR)):
+            logger.info("Splitting activity into custom laps based on elevation data")
+            activity_instance.laps.all().delete()
+            self.split_activity(activity_instance, activity_streams)
+
+        self.profiler.end_operation('process_activity_laps')
+
+    def _process_lift_rides(self, activity_instance: Activity, activity_streams) -> None:
+        """Process and create lift ride instances for each lap."""
+        self.profiler.start_operation('process_lift_rides')
+
+        for lap in activity_instance.laps.all():
+            logger.debug(f"Processing Lap: {lap.lap_index}")
+            logger.debug(f"Start Position (Lap): {self.get_osm_url(lap.start_position)} at {lap.start_time}")
+            logger.debug(f"End Position (Lap): {self.get_osm_url(lap.end_position)} at {lap.end_time}")
+
+            # Determine lift start and end positions
+            lift_end_pos = lap.start_position
+            prev_lap = Lap.objects.filter(
+                activity=activity_instance,
+                lap_index=lap.lap_index - 1
+            ).first()
+
+            if prev_lap:
+                lift_start_pos = prev_lap.end_position
+                lift_start_time = prev_lap.end_time
+            else:
+                lift_start_pos = None
+                lift_start_time = lap.start_time
+
+            # Find aerialways connecting the positions
+            lift_rides = self.get_aerialways(
+                lift_start_pos, lift_end_pos,
+                start_activity=activity_instance.start_position
+            )
+
+            # Create lift ride instances
+            for lift_ride, uphill in lift_rides:
+                logger.debug(f"Found lift ride: {lift_ride.name if lift_ride else 'unnamed'}")
+                logger.debug(f"Uphill: {uphill}")
+
+                # Apply any lift exceptions/corrections
+                lift_ride = self.apply_exceptions(lift_ride)
+
+                # Create the lift ride
+                lift, _ = LiftRide.objects.update_or_create(
+                    lap=lap,
+                    aerialway=lift_ride,
+                    uphill=uphill,
+                    timestamp=lift_start_time
+                )
+
+                # Advance timestamp for next potential lift ride
+                duration_minutes = lift.aerialway.aerialway_duration if lift.aerialway.aerialway_duration else 1
+                lift_start_time = lift_start_time + timedelta(minutes=duration_minutes)
+
+                logger.info(f"Created LiftRide for Lap: {lap.lap_index} with lift {lift_ride.name if lift_ride else 'unnamed'}")
+
+        self.profiler.end_operation('process_lift_rides')
 
     def _finalize_activity_processing(self, activity_instance: Activity, activity_streams: Dict) -> None:
         """Finalize activity processing with calculations and badges."""
