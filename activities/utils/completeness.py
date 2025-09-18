@@ -348,6 +348,132 @@ def calculate_activity_completeness(activity):
     }
 
 
+def calculate_batch_activity_completeness(activities, user):
+    """
+    Calculate completeness for multiple activities efficiently by batching operations.
+
+    Args:
+        activities: List of Activity objects (should be prefetched with laps__lift_rides)
+        user: User object
+
+    Returns:
+        dict: Mapping of activity_id to completeness data
+    """
+    from collections import defaultdict
+    from django.core.cache import cache
+
+    if not activities:
+        return {}
+
+    # Group activities by ski area to avoid duplicate lift calculations
+    activities_by_ski_area = defaultdict(list)
+    for activity in activities:
+        if activity.ski_area:
+            activities_by_ski_area[activity.ski_area.id].append(activity)
+
+    # Pre-calculate available lifts for each unique ski area
+    ski_area_lifts_cache = {}
+    for ski_area_id in activities_by_ski_area.keys():
+        cache_key = f"ski_area_lifts_{ski_area_id}_{user.id}"
+        cached_lifts = cache.get(cache_key)
+
+        if cached_lifts is not None:
+            ski_area_lifts_cache[ski_area_id] = cached_lifts
+        else:
+            # Get ski area and calculate lifts
+            ski_area = activities_by_ski_area[ski_area_id][0].ski_area
+            available_lifts = get_available_lifts_in_ski_area(ski_area, user=user)
+            available_lift_ids = set(available_lifts.values_list('id', flat=True))
+            ski_area_lifts_cache[ski_area_id] = available_lift_ids
+            # Cache for 30 minutes
+            cache.set(cache_key, available_lift_ids, 1800)
+
+    # Get all lift rides for all activities in batch
+    activity_ids = [a.id for a in activities]
+    all_lift_rides = LiftRide.objects.filter(
+        lap__activity_id__in=activity_ids
+    ).values('lap__activity_id', 'aerialway').distinct()
+
+    # Group lift rides by activity
+    activity_lifts = defaultdict(set)
+    for ride in all_lift_rides:
+        activity_lifts[ride['lap__activity_id']].add(ride['aerialway'])
+
+    # Pre-calculate previous lifts for new lifts discovery (batch query)
+    previous_lifts_by_ski_area = {}
+    for ski_area_id, ski_area_activities in activities_by_ski_area.items():
+        # Get earliest activity timestamp for this ski area
+        earliest_timestamp = min(a.start_time for a in ski_area_activities)
+
+        cache_key = f"previous_lifts_{user.id}_{ski_area_id}_{earliest_timestamp.isoformat()}"
+        cached_previous = cache.get(cache_key)
+
+        if cached_previous is not None:
+            previous_lifts_by_ski_area[ski_area_id] = cached_previous
+        else:
+            # Get all lifts ridden before the earliest activity in this batch
+            previous_lifts = LiftRide.objects.filter(
+                lap__activity__user=user,
+                lap__activity__ski_area_id=ski_area_id,
+                lap__activity__start_time__lt=earliest_timestamp
+            ).values_list('aerialway', flat=True).distinct()
+
+            previous_lifts_set = set(previous_lifts)
+            previous_lifts_by_ski_area[ski_area_id] = previous_lifts_set
+            # Cache for 30 minutes
+            cache.set(cache_key, previous_lifts_set, 1800)
+
+    # Calculate completeness for each activity
+    results = {}
+    for activity in activities:
+        activity_id = str(activity.id)
+
+        if not activity.ski_area:
+            results[activity_id] = {
+                'lifts_used_today': 0,
+                'total_lifts_available': 0,
+                'daily_completion_percentage': 0,
+                'new_lifts_discovered': 0
+            }
+            continue
+
+        try:
+            # Get pre-calculated data
+            available_lift_ids = ski_area_lifts_cache.get(activity.ski_area.id, set())
+            activity_lift_ids = activity_lifts.get(activity.id, set())
+            previous_lift_ids = previous_lifts_by_ski_area.get(activity.ski_area.id, set())
+
+            total_available = len(available_lift_ids)
+            lifts_used_today = len(activity_lift_ids)
+
+            # Calculate daily completion percentage
+            daily_percentage = 0
+            if total_available > 0:
+                daily_percentage = round((lifts_used_today / total_available) * 100, 1)
+
+            # Calculate new lifts discovered
+            new_lifts = activity_lift_ids - previous_lift_ids
+
+            results[activity_id] = {
+                'lifts_used_today': lifts_used_today,
+                'total_lifts_available': total_available,
+                'daily_completion_percentage': daily_percentage,
+                'new_lifts_discovered': len(new_lifts)
+            }
+
+        except Exception as e:
+            logger.error(f"Error calculating completeness for activity {activity.id}: {e}")
+            results[activity_id] = {
+                'error': 'Error calculating completeness',
+                'daily_completion_percentage': 0,
+                'lifts_used_today': 0,
+                'total_lifts_available': 0,
+                'new_lifts_discovered': 0
+            }
+
+    return results
+
+
 def get_lift_statistics(user, ski_area=None):
     """
     Get comprehensive lift ride statistics for a user.

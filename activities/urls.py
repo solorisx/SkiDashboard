@@ -32,5 +32,6 @@ urlpatterns = [
     path("ski-area-completeness/all/", views.ski_area_completeness_all, name="ski_area_completeness_all"),
     path("ski-area-completeness/all/<str:season>/", views.ski_area_completeness_all, name="ski_area_completeness_all_season"),
     path("api/activity-completeness/<int:activity_id>/", views.activity_completeness_api, name="activity_completeness_api"),
+    path("api/activity-completeness-batch/", views.activity_completeness_batch_api, name="activity_completeness_batch_api"),
     path("api/reload-ski-area-completeness/<int:ski_area_id>/", views.reload_ski_area_completeness, name="reload_ski_area_completeness"),
 ]

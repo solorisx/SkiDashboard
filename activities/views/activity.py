@@ -18,6 +18,7 @@ from osm.osm_util import get_aerialways_with_distance
 
 from ..models import Activity
 from ..utils.queries import get_user_activities_base_query
+from ..utils.seasons import get_seasons, parse_season_string
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,7 @@ def activity_list(request):
 
     # Get filter parameters
     ski_area_filter = request.GET.get('ski_area')
+    season_filter = request.GET.get('season')
     group_by_ski_area = request.GET.get('group_by') == 'ski_area'
 
     activities = get_user_activities_base_query(request.user).order_by("-timestamp")
@@ -70,6 +72,16 @@ def activity_list(request):
             activities = activities.filter(ski_area_id=ski_area_id)
         except (ValueError, TypeError):
             # Invalid ski_area parameter, ignore it
+            pass
+
+    # Apply season filter if specified
+    if season_filter:
+        try:
+            start_date, end_date = parse_season_string(season_filter, request.user)
+            if start_date and end_date:
+                activities = activities.filter(timestamp__range=[start_date, end_date])
+        except (ValueError, TypeError):
+            # Invalid season parameter, ignore it
             pass
 
     # Create a subquery to check for valid season passes
@@ -87,32 +99,57 @@ def activity_list(request):
         has_season_pass=Exists(season_pass_subquery),
     ).prefetch_related('badges__badge', 'ski_area')
 
-    # Get available ski areas for the filter dropdown
+    # Get available ski areas and seasons for the filter dropdowns
     available_ski_areas = SkiArea.objects.filter(
         activity__user=request.user
     ).distinct().order_by('name')
 
+    available_seasons = get_seasons(request.user)
+
+    # Pre-calculate selected ski area to avoid O(n) template lookups
+    selected_ski_area = None
+    if ski_area_filter:
+        try:
+            ski_area_id = int(ski_area_filter)
+            selected_ski_area = SkiArea.objects.get(id=ski_area_id)
+        except (ValueError, TypeError, SkiArea.DoesNotExist):
+            pass
+
     # Handle grouping by ski area
     if group_by_ski_area:
-        # For grouping, we need all activities without pagination
-        all_activities = list(activities.order_by('ski_area__name', '-timestamp'))
+        # Get all activities ordered by ski area, then by timestamp
+        all_activities_query = activities.order_by('ski_area__name', '-timestamp')
+        total_count = all_activities_query.count()
 
-        # Group activities by ski area
-        grouped_activities = []
+        # Group all activities first to avoid splitting groups across pages
+        all_activities = list(all_activities_query)
+        all_grouped_activities = []
         for ski_area, group in groupby(all_activities, key=attrgetter('ski_area')):
             activities_list = list(group)
-            grouped_activities.append({
+            all_grouped_activities.append({
                 'ski_area': ski_area,
                 'activities': activities_list,
                 'count': len(activities_list)
             })
 
+        # paginate by complete groups
+        groups_per_page = 5  # Show 5 complete ski area groups per page
+        group_paginator = Paginator(all_grouped_activities, groups_per_page)
+        page_number = request.GET.get('page', 1)
+        page_obj = group_paginator.get_page(page_number)
+
+        grouped_activities = page_obj.object_list
+
         context = {
             'grouped_activities': grouped_activities,
             'is_grouped': True,
             'available_ski_areas': available_ski_areas,
+            'available_seasons': available_seasons,
             'current_ski_area_filter': ski_area_filter,
-            'total_activities': len(all_activities),
+            'current_season_filter': season_filter,
+            'selected_ski_area': selected_ski_area,
+            'total_activities': total_count,
+            'page_obj': page_obj,  # Include pagination info for grouped mode
         }
     else:
         # Regular pagination
@@ -124,7 +161,10 @@ def activity_list(request):
             'page_obj': page_obj,
             'is_grouped': False,
             'available_ski_areas': available_ski_areas,
+            'available_seasons': available_seasons,
             'current_ski_area_filter': ski_area_filter,
+            'current_season_filter': season_filter,
+            'selected_ski_area': selected_ski_area,
         }
 
     return render(request, 'activities/activity_list.html', context)

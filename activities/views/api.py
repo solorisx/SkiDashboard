@@ -7,7 +7,7 @@ from django.http import JsonResponse
 from cost.models import SeasonPass
 from osm.models import SkiArea
 
-from ..utils.completeness import calculate_activity_completeness
+from ..utils.completeness import calculate_activity_completeness, calculate_batch_activity_completeness
 from ..models import Activity
 from ..utils.queries import get_user_activities_base_query
 from ..utils.seasons import get_season_dates
@@ -171,3 +171,43 @@ def activity_completeness_api(request, activity_id):
     except Exception as e:
         logger.error(f"Error calculating completeness for activity {activity_id}: {e}")
         return JsonResponse({'error': 'Error calculating completeness'}, status=500)
+
+
+@login_required
+def activity_completeness_batch_api(request):
+    """Batch API endpoint to get completeness data for multiple activities."""
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'AJAX requests only'}, status=400)
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST requests only'}, status=405)
+
+    try:
+        import json
+        data = json.loads(request.body)
+        activity_ids = data.get('activity_ids', [])
+
+        if not activity_ids:
+            return JsonResponse({'error': 'No activity IDs provided'}, status=400)
+
+        if len(activity_ids) > 100:  # Reasonable limit
+            return JsonResponse({'error': 'Too many activity IDs (max 100)'}, status=400)
+
+        # Get activities for user with related data
+        activities = Activity.objects.filter(
+            id__in=activity_ids,
+            user=request.user
+        ).select_related('ski_area').prefetch_related(
+            'laps__lift_rides'
+        )
+
+        # Calculate completeness for batch of activities efficiently
+        results = calculate_batch_activity_completeness(list(activities), request.user)
+
+        return JsonResponse({'results': results})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        logger.error(f"Error in batch completeness API: {e}")
+        return JsonResponse({'error': 'Server error'}, status=500)

@@ -41,7 +41,7 @@
                       type="button"
                       data-bs-toggle="collapse"
                       data-bs-target="#filterControls"
-                      aria-expanded="{% if current_ski_area_filter or is_grouped %}true{% else %}false{% endif %}"
+                      aria-expanded="{% if current_ski_area_filter or current_season_filter or is_grouped %}true{% else %}false{% endif %}"
                       aria-controls="filterControls">
                 <i class="bi bi-funnel me-2"></i>
                 <span>Filters & Grouping</span>
@@ -50,7 +50,7 @@
             </div>
 
             <!-- Quick Active Filters Summary -->
-            {% if current_ski_area_filter or is_grouped %}
+            {% if current_ski_area_filter or current_season_filter or is_grouped %}
             <div class="d-flex flex-wrap gap-2 align-items-center">
               {% if current_ski_area_filter %}
                 {% for ski_area in available_ski_areas %}
@@ -60,6 +60,11 @@
                     </span>
                   {% endif %}
                 {% endfor %}
+              {% endif %}
+              {% if current_season_filter %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                  <i class="bi bi-calendar me-1"></i>{{ current_season_filter }}
+                </span>
               {% endif %}
               {% if is_grouped %}
                 <span class="badge bg-info-subtle text-info border border-info-subtle">
@@ -72,7 +77,7 @@
         </div>
 
         <!-- Collapsible Content -->
-        <div class="collapse {% if current_ski_area_filter or is_grouped %}show{% endif %}" id="filterControls">
+        <div class="collapse {% if current_ski_area_filter or current_season_filter or is_grouped %}show{% endif %}" id="filterControls">
           <div class="card-body pt-0 pb-3">
             <form method="get" id="filterForm" class="row g-3 align-items-center">
               <!-- Ski Area Filter -->
@@ -83,6 +88,19 @@
                   {% for ski_area in available_ski_areas %}
                     <option value="{{ ski_area.id }}" {% if current_ski_area_filter == ski_area.id|stringformat:"s" %}selected{% endif %}>
                       {{ ski_area.name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <!-- Season Filter -->
+              <div class="col-auto">
+                <label for="seasonFilter" class="form-label fw-medium text-muted small mb-1">Filter by Season</label>
+                <select name="season" id="seasonFilter" class="form-select form-select-sm">
+                  <option value="">All Seasons</option>
+                  {% for season in available_seasons %}
+                    <option value="{{ season }}" {% if current_season_filter == season %}selected{% endif %}>
+                      {{ season }}
                     </option>
                   {% endfor %}
                 </select>
@@ -222,8 +240,8 @@
   {% endif %}
 </div>
 
-<!-- Enhanced Pagination (only for regular display) -->
-{% if not is_grouped and page_obj.paginator.num_pages > 1 %}
+<!-- Enhanced Pagination -->
+{% if page_obj.paginator.num_pages > 1 %}
 <div class="container-fluid px-4 pb-5">
   <div class="row">
     <div class="col-12">
@@ -231,12 +249,12 @@
         <ul class="pagination pagination-lg shadow-sm">
           {% if page_obj.has_previous %}
             <li class="page-item">
-              <a class="page-link rounded-start-pill px-4" href="?page=1{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}" aria-label="First page">
+              <a class="page-link rounded-start-pill px-4" href="?page=1{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}{% if current_season_filter %}&season={{ current_season_filter }}{% endif %}{% if is_grouped %}&group_by=ski_area{% endif %}" aria-label="First page">
                 <i class="bi bi-chevron-double-left"></i>
               </a>
             </li>
             <li class="page-item">
-              <a class="page-link px-4" href="?page={{ page_obj.previous_page_number }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}" aria-label="Previous page">
+              <a class="page-link px-4" href="?page={{ page_obj.previous_page_number }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}{% if current_season_filter %}&season={{ current_season_filter }}{% endif %}{% if is_grouped %}&group_by=ski_area{% endif %}" aria-label="Previous page">
                 <i class="bi bi-chevron-left"></i>
               </a>
             </li>
@@ -261,12 +279,12 @@
 
           {% if page_obj.has_next %}
             <li class="page-item">
-              <a class="page-link px-4" href="?page={{ page_obj.next_page_number }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}" aria-label="Next page">
+              <a class="page-link px-4" href="?page={{ page_obj.next_page_number }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}{% if current_season_filter %}&season={{ current_season_filter }}{% endif %}{% if is_grouped %}&group_by=ski_area{% endif %}" aria-label="Next page">
                 <i class="bi bi-chevron-right"></i>
               </a>
             </li>
             <li class="page-item">
-              <a class="page-link rounded-end-pill px-4" href="?page={{ page_obj.paginator.num_pages }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}" aria-label="Last page">
+              <a class="page-link rounded-end-pill px-4" href="?page={{ page_obj.paginator.num_pages }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}{% if current_season_filter %}&season={{ current_season_filter }}{% endif %}{% if is_grouped %}&group_by=ski_area{% endif %}" aria-label="Last page">
                 <i class="bi bi-chevron-double-right"></i>
               </a>
             </li>
@@ -404,11 +422,19 @@ document.addEventListener("DOMContentLoaded", function() {
   // Handle filter form interactions
   const filterForm = document.getElementById('filterForm');
   const skiAreaFilter = document.getElementById('skiAreaFilter');
+  const seasonFilter = document.getElementById('seasonFilter');
   const groupBySkiArea = document.getElementById('groupBySkiArea');
 
   // Auto-submit form when ski area filter changes
   if (skiAreaFilter) {
     skiAreaFilter.addEventListener('change', function() {
+      filterForm.submit();
+    });
+  }
+
+  // Auto-submit form when season filter changes
+  if (seasonFilter) {
+    seasonFilter.addEventListener('change', function() {
       filterForm.submit();
     });
   }
@@ -497,73 +523,124 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  // Load completeness data for each activity
+  // Load completeness data for all activities in batch
   const completenessCards = document.querySelectorAll('[id^="completeness-"]');
-  completenessCards.forEach(card => {
-    const activityId = card.dataset.activityId;
-    const skiAreaId = card.dataset.skiAreaId;
 
-    // Make AJAX request to get activity completeness
-    fetch(`/activities/api/activity-completeness/${activityId}/`, {
-      method: 'GET',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
+  if (completenessCards.length > 0) {
+    // Collect all activity IDs
+    const activityIds = Array.from(completenessCards).map(card => card.dataset.activityId);
+
+    // Get CSRF token
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
       }
+      return cookieValue;
+    }
+
+    const csrfToken = getCookie('csrftoken');
+
+    // Make single batch API request
+    fetch('/activities/api/activity-completeness-batch/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({
+        activity_ids: activityIds
+      })
     })
-    .then(response => response.json())
-    .then(data => {
-      // Update the card with completeness data
-      const percentage = Math.round(data.daily_completion_percentage || 0);
-      const liftsUsed = data.lifts_used_today || 0;
-      const totalLifts = data.total_lifts_available || 0;
-      const newLifts = data.new_lifts_discovered || 0;
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then(responseData => {
+      // Extract results from the API response
+      const batchData = responseData.results || {};
 
-      let badgeClass = 'secondary';
-      if (percentage >= 75) badgeClass = 'success';
-      else if (percentage >= 50) badgeClass = 'warning';
-      else if (percentage >= 25) badgeClass = 'info';
+      // Process each card with its corresponding data
+      completenessCards.forEach(card => {
+        const activityId = card.dataset.activityId;
+        const skiAreaId = card.dataset.skiAreaId;
+        const data = batchData[activityId];
 
-      let badgeIcon = 'pie-chart';
-      if (percentage >= 75) badgeIcon = 'trophy';
-      else if (percentage >= 50) badgeIcon = 'award';
+        if (data) {
+          // Update the card with completeness data
+          const percentage = Math.round(data.daily_completion_percentage || 0);
+          const liftsUsed = data.lifts_used_today || 0;
+          const totalLifts = data.total_lifts_available || 0;
+          const newLifts = data.new_lifts_discovered || 0;
 
-      card.innerHTML = `
-        <a href="/activities/ski-area-completeness/${skiAreaId}/" class="text-decoration-none">
-          <div class="d-flex align-items-center justify-content-between">
-            <div class="text-start">
-              <div class="fs-5 fw-bold text-${badgeClass} mb-0">${percentage}%</div>
-              <small class="text-muted fw-medium">Area completeness</small>
+          let badgeClass = 'secondary';
+          if (percentage >= 75) badgeClass = 'success';
+          else if (percentage >= 50) badgeClass = 'warning';
+          else if (percentage >= 25) badgeClass = 'info';
+
+          let badgeIcon = 'pie-chart';
+          if (percentage >= 75) badgeIcon = 'trophy';
+          else if (percentage >= 50) badgeIcon = 'award';
+
+          card.innerHTML = `
+            <a href="/activities/ski-area-completeness/${skiAreaId}/" class="text-decoration-none">
+              <div class="d-flex align-items-center justify-content-between">
+                <div class="text-start">
+                  <div class="fs-5 fw-bold text-${badgeClass} mb-0">${percentage}%</div>
+                  <small class="text-muted fw-medium">Area completeness</small>
+                </div>
+                <div class="text-end">
+                  <div class="d-flex align-items-center gap-1 mb-1">
+                    <i class="bi bi-${badgeIcon} text-${badgeClass}"></i>
+                    <small class="text-muted">${liftsUsed}/${totalLifts} lifts</small>
+                  </div>
+                  <div class="mb-1" style="min-height: 20px;">
+                    ${newLifts > 0 ? `<div class="badge bg-success text-white small">+${newLifts} new!</div>` : ''}
+                  </div>
+                  <div class="text-center">
+                    <small class="text-primary fw-medium">
+                      <i class="bi bi-arrow-right me-1"></i>View Details
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </a>
+          `;
+
+          // Add hover effect
+          card.classList.add('hover-lift-completeness');
+        } else {
+          // Handle missing data
+          card.innerHTML = `
+            <div class="text-center">
+              <small class="text-muted">Completeness unavailable</small>
             </div>
-            <div class="text-end">
-              <div class="d-flex align-items-center gap-1 mb-1">
-                <i class="bi bi-${badgeIcon} text-${badgeClass}"></i>
-                <small class="text-muted">${liftsUsed}/${totalLifts} lifts</small>
-              </div>
-              <div class="mb-1" style="min-height: 20px;">
-                ${newLifts > 0 ? `<div class="badge bg-success text-white small">+${newLifts} new!</div>` : ''}
-              </div>
-              <div class="text-center">
-                <small class="text-primary fw-medium">
-                  <i class="bi bi-arrow-right me-1"></i>View Details
-                </small>
-              </div>
-            </div>
-          </div>
-        </a>
-      `;
-
-      // Add hover effect
-      card.classList.add('hover-lift-completeness');
+          `;
+        }
+      });
     })
     .catch(error => {
-      console.error('Error loading completeness:', error);
-      card.innerHTML = `
-        <div class="text-center">
-          <small class="text-muted">Completeness unavailable</small>
-        </div>
-      `;
+      console.error('Error loading batch completeness:', error);
+      // Fallback for all cards
+      completenessCards.forEach(card => {
+        card.innerHTML = `
+          <div class="text-center">
+            <small class="text-muted">Completeness unavailable</small>
+          </div>
+        `;
+      });
     });
-  });
+  }
 });
 </script>
 
