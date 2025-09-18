@@ -34,4 +34,5 @@ urlpatterns = [
     path("api/activity-completeness/<int:activity_id>/", views.activity_completeness_api, name="activity_completeness_api"),
     path("api/activity-completeness-batch/", views.activity_completeness_batch_api, name="activity_completeness_batch_api"),
     path("api/reload-ski-area-completeness/<int:ski_area_id>/", views.reload_ski_area_completeness, name="reload_ski_area_completeness"),
+    path("api/activity/<int:activity_id>/", views.ActivityAPI.as_view(), name="activity_api"),
 ]

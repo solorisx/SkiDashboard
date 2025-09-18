@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, F, Sum
 from django.db.models.functions import Round
 from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+import json
 
 from cost.models import SeasonPass
 from osm.models import SkiArea

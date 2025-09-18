@@ -12,6 +12,7 @@ from .activity import (
     activity_list,
     get_unique_lift_rides,
     segment_map,
+    ActivityAPI,
 )
 
 from .api import (
@@ -70,10 +71,11 @@ def home_stats(request):
 __all__ = [
     # Activity views
     'activity_detail',
-    'activity_detail_strava', 
+    'activity_detail_strava',
     'activity_list',
     'get_unique_lift_rides',
     'segment_map',
+    'ActivityAPI',
     
     # API views
     'activity_completeness_api',

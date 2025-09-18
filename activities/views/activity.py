@@ -1,5 +1,9 @@
 import logging
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.decorators.http import require_http_methods
+from django.views import View
+from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.core.serializers import serialize
 from django.contrib.gis.geos import LineString, Point
@@ -32,6 +36,11 @@ def get_unique_lift_rides(activity):
 def activity_list(request):
     """Show all activities with pagination, cost management, filtering and grouping."""
     logger.debug(f"Request method: {request.method}")
+
+    # Check for delete success message
+    if request.GET.get('deleted') == '1':
+        from django.contrib import messages
+        messages.success(request, 'Activity deleted successfully!')
 
     # Get filter parameters
     ski_area_filter = request.GET.get('ski_area')
@@ -247,3 +256,20 @@ def segment_map(request, activity_id):
         "segments_geojson": segments_geojson,
         "piste_geojson": piste_geojson,
     })
+
+class ActivityAPI(LoginRequiredMixin, View):
+    """API endpoint to delete activity."""
+
+    def delete(self, request, activity_id):
+        """Handle DELETE requests to delete an activity."""
+        activity = get_object_or_404(Activity, id=activity_id, user=request.user)
+        activity_name = activity.name
+        skiarea_id = activity.ski_area.id if activity.ski_area else None
+        activity.delete()
+        from activities.tasks import recalculate_completeness_task
+        recalculate_completeness_task.delay(user_id=request.user.id, skiarea_id=skiarea_id)
+        logging.getLogger(__name__).info(f"Activity '{activity_name}' (ID: {activity_id}) deleted by user {request.user}")
+        return JsonResponse({
+            "success": True,
+            "message": f"Activity '{activity_name}' deleted successfully"
+        }, status=204)
