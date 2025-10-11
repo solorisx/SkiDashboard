@@ -315,39 +315,82 @@ def assign_badges(activity: Activity):
         overall_completeness = calculate_ski_area_completeness(activity.user, activity.ski_area)
         completion_percentage = overall_completeness['completion_percentage']
 
+        # Award badges only to the first activity that achieved each threshold
+        # We check if this activity achieved a threshold by seeing if we have the percentage now
+        # and if there are no earlier activities with this badge already
+
         if completion_percentage >= 100:
             badge, _ = get_or_create_badge_by_natural_key('COMPLETENESS_100')
-            # Award to the activity that achieved 100% completion
-            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
-            # Remove from any earlier activities in the same ski area
-            ActivityBadge.objects.filter(
+            # Check if this badge was already awarded to an earlier activity
+            earlier_badge = ActivityBadge.objects.filter(
                 badge=badge,
                 activity__user=activity.user,
                 activity__ski_area=activity.ski_area,
                 activity__start_time__lt=activity.start_time
+            ).first()
+
+            if not earlier_badge:
+                # This is the first activity to achieve this threshold
+                ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+
+            # Remove from any later activities
+            ActivityBadge.objects.filter(
+                badge=badge,
+                activity__user=activity.user,
+                activity__ski_area=activity.ski_area,
+                activity__start_time__gt=activity.start_time
             ).delete()
-        elif completion_percentage >= 75:
+
+        if completion_percentage >= 75:
             badge, _ = get_or_create_badge_by_natural_key('COMPLETENESS_75')
-            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
-            # Remove from later activities that might have gotten it prematurely
+            earlier_badge = ActivityBadge.objects.filter(
+                badge=badge,
+                activity__user=activity.user,
+                activity__ski_area=activity.ski_area,
+                activity__start_time__lt=activity.start_time
+            ).first()
+
+            if not earlier_badge:
+                ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+
             ActivityBadge.objects.filter(
                 badge=badge,
                 activity__user=activity.user,
                 activity__ski_area=activity.ski_area,
                 activity__start_time__gt=activity.start_time
             ).delete()
-        elif completion_percentage >= 50:
+
+        if completion_percentage >= 50:
             badge, _ = get_or_create_badge_by_natural_key('COMPLETENESS_50')
-            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+            earlier_badge = ActivityBadge.objects.filter(
+                badge=badge,
+                activity__user=activity.user,
+                activity__ski_area=activity.ski_area,
+                activity__start_time__lt=activity.start_time
+            ).first()
+
+            if not earlier_badge:
+                ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+
             ActivityBadge.objects.filter(
                 badge=badge,
                 activity__user=activity.user,
                 activity__ski_area=activity.ski_area,
                 activity__start_time__gt=activity.start_time
             ).delete()
-        elif completion_percentage >= 25:
+
+        if completion_percentage >= 25:
             badge, _ = get_or_create_badge_by_natural_key('COMPLETENESS_25')
-            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+            earlier_badge = ActivityBadge.objects.filter(
+                badge=badge,
+                activity__user=activity.user,
+                activity__ski_area=activity.ski_area,
+                activity__start_time__lt=activity.start_time
+            ).first()
+
+            if not earlier_badge:
+                ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+
             ActivityBadge.objects.filter(
                 badge=badge,
                 activity__user=activity.user,
