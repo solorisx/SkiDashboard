@@ -515,8 +515,10 @@ class ActivityParser:
         }
 
         # Remove old entries (keep only last entries to prevent memory bloat)
-        spatial_index = [entry for entry in spatial_index
-                        if time.time() - entry.get('created_at', 0) < self.config.CACHE_TIMEOUT_SECONDS]
+        # Only filter by time if CACHE_TIMEOUT_SECONDS is set
+        if self.config.CACHE_TIMEOUT_SECONDS is not None:
+            spatial_index = [entry for entry in spatial_index
+                            if time.time() - entry.get('created_at', 0) < self.config.CACHE_TIMEOUT_SECONDS]
         spatial_index.append(new_entry)
 
         if len(spatial_index) > self.config.MAX_SPATIAL_INDEX_ENTRIES:
