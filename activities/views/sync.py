@@ -60,7 +60,7 @@ def sync_strava_admin(request):
                 strava_activity_id = activity_form.cleaned_data["strava_activity_id"]
                 update = activity_form.cleaned_data["update"]
                 try:
-                    sync_strava_activity_task.delay(user, strava_activity_id, update)
+                    sync_strava_activity_task.delay(user.id, strava_activity_id, update)
                     messages.success(
                         request,
                         f"Started sync for Strava activity {strava_activity_id} (user: {user})."
