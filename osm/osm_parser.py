@@ -64,23 +64,29 @@ class OSMHandler(osmium.SimpleHandler):
 
 def duration_to_minutes(duration):
     try:
+        if not duration:
+            return None
         minutes = duration.split(':')
         return int(minutes[0])
-    except:
+    except (AttributeError, IndexError, ValueError, TypeError):
         return None
     
 def ele_to_float(ele):
     try:
+        if not ele:
+            return None
         # format 1234.56m
         ele = ele.replace('m', '')
         return float(ele)
-    except:
+    except (AttributeError, ValueError, TypeError):
         return None
     
 def str_to_int(s):
+    if s is None or s == '':
+        return None
     try:
         return int(s)
-    except:
+    except ValueError:
         return None
 
 def process_nodes(handler):
@@ -152,8 +158,7 @@ def process_ways(handler):
                     logger.debug(existing_way_nodes)
 
                     new_node_ids = set(way_data['nodes'])
-                    existing_node_ids = set([way_node.node.osm_id for way_node in existing_way_nodes.values()]
-)
+                    existing_node_ids = set([way_node.node.osm_id for way_node in existing_way_nodes.values()])
 
                     logger.debug(f"new_node_ids: {new_node_ids}")
                     logger.debug(f"existing_node_ids {existing_node_ids}")
@@ -212,8 +217,9 @@ def process_ways(handler):
             tags=way.get('tags', {})
             nodes=way.get('nodes', [])
 
-            way_obj = Way.objects.get(osm_id=way['osm_id'])
-            if way_obj is None:
+            try:
+                way_obj = Way.objects.get(osm_id=way['osm_id'])
+            except Way.DoesNotExist:
                 logger.warning(f"Way {way['osm_id']} does not exist")
                 continue
 
@@ -257,7 +263,9 @@ def process_ways(handler):
 
                 # Handle Piste
                 elif 'piste:type' in tags:
-                    if way_obj.nodes.first() == way_obj.nodes.last():
+                    first_node = way_obj.nodes.first()
+                    last_node = way_obj.nodes.last()
+                    if first_node and last_node and first_node == last_node:
                         # TODO: add support for polygons
                         logger.warning(f"Piste {way['osm_id']} has the same start and end node, probably a polygon - not supported")
                         continue
@@ -441,7 +449,141 @@ def delete_orphan_nodes_batch(batch_size=1000, dry_run=False):
         logger.info(f"Total orphan nodes deleted: {total_deleted}")
         return total_deleted
 
+# Cloud-safe chunk processing functions
+def process_nodes_chunk(nodes_chunk):
+    """Process a chunk of nodes for cloud-safe execution."""
+    chunk_size = 1000
+    logger.debug(f"Processing nodes chunk with {len(nodes_chunk)} nodes")
+
+    try:
+        node_objs = [Node(osm_id=node['osm_id'], geom=node['geom'], tags=node.get('tags', {})) for node in nodes_chunk]
+        Node.objects.bulk_create(node_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['geom', 'tags'], unique_fields=['osm_id'])
+        logger.debug(f"Successfully processed {len(nodes_chunk)} nodes")
+        return len(nodes_chunk)
+    except Exception as e:
+        logger.error(f"Error processing nodes chunk: {e}")
+        raise
+
+
+def process_ways_chunk(ways_chunk):
+    """Process a chunk of ways for cloud-safe execution."""
+    chunk_size = 500  # Smaller chunk size for ways due to complexity
+    logger.debug(f"Processing ways chunk with {len(ways_chunk)} ways")
+
+    try:
+        # Create Way objects without assigning nodes
+        way_objs = [Way(osm_id=way['osm_id'], tags=way.get('tags', {})) for way in ways_chunk]
+        Way.objects.bulk_create(way_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['tags'], unique_fields=['osm_id'])
+
+        # Fetch the created ways to update nodes
+        osm_ids = [way['osm_id'] for way in ways_chunk]
+        ways = Way.objects.filter(osm_id__in=osm_ids)
+        ways_dict = {way.osm_id: way for way in ways}
+
+        # Fetch all nodes required in this chunk
+        node_ids = {node_id for way in ways_chunk for node_id in way['nodes']}
+        nodes = Node.objects.filter(osm_id__in=node_ids)
+        nodes_dict = {node.osm_id: node for node in nodes}
+
+        way_nodes_to_create = []
+
+        with transaction.atomic():
+            for way_data in ways_chunk:
+                way = ways_dict[way_data['osm_id']]
+
+                # Process each node in the way
+                for sequence, node_id in enumerate(way_data['nodes']):
+                    if node_id in nodes_dict:  # Ensure node exists
+                        way_nodes_to_create.append(
+                            way.nodes.through(way=way, node=nodes_dict[node_id], sequence=sequence)
+                        )
+
+            # Bulk create new WayNode instances
+            if way_nodes_to_create:
+                way.nodes.through.objects.bulk_create(way_nodes_to_create, batch_size=chunk_size)
+
+        logger.debug(f"Successfully processed {len(ways_chunk)} ways")
+        return len(ways_chunk)
+    except Exception as e:
+        logger.error(f"Error processing ways chunk: {e}")
+        raise
+
+
+def process_relations_chunk(relations_chunk):
+    """Process a chunk of relations for cloud-safe execution."""
+    logger.debug(f"Processing relations chunk with {len(relations_chunk)} relations")
+
+    try:
+        for relation_data in relations_chunk:
+            with transaction.atomic():
+                ski_area, created = SkiArea.objects.update_or_create(
+                    osm_id=relation_data['osm_id'],
+                    defaults={
+                        'name': relation_data['name'] or f"Unnamed relation {relation_data['osm_id']}",
+                        'url': relation_data['url'],
+                        'wikipedia': relation_data['wikipedia'],
+                        'tags': relation_data.get('tags', {})
+                    }
+                )
+
+                # Associate ways with this ski area
+                for way_id in relation_data['member_ids']:
+                    way = Way.objects.filter(osm_id=way_id).first()
+                    if way:
+                        ski_area.ways.add(way)
+                    else:
+                        logger.warning(f"Way {way_id} does not exist for ski area {relation_data['osm_id']}")
+
+        logger.debug(f"Successfully processed {len(relations_chunk)} relations")
+        return len(relations_chunk)
+    except Exception as e:
+        logger.error(f"Error processing relations chunk: {e}")
+        raise
+
+
+def process_areas_chunk(areas_chunk):
+    """Process a chunk of areas for cloud-safe execution."""
+    logger.debug(f"Processing areas chunk with {len(areas_chunk)} areas")
+
+    try:
+        for area_data in areas_chunk:
+            with transaction.atomic():
+                name = area_data['name'] or f"Unnamed area {area_data['osm_id']}"
+                way = Way.objects.filter(osm_id=area_data['osm_id']).first()
+                if way is None:
+                    way = Way.objects.create(osm_id=area_data['osm_id'], tags=area_data.get('tags', {}))
+
+                SkiAreaBoundary.objects.update_or_create(
+                    way=way,
+                    defaults={
+                        'geom': area_data['geom'],
+                        'name': area_data['name'] or f"Unnamed area {area_data['osm_id']}"
+                    }
+                )
+
+                SkiArea.objects.update_or_create(
+                    osm_id=way.osm_id,
+                    way=way,
+                    defaults={
+                        'geom': area_data['geom'],
+                        'name': area_data['name'] or f"Unnamed area {area_data['osm_id']}",
+                        'tags': area_data.get('tags', {})
+                    }
+                )
+
+        logger.debug(f"Successfully processed {len(areas_chunk)} areas")
+        return len(areas_chunk)
+    except Exception as e:
+        logger.error(f"Error processing areas chunk: {e}")
+        raise
+
+
 def parse_osm_file(file_path, scope):
+    """
+    Legacy OSM file parsing function.
+
+    Note: For cloud environments, use parse_osm_file_cloud_safe() from tasks.py instead.
+    """
     logger.info(f"Starting to parse OSM file: {file_path}")
     logger.info(f"{'parsing' if scope[0] else 'skipping'} nodes, {'parsing' if scope[1] else 'skipping'} ways, {'parsing' if scope[2] else 'skipping'} relations")
     start_time = time.time()
@@ -454,7 +596,7 @@ def parse_osm_file(file_path, scope):
     logger.info(f"Applied OSM file to handler in {total_duration_handler:.4f} seconds")
 
     logger.info(f"OSM file has {len(handler.nodes) if handler.nodes is not None else 'N/A'} nodes, {len(handler.ways) if handler.ways is not None else 'N/A'} ways, {len(handler.relations) if handler.relations is not None else 'N/A'} relations, {len(handler.areas) if handler.areas is not None else 'N/A'} areas")
-    
+
     # Process and save or update nodes
     if scope[0]:
         process_nodes(handler)

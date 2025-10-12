@@ -272,8 +272,11 @@ class Piste(models.Model):
         Returns:
             bool: True if the last node update is more recent than the geometry update, False otherwise.
         """
-        last_node_update = self.way.nodes.all().order_by('-modified_on').first().modified_on
-        if not last_node_update:
+        last_node = self.way.nodes.all().order_by('-modified_on').first()
+        if not last_node:
+            return False
+        last_node_update = last_node.modified_on
+        if not last_node_update or not self.geom_updated_on:
             return False
         return last_node_update > self.geom_updated_on
     
