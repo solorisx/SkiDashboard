@@ -13,29 +13,167 @@
     z-index: 1000;
     background: white;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    padding: 1rem 0;
-    margin-bottom: 2rem;
+    padding: 0.75rem 0;
+    margin-bottom: 1.5rem;
   }
 
   .activity-title {
     font-size: 1.5rem;
     margin: 0;
-    line-height: 1.2;
+    line-height: 1.3;
+    font-weight: 700;
   }
 
   .device-attribution {
     color: #6c757d;
     font-size: 0.875rem;
     margin-left: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .header-info-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .header-badge {
     white-space: nowrap;
   }
 
-  @media (max-width: 991px) {
-    .activity-title {
-      font-size: 1.25rem;
+  /* Desktop layout - single line */
+  @media (min-width: 992px) {
+    .sticky-header-content {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
     }
-    .header-badges {
-      margin-top: 0.5rem;
+
+    .header-title-section {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .activity-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+    }
+  }
+
+  /* Mobile layout - stacked */
+  @media (max-width: 991px) {
+    .sticky-header {
+      padding: 0.5rem 0;
+    }
+
+    .sticky-header-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .header-title-section {
+      width: 100%;
+    }
+
+    .activity-title {
+      font-size: 1.1rem;
+      line-height: 1.3;
+      margin-bottom: 0.25rem;
+      word-break: break-word;
+    }
+
+    .device-attribution {
+      display: block;
+      margin-left: 0;
+      font-size: 0.8rem;
+    }
+
+    .header-right {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .header-badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem !important;
+    }
+
+    /* Hide back button on mobile */
+    .btn-back-mobile {
+      display: none !important;
+    }
+  }
+
+  /* Extra small mobile */
+  @media (max-width: 576px) {
+    .activity-title {
+      font-size: 1rem;
+    }
+
+    .device-attribution {
+      font-size: 0.75rem;
+    }
+
+    .header-right {
+      font-size: 0.8rem;
+    }
+  }
+
+  /* Stats cards - mobile optimization */
+  @media (max-width: 991px) {
+    .stats-card-body {
+      padding: 0.75rem !important;
+    }
+
+    .stats-card-icon {
+      font-size: 2rem !important;
+      margin-bottom: 0.5rem !important;
+    }
+
+    .stats-card-value {
+      font-size: 1.25rem !important;
+      margin-bottom: 0.25rem !important;
+    }
+
+    .stats-card-label {
+      font-size: 0.7rem !important;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .stats-card-body {
+      padding: 0.5rem !important;
+    }
+
+    .stats-card-icon {
+      font-size: 1.5rem !important;
+      margin-bottom: 0.25rem !important;
+    }
+
+    .stats-card-value {
+      font-size: 1rem !important;
+      margin-bottom: 0.25rem !important;
+    }
+
+    .stats-card-label {
+      font-size: 0.65rem !important;
     }
   }
 </style>
@@ -44,40 +182,45 @@
 
 <!-- Sticky Header -->
 <div class="sticky-header">
-  <div class="container-fluid px-4">
+  <div class="container-fluid px-3 px-md-4">
     <div class="row">
       <div class="col-12">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-          <!-- Left: Back Button -->
-          <a href="{% url 'activity_list' %}" class="btn btn-outline-primary">
-            <i class="bi bi-arrow-left"></i> Back
+        <div class="sticky-header-content">
+          <!-- Back Button -->
+          <a href="{% url 'activity_list' %}" class="btn btn-outline-primary btn-sm btn-back-mobile d-lg-inline-block">
+            <i class="bi bi-arrow-left"></i><span class="d-none d-sm-inline"> Back</span>
           </a>
 
-          <!-- Center: Title and Attribution -->
-          <div class="flex-grow-1 d-flex align-items-center flex-wrap">
-            <h1 class="activity-title fw-bold text-dark me-3">{{ activity.name }}</h1>
-            {% if activity.device_name %}
-            <span class="device-attribution">
-              <i class="bi bi-watch me-1"></i>{{ activity.device_name }}
-            </span>
-            {% endif %}
+          <!-- Title and Device Attribution Section -->
+          <div class="header-title-section">
+            <div>
+              <h1 class="activity-title text-dark">{{ activity.name }}</h1>
+              {% if activity.device_name %}
+              <div class="device-attribution">
+                <i class="bi bi-watch me-1"></i>{{ activity.device_name }}
+              </div>
+              {% endif %}
+            </div>
           </div>
 
-          <!-- Right: Badges and Info -->
-          <div class="d-flex align-items-center flex-wrap gap-2 header-badges">
-            <span class="badge bg-primary px-3 py-2">
+          <!-- Badges and Info Section -->
+          <div class="header-right">
+            <span class="badge bg-primary header-badge">
               <i class="bi bi-snow me-1"></i>{{ activity.ski_area.name }}
             </span>
             {% if activity.has_season_pass %}
-            <span class="badge bg-success text-white px-3 py-2"
+            <span class="badge bg-success text-white header-badge"
                   title="This activity is covered by a valid season pass"
                   data-bs-toggle="tooltip"
                   data-bs-placement="top">
-              <i class="bi bi-ticket-perforated me-1"></i>Season Pass
+              <i class="bi bi-ticket-perforated me-1"></i><span class="d-none d-sm-inline">Season Pass</span><span class="d-inline d-sm-none">Pass</span>
             </span>
             {% endif %}
-            <span class="text-muted">
+            <span class="text-muted d-none d-md-inline">
               <i class="bi bi-clock me-1"></i>{{ activity.start_time|date:"DATETIME_FORMAT" }}
+            </span>
+            <span class="text-muted d-inline d-md-none small">
+              <i class="bi bi-clock me-1"></i>{{ activity.start_time|date:"SHORT_DATETIME_FORMAT" }}
             </span>
           </div>
         </div>
@@ -89,47 +232,47 @@
 <div class="container-fluid px-4 py-3">
 
   <!-- Stats Overview Cards -->
-  <div class="row row-cols-2 row-cols-sm-2 row-cols-md-3 row-cols-xl-5 g-4 mb-5">
+  <div class="row row-cols-2 row-cols-sm-2 row-cols-md-3 row-cols-xl-5 g-3 g-md-4 mb-4 mb-md-5">
     <div class="col">
       <div class="card bg-primary bg-opacity-10 border-primary border-2 h-100">
-        <div class="card-body text-center">
-          <i class="bi bi-arrow-down-circle display-4 text-primary mb-2"></i>
-          <h3 class="fw-bold text-primary mb-1">{{ activity.total_descent|round_to:0 }}</h3>
-          <small class="text-muted fw-medium">Total Descent (m)</small>
+        <div class="card-body text-center stats-card-body">
+          <i class="bi bi-arrow-down-circle display-4 text-primary mb-2 stats-card-icon"></i>
+          <h3 class="fw-bold text-primary mb-1 stats-card-value">{{ activity.total_descent|round_to:0 }}</h3>
+          <small class="text-muted fw-medium stats-card-label">Total Descent (m)</small>
         </div>
       </div>
     </div>
     <div class="col">
       <div class="card bg-success bg-opacity-10 border-success border-2 h-100">
-        <div class="card-body text-center">
-          <i class="bi bi-geo-alt display-4 text-success mb-2"></i>
-          <h3 class="fw-bold text-success mb-1">{{ activity.total_distance_km }}</h3>
-          <small class="text-muted fw-medium">Distance (km)</small>
+        <div class="card-body text-center stats-card-body">
+          <i class="bi bi-geo-alt display-4 text-success mb-2 stats-card-icon"></i>
+          <h3 class="fw-bold text-success mb-1 stats-card-value">{{ activity.total_distance_km }}</h3>
+          <small class="text-muted fw-medium stats-card-label">Distance (km)</small>
         </div>
       </div>
     </div>
     <div class="col">
       <div class="card bg-info bg-opacity-10 border-info border-2 h-100">
-        <div class="card-body text-center">
-          <i class="bi bi-arrow-up-circle display-4 text-info mb-2"></i>
-          <h3 class="fw-bold text-info mb-1">{{ activity.num_lift_rides }}</h3>
-          <small class="text-muted fw-medium">Lift Rides</small>
+        <div class="card-body text-center stats-card-body">
+          <i class="bi bi-arrow-up-circle display-4 text-info mb-2 stats-card-icon"></i>
+          <h3 class="fw-bold text-info mb-1 stats-card-value">{{ activity.num_lift_rides }}</h3>
+          <small class="text-muted fw-medium stats-card-label">Lift Rides</small>
         </div>
       </div>
     </div>
     <div class="col">
       <div class="card bg-warning bg-opacity-10 border-warning border-2 h-100">
-        <div class="card-body text-center">
-          <i class="bi bi-award display-4 text-warning mb-2"></i>
-          <h3 class="fw-bold text-warning mb-1">{{ badges|length }}</h3>
-          <small class="text-muted fw-medium">Badges Earned</small>
+        <div class="card-body text-center stats-card-body">
+          <i class="bi bi-award display-4 text-warning mb-2 stats-card-icon"></i>
+          <h3 class="fw-bold text-warning mb-1 stats-card-value">{{ badges|length }}</h3>
+          <small class="text-muted fw-medium stats-card-label">Badges Earned</small>
         </div>
       </div>
     </div>
     {% if activity.ski_area %}
     <div class="col">
       <div class="card bg-secondary bg-opacity-10 border-secondary border-2 h-100">
-        <div class="card-body text-center">
+        <div class="card-body text-center stats-card-body">
           <div id="completeness-{{ activity.id }}"
                data-activity-id="{{ activity.id }}"
                data-ski-area-id="{{ activity.ski_area.id }}"
@@ -137,7 +280,7 @@
             <div class="spinner-border spinner-border-sm text-secondary mb-2" role="status">
               <span class="visually-hidden">Loading...</span>
             </div>
-            <small class="text-muted fw-medium">Loading...</small>
+            <small class="text-muted fw-medium stats-card-label">Loading...</small>
           </div>
         </div>
       </div>
