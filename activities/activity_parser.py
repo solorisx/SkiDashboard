@@ -1042,6 +1042,7 @@ class ActivityParser:
             "user": user,
             "start_position": start_point,
             "ski_area": ski_area,
+            "device_name": activity.device_name,
         }
 
         # Create or update activity

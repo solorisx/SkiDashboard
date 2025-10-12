@@ -38,6 +38,7 @@ class Activity(models.Model):
     processed_on = models.DateTimeField(null=True)
     processing_time = models.DurationField(null=True)
     version = models.PositiveIntegerField(default=1)
+    device_name = models.CharField(max_length=255, null=True)
 
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
 
