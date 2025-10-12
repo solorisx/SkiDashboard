@@ -93,6 +93,59 @@
         </div>
       </div>
 
+      <!-- Email & Communication Preferences -->
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">{% trans "Email & Communication Preferences" %}</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-muted mb-3">
+            {% trans "Control what emails you receive from us." %}
+          </p>
+
+          <div class="form-check mb-3">
+            {{ form.opt_in_newsletter }}
+            <label class="form-check-label" for="{{ form.opt_in_newsletter.id_for_label }}">
+              <strong>{% trans "Newsletter" %}</strong>
+              <div class="text-muted small">{{ form.opt_in_newsletter.help_text }}</div>
+            </label>
+          </div>
+
+          <div class="form-check mb-3">
+            {{ form.opt_in_summary_email }}
+            <label class="form-check-label" for="{{ form.opt_in_summary_email.id_for_label }}">
+              <strong>{% trans "Weekly Summary" %}</strong>
+              <div class="text-muted small">{{ form.opt_in_summary_email.help_text }}</div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Strava Integration -->
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">{% trans "Strava Integration" %}</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-muted mb-3">
+            {% trans "Configure how this app interacts with your Strava account." %}
+          </p>
+
+          <div class="form-check mb-3">
+            {{ form.opt_in_strava_write }}
+            <label class="form-check-label" for="{{ form.opt_in_strava_write.id_for_label }}">
+              <strong>{% trans "Allow Write Access to Strava" %}</strong>
+              <div class="text-muted small">{{ form.opt_in_strava_write.help_text }}</div>
+            </label>
+          </div>
+
+          <div class="alert alert-info" role="alert">
+            <i class="bi bi-info-circle me-2"></i>
+            {% trans "Note: Changing write access requires re-connecting your Strava account. You will be redirected to re-authenticate after saving." %}
+          </div>
+        </div>
+      </div>
+
       <!-- Form Actions -->
       <div class="d-flex justify-content-between">
         <a href="{% url 'home' %}" class="btn btn-secondary">

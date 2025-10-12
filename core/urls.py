@@ -23,13 +23,15 @@ import os
 urlpatterns = [
     path('', views.landing, name="landing"),
     path('activities/', include('activities.urls')),
-    path('init_networks/', views.initialize_ski_area_networks, name="init_networks"),    
+    path('init_networks/', views.initialize_ski_area_networks, name="init_networks"),
     path('admin/', admin.site.urls),
     path('home/', views.home, name="home"),
+    # Custom Strava OAuth URLs must come BEFORE allauth.urls
+    path('accounts/strava/login/', include('core.strava_urls')),
     path('accounts/', include('allauth.urls')),
     path('accounts/delete/', views.UserDeleteView.as_view(), name='account_delete'),
     path('accounts/profile/', views.profile_management, name='profile_management'),
-    path("accounts/strava/", views.strava_connection_view, name="strava-connection"),
+    path("accounts/strava/connection/", views.strava_connection_view, name="strava-connection"),
     path("accounts/strava/unlink/", views.strava_unlink_view, name="strava-unlink"),
     path('cost/', include('cost.urls')),
     path("osm/", include('osm.urls')),

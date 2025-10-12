@@ -11,36 +11,120 @@
     </p>
 
     {% if user.is_authenticated %}
+      {% if request.session.strava_reauth_needed %}
+        <div class="alert alert-warning">
+          <h5 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>{% trans "Re-authentication Required" %}</h5>
+          <p>
+            {% trans "You've changed your Strava write access preferences. To apply these changes, you need to reconnect your Strava account with the new permissions." %}
+          </p>
+          <p class="mb-0">
+            <strong>{% trans "New permission:" %}</strong>
+            {% if request.session.strava_reauth_write_scope %}
+              {% trans "Read and Write Access" %} - <small class="text-muted">{% trans "Allows the app to update your Strava activities" %}</small>
+            {% else %}
+              {% trans "Read-Only Access" %} - <small class="text-muted">{% trans "App can only read your activities" %}</small>
+            {% endif %}
+          </p>
+        </div>
+
+        <div class="d-grid gap-2 mb-3">
+          <a class="btn btn-primary btn-lg fw-bold"
+             href="{% provider_login_url 'strava' process='connect' next=request.path %}">
+            <i class="bi bi-arrow-repeat me-2"></i>{% trans "Reconnect Strava with New Permissions" %}
+          </a>
+          <a class="btn btn-outline-secondary" href="{% url 'profile_management' %}">
+            {% trans "Back to Profile Settings" %}
+          </a>
+        </div>
+      {% endif %}
+
       {% if strava_account %}
-        <div class="alert alert-success d-flex justify-content-between align-items-center">
-          <div>
-            <strong>{% trans "Connected to Strava" %}</strong>
-            <div class="small text-muted">
-              {% if strava_account.extra_data.username %}
-                @{{ strava_account.extra_data.username }}
-              {% endif %}
-              {% if strava_account.extra_data.firstname and strava_account.extra_data.lastname %}
-                - {{ strava_account.extra_data.firstname }} {{ strava_account.extra_data.lastname }}
-              {% elif strava_account.extra_data.firstname %}
-                - {{ strava_account.extra_data.firstname }}
-              {% endif %}
-              <br>
-              {% if strava_account.extra_data.id %}
-                ID: {{ strava_account.extra_data.id }}
-              {% elif strava_account.uid %}
-                ID: {{ strava_account.uid }}
-              {% endif %}
+        <div class="alert alert-success">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <strong>{% trans "Connected to Strava" %}</strong>
+              <div class="small text-muted">
+                {% if strava_account.extra_data.username %}
+                  @{{ strava_account.extra_data.username }}
+                {% endif %}
+                {% if strava_account.extra_data.firstname and strava_account.extra_data.lastname %}
+                  - {{ strava_account.extra_data.firstname }} {{ strava_account.extra_data.lastname }}
+                {% elif strava_account.extra_data.firstname %}
+                  - {{ strava_account.extra_data.firstname }}
+                {% endif %}
+                <br>
+                {% if strava_account.extra_data.id %}
+                  ID: {{ strava_account.extra_data.id }}
+                {% elif strava_account.uid %}
+                  ID: {{ strava_account.uid }}
+                {% endif %}
+              </div>
             </div>
+            <form method="post" action="{% url 'strava-unlink' %}">
+              {% csrf_token %}
+              <button class="btn btn-outline-danger btn-sm">{% trans "Unlink" %}</button>
+            </form>
           </div>
-          <form method="post" action="{% url 'strava-unlink' %}">
-            {% csrf_token %}
-            <button class="btn btn-outline-danger">{% trans "Unlink" %}</button>
-          </form>
+
+          {% if current_scopes %}
+          <hr class="my-2">
+          <div class="mt-2">
+            <h6 class="mb-2 small fw-bold">{% trans "Current Permissions:" %}</h6>
+            <ul class="list-unstyled mb-0 small">
+              {% for scope in current_scopes %}
+              <li>
+                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                {% if scope == "read" %}
+                  {% trans "Read - View public profile information" %}
+                {% elif scope == "activity:read" %}
+                  {% trans "Activity Read - View your activities" %}
+                {% elif scope == "activity:write" %}
+                  {% trans "Activity Write - Update your activities" %}
+                {% elif scope == "activity:read_all" %}
+                  {% trans "Activity Read All - View all activities including private" %}
+                {% else %}
+                  {{ scope }}
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
         </div>
       {% else %}
         <div class="alert alert-warning mb-4">
           {% trans "You are not connected to Strava." %}
         </div>
+
+        {% if requested_scopes %}
+        <div class="card mb-3">
+          <div class="card-body">
+            <h6 class="card-title">{% trans "Permissions that will be requested:" %}</h6>
+            <ul class="list-unstyled mb-0 small">
+              {% for scope in requested_scopes %}
+              <li>
+                <i class="bi bi-arrow-right-circle me-2"></i>
+                {% if scope == "read" %}
+                  {% trans "Read - View public profile information" %}
+                {% elif scope == "activity:read" %}
+                  {% trans "Activity Read - View your activities" %}
+                {% elif scope == "activity:write" %}
+                  {% trans "Activity Write - Update your activities" %}
+                {% elif scope == "activity:read_all" %}
+                  {% trans "Activity Read All - View all activities including private" %}
+                {% else %}
+                  {{ scope }}
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+            <p class="small text-muted mb-0 mt-2">
+              {% trans "You can change these permissions in your profile settings." %}
+            </p>
+          </div>
+        </div>
+        {% endif %}
+
         <a class="btn btn-primary fw-bold"
            href="{% provider_login_url 'strava' process='connect' next=request.path %}">
           {% trans "Connect Strava" %}

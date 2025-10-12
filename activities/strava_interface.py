@@ -93,4 +93,17 @@ def load_activity_laps(User, activity_id):
     laps = client.get_activity_laps(activity_id)
     return laps
 
-    
+def update_activity_description(user, activity_id, description):
+    """
+    Updates the description of a Strava activity.
+    Requires 'activity:write' scope.
+    """
+    try:
+        access_token = get_access_token(user)
+        client = Client(access_token)
+        client.update_activity(activity_id, description=description)
+        logger.info(f"Updated Strava activity {activity_id} description for user {user.username}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to update Strava activity {activity_id} description: {e}", exc_info=True, stack_info=True)
+        return False

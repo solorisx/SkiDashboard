@@ -109,6 +109,20 @@ SILKY_AUTHORISATION = True  # User must have permissions
 SOCIALACCOUNT_STORE_TOKENS = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
+# Custom social account adapter for dynamic Strava scopes
+SOCIALACCOUNT_ADAPTER = 'core.strava_adapter.CustomSocialAccountAdapter'
+
+# Strava provider configuration
+# Custom provider registered via provider_classes in strava_adapter.py
+SOCIALACCOUNT_PROVIDERS = {
+    'strava': {
+        'SCOPE': ['read', 'activity:read'],  # Base scopes, will be overridden dynamically
+        'AUTH_PARAMS': {
+            'approval_prompt': 'auto',
+        },
+    }
+}
+
 # Email Configuration
 if os.getenv('SMTP_HOST'):
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -290,7 +304,7 @@ LOGGING = {
     },
     'root': {   # <--- root logger catches everything not caught by other loggers
         'handlers': ['console'],
-        'level': "WARNING",
+        'level': "DEBUG",
     },
     'loggers': {
         'django': {
@@ -301,7 +315,7 @@ LOGGING = {
         'core': {
             'handlers': ['console'],
             'level': LOG_LEVEL,
-            'propagate': False,
+            'propagate': True,  # Allow child loggers to inherit
         },
         'activities': {
             'handlers': ['console'],

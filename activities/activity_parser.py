@@ -29,7 +29,7 @@ from cost.seasonpass import has_seasonpass
 
 
 
-from .strava_interface import load_activities, load_activity, load_activity_streams, load_activity_laps
+from .strava_interface import load_activities, load_activity, load_activity_streams, load_activity_laps, update_activity_description
 
 # Get an instance of a logger
 logger = logging.getLogger('core')
@@ -1169,6 +1169,97 @@ class ActivityParser:
 
         self.profiler.end_operation('process_lift_rides')
 
+    def generate_strava_description(self, activity_instance: Activity, existing_description: str = "") -> str:
+        """
+        Generate a description for the Strava activity with lift ride information.
+        Uses a regex-matchable pattern to identify and replace our generated content while preserving user content.
+
+        Pattern: 🎿 3x Tiefenbachbahn, 2x Schwarze Schneid, 1x Mutkogl - tracked by SkiDashboard 🎿
+        """
+        self.profiler.start_operation('generate_strava_description')
+
+        # Get all lift rides for this activity, grouped by aerialway
+        lift_rides = LiftRide.objects.filter(
+            lap__activity=activity_instance,
+            uphill=True
+        ).select_related('aerialway').order_by('timestamp')
+
+        if not lift_rides.exists():
+            self.profiler.end_operation('generate_strava_description')
+            return existing_description
+
+        # Count rides per lift
+        from collections import Counter
+        lift_counts = Counter()
+        for ride in lift_rides:
+            lift_counts[ride.aerialway] += 1
+
+        # Build the lift list in the format "3x Tiefenbachbahn, 2x Schwarze Schneid, 1x Mutkogl"
+        lift_parts = []
+        for aerialway, count in lift_counts.most_common():
+            lift_parts.append(f"{count}x {aerialway.name}")
+
+        lifts_string = ", ".join(lift_parts)
+
+        # Create the marked content
+        marked_content = f"🎿 {lifts_string} - tracked by SkiDashboard 🎿"
+
+        # Remove any existing SkiDashboard content from the description using regex
+        import re
+        pattern = r'🎿.*?- tracked by SkiDashboard 🎿'
+        cleaned_description = re.sub(pattern, '', existing_description, flags=re.DOTALL).strip()
+
+        # Combine: user content + our content
+        if cleaned_description:
+            final_description = f"{cleaned_description}\n\n{marked_content}"
+        else:
+            final_description = marked_content
+
+        self.profiler.end_operation('generate_strava_description')
+        logger.info(f"Generated Strava description for activity {activity_instance.id}")
+        return final_description
+
+    def update_strava_description(self, activity_instance: Activity) -> bool:
+        """
+        Update the Strava activity description with lift ride information.
+        Only updates if user has opted in for Strava write access.
+        """
+        self.profiler.start_operation('update_strava_description')
+
+        try:
+            # Check if user has opted in for Strava write access
+            profile = UserProfile.objects.get(user=activity_instance.user)
+            if not profile.opt_in_strava_write:
+                logger.debug(f"User {activity_instance.user.username} has not opted in for Strava write access")
+                self.profiler.end_operation('update_strava_description')
+                return False
+
+            # Load the current activity from Strava to get existing description
+            strava_activity = load_activity(activity_instance.user, activity_instance.strava_id)
+            existing_description = strava_activity.description or ""
+
+            # Generate new description
+            new_description = self.generate_strava_description(activity_instance, existing_description)
+
+            # Update on Strava
+            success = update_activity_description(
+                activity_instance.user,
+                activity_instance.strava_id,
+                new_description
+            )
+
+            self.profiler.end_operation('update_strava_description')
+            return success
+
+        except UserProfile.DoesNotExist:
+            logger.warning(f"No profile found for user {activity_instance.user.username}")
+            self.profiler.end_operation('update_strava_description')
+            return False
+        except Exception as e:
+            logger.error(f"Error updating Strava description for activity {activity_instance.id}: {e}", exc_info=True)
+            self.profiler.end_operation('update_strava_description')
+            return False
+
     def _finalize_activity_processing(self, activity_instance: Activity, activity_streams: Dict) -> None:
         """Finalize activity processing with calculations and badges."""
         self.profiler.start_operation('finalize_activity_processing')
@@ -1205,7 +1296,10 @@ class ActivityParser:
         # Assign badges
         assign_badges(activity_instance)
         logger.info(f"Assigned badges to activity {activity_instance.id}")
-        
+
+        # Update Strava description if user has opted in
+        self.update_strava_description(activity_instance)
+
         self.profiler.end_operation('finalize_activity_processing')
 
     def get_performance_summary(self) -> Dict[str, Any]:

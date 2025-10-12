@@ -82,7 +82,25 @@ class UserDeleteView(LoginRequiredMixin, View):
 @login_required
 def strava_connection_view(request):
     sa = SocialAccount.objects.filter(user=request.user, provider="strava").first()
-    return render(request, "account/strava.html", {"strava_account": sa})
+
+    # Get current scopes from account extra_data if connected
+    current_scopes = []
+    if sa and sa.extra_data:
+        # Strava returns scope in the token response, stored in extra_data
+        scope_str = sa.extra_data.get('scope')
+        if scope_str:
+            current_scopes = scope_str.split(',')
+
+    # Get what scopes will be requested based on user preferences
+    from core.strava_adapter import get_dynamic_strava_scope
+    requested_scopes = get_dynamic_strava_scope(request)
+
+    context = {
+        "strava_account": sa,
+        "current_scopes": current_scopes,
+        "requested_scopes": requested_scopes,
+    }
+    return render(request, "account/strava.html", context)
 
 @login_required
 @require_http_methods(["POST"])
@@ -119,9 +137,34 @@ def profile_management(request):
 
     if request.method == 'POST':
         logger.debug("Received profile update POST data: %s", request.POST)
+
+        # Store original opt_in_strava_write value
+        original_strava_write = profile.opt_in_strava_write
+
         form = UserProfileForm(request.POST, instance=profile)
         if form.is_valid():
-            form.save()
+            updated_profile = form.save()
+
+            # Check if opt_in_strava_write changed
+            strava_write_changed = original_strava_write != updated_profile.opt_in_strava_write
+
+            if strava_write_changed:
+                # Check if user has Strava connected
+                strava_account = SocialAccount.objects.filter(
+                    user=request.user,
+                    provider="strava"
+                ).first()
+
+                if strava_account:
+                    # Store that reauth is needed in session
+                    request.session['strava_reauth_needed'] = True
+                    request.session['strava_reauth_write_scope'] = updated_profile.opt_in_strava_write
+                    messages.warning(
+                        request,
+                        'Strava write access changed. Please reconnect your Strava account to apply the new permissions.'
+                    )
+                    return redirect('strava-connection')
+
             messages.success(request, 'Profile settings updated successfully.')
             return redirect('profile_management')
         else:
