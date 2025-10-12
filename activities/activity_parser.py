@@ -1211,7 +1211,7 @@ class ActivityParser:
 
         # Combine: user content + our content
         if cleaned_description:
-            final_description = f"{cleaned_description}\n\n{marked_content}"
+            final_description = f"{marked_content}\n\n{cleaned_description}"
         else:
             final_description = marked_content
 
