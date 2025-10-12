@@ -44,7 +44,8 @@ class UserProfile(models.Model):
             if orig.excluded_lift_types != self.excluded_lift_types:
                 logger.info(f"User {self.user.username} changed excluded_lift_types from {orig.excluded_lift_types} to {self.excluded_lift_types}")
                 super().save(*args, **kwargs)
-                from activities.tasks import recalculate_completeness_task
+                from activities.tasks import recalculate_completeness_task, reassign_badges_task
                 recalculate_completeness_task.delay(self.user.id)
+                reassign_badges_task.delay(self.user.id)
                 return
         super().save(*args, **kwargs)
