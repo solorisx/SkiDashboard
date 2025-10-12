@@ -21,6 +21,11 @@ class UserProfile(models.Model):
     season_start_month = models.IntegerField(default=7, help_text="Month when ski season starts (1-12)")
     season_start_day = models.IntegerField(default=1, help_text="Day when ski season starts (1-31)")
 
+    # User preferences and opt-ins
+    opt_in_newsletter = models.BooleanField(default=False, help_text="Receive occassional newsletters and updates about the app (no more than 4 per year)")
+    opt_in_summary_email = models.BooleanField(default=False, help_text="Receive summary of new activities by email")
+    opt_in_strava_write = models.BooleanField(default=False, help_text="Allow app to update Strava activity descriptions with the ridden lifts")
+
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 

@@ -30,7 +30,8 @@ class UserProfileForm(forms.ModelForm):
         model = UserProfile
         fields = [
             # 'language', 'timezone', 'metric_units', 'dark_mode',
-            'excluded_lift_types', 'season_start_month', 'season_start_day'
+            'excluded_lift_types', 'season_start_month', 'season_start_day',
+            'opt_in_newsletter', 'opt_in_summary_email', 'opt_in_strava_write'
         ]
         widgets = {
             #'language': forms.Select(attrs={'class': 'form-select'}),
@@ -39,6 +40,9 @@ class UserProfileForm(forms.ModelForm):
             #'dark_mode': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'season_start_month': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 12}),
             'season_start_day': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 31}),
+            'opt_in_newsletter': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'opt_in_summary_email': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'opt_in_strava_write': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
     def __init__(self, *args, **kwargs):
