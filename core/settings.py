@@ -112,6 +112,9 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 # Custom social account adapter for dynamic Strava scopes
 SOCIALACCOUNT_ADAPTER = 'core.strava_adapter.CustomSocialAccountAdapter'
 
+# Custom account adapter for async email sending
+ACCOUNT_ADAPTER = 'core.account_adapter.AsyncEmailAccountAdapter'
+
 # Strava provider configuration
 # Custom provider registered via provider_classes in strava_adapter.py
 SOCIALACCOUNT_PROVIDERS = {
@@ -133,6 +136,8 @@ if os.getenv('SMTP_HOST'):
     EMAIL_HOST_USER = os.getenv('SMTP_USER')
     EMAIL_HOST_PASSWORD = os.getenv('SMTP_PASSWORD')
     DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@skidashboard.app')
+    # Set timeout to prevent worker blocking if SMTP connection hangs
+    EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', 10))
 else:
     # Fallback to file-based backend for development
     EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
