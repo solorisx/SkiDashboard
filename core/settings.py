@@ -115,6 +115,18 @@ SOCIALACCOUNT_ADAPTER = 'core.strava_adapter.CustomSocialAccountAdapter'
 # Custom account adapter for async email sending
 ACCOUNT_ADAPTER = 'core.account_adapter.AsyncEmailAccountAdapter'
 
+# Email configuration for allauth
+ACCOUNT_EMAIL_REQUIRED = True
+SOCIALACCOUNT_EMAIL_REQUIRED = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
+# Use email as username (no separate username field)
+ACCOUNT_AUTHENTICATION_METHOD = "email"  # Use email to login instead of username
+ACCOUNT_USERNAME_REQUIRED = False  # Don't require a username field in forms
+# Note: username field still exists in DB but is auto-generated from email
+
 # Strava provider configuration
 # Custom provider registered via provider_classes in strava_adapter.py
 SOCIALACCOUNT_PROVIDERS = {
@@ -127,7 +139,17 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # Email Configuration
-if os.getenv('SMTP_HOST'):
+if os.getenv('MAILGUN_API_KEY'):
+    # Use Mailgun HTTP API (more reliable than SMTP)
+    EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+    ANYMAIL = {
+        "MAILGUN_API_KEY": os.getenv('MAILGUN_API_KEY'),
+        "MAILGUN_SENDER_DOMAIN": os.getenv('MAILGUN_SENDER_DOMAIN'),
+        "MAILGUN_API_URL": os.getenv('MAILGUN_API_URL', 'https://api.mailgun.net/v3'),
+    }
+    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@skidashboard.app')
+elif os.getenv('SMTP_HOST'):
+    # Fallback to SMTP
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     EMAIL_HOST = os.getenv('SMTP_HOST')
     EMAIL_PORT = int(os.getenv('SMTP_PORT', 587))
@@ -236,10 +258,10 @@ LANGUAGE_CODE = 'en-us'
 # Supported languages for the application
 LANGUAGES = [
     ('en', 'English'),
-    ('de', 'Deutsch'),
-    ('fr', 'Français'),
-    ('es', 'Español'),
-    ('it', 'Italiano'),
+    #('de', 'Deutsch'),
+    #('fr', 'Français'),
+    #('es', 'Español'),
+    #('it', 'Italiano'),
 ]
 
 TIME_ZONE = 'UTC'
@@ -309,7 +331,7 @@ LOGGING = {
     },
     'root': {   # <--- root logger catches everything not caught by other loggers
         'handlers': ['console'],
-        'level': "DEBUG",
+        'level': "WARNING", #LOG_LEVEL,
     },
     'loggers': {
         'django': {
@@ -340,6 +362,21 @@ LOGGING = {
         'celery': {
             'handlers': ['console'],
             'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'anymail': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'requests': {
+            'handlers': ['console'],
+            'level': 'DEBUG',  # See HTTP requests made by anymail
+            'propagate': False,
+        },
+        'urllib3': {
+            'handlers': ['console'],
+            'level': 'DEBUG',  # See low-level HTTP details
             'propagate': False,
         },
     },

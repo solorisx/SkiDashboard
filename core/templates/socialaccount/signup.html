@@ -1,0 +1,47 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-5 text-center" style="max-width: 560px;">
+
+  <div class="mt-4 p-4 bg-light rounded shadow-sm">
+    <h1 class="text-primary fw-bold">{% trans "Complete Your Signup" %} 🎿</h1>
+    <p class="lead text-muted">
+      {% blocktrans with provider_name=account.get_provider.name %}
+        You're signing up with {{ provider_name }}. Please complete the form below to finish creating your account.
+      {% endblocktrans %}
+    </p>
+  </div>
+
+  {# Messages or form errors #}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger mt-4 text-start" role="alert">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  <div class="mt-4 p-4 bg-white rounded shadow-sm text-start">
+    <form method="post" action="{% url 'socialaccount_signup' %}">
+      {% csrf_token %}
+      {% if redirect_field_value %}
+        <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+      {% endif %}
+
+      {{ form.as_p }}
+
+      <button class="btn btn-success w-100 fw-bold mt-3">{% trans "Complete Sign Up" %}</button>
+    </form>
+  </div>
+
+  <div class="mt-4 p-4 bg-light rounded shadow-sm text-center">
+    <p class="text-muted mb-0">
+      <small>
+        {% blocktrans %}
+          By signing up, you agree to our Terms of Service and Privacy Policy.
+        {% endblocktrans %}
+      </small>
+    </p>
+  </div>
+
+</div>
+{% endblock %}

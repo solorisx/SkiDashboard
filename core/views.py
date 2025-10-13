@@ -70,10 +70,15 @@ class UserDeleteView(LoginRequiredMixin, View):
         # Form will be valid if checkbox is checked.
         if form.is_valid():
             user = request.user
-            deauthorize_strava(user.id)
+            if SocialAccount.objects.filter(user=user, provider="strava").exists():
+                # Try to deauthorize Strava if the user has a connected account
+                try:
+                    deauthorize_strava(user)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to deauthorize Strava for user {user.username}: {e}")
             logout(request)
-            # Delete user (and any associated ForeignKeys, according to
-            # on_delete parameters).
             user.delete()
             messages.success(request, 'Account successfully deleted')
             return redirect(reverse('home'))

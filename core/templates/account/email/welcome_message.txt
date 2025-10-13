@@ -1,0 +1,23 @@
+Hi {{ user.email }}!
+
+Welcome to Ski Dashboard! 🎿
+
+Your email has been verified and your account is now fully active. You're all set to start tracking your skiing adventures!
+
+Here's what you can do:
+
+• Connect your Strava account to automatically import your ski activities
+• Track your lift rides and vertical meters
+• Analyze your performance across different ski resorts
+• See your season statistics and progress
+
+Ready to get started? Visit your dashboard:
+http{% if request.is_secure %}s{% endif %}://{{ current_site.domain }}/
+
+If you have any questions or need help, feel free to reach out.
+
+Happy skiing!
+The Ski Dashboard Team
+
+---
+{{ current_site.domain }}

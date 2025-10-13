@@ -1,7 +1,6 @@
 """Custom allauth account adapter with async email support."""
 import logging
 from allauth.account.adapter import DefaultAccountAdapter
-from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.conf import settings
 
@@ -24,13 +23,33 @@ class AsyncEmailAccountAdapter(DefaultAccountAdapter):
         """
         from core.tasks import send_email_async
 
-
         request = context.get('request')
+
+        # Create a simple site object for email context
+        class SimpleSite:
+            def __init__(self):
+                # Get domain from request or fall back to ALLOWED_HOSTS
+                if request:
+                    try:
+                        self.domain = request.get_host()
+                    except Exception:
+                        self.domain = self._get_default_domain()
+                else:
+                    self.domain = self._get_default_domain()
+                self.name = 'Ski Dashboard'
+
+            def _get_default_domain(self):
+                allowed_hosts = getattr(settings, 'ALLOWED_HOSTS', [])
+                if allowed_hosts and allowed_hosts[0]:
+                    return allowed_hosts[0]
+                return 'localhost'
+
+        current_site = SimpleSite()
 
         ctx = {
             "request": request,
             "email": email,
-            "current_site": get_current_site(request),
+            "current_site": current_site,
         }
         ctx.update(context)
 
@@ -73,3 +92,21 @@ class AsyncEmailAccountAdapter(DefaultAccountAdapter):
     def get_from_email(self):
         """Get the sender email address."""
         return getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@skidashboard.app')
+
+    def confirm_email(self, request, email_address):
+        """
+        Called after email is confirmed. Send a welcome email.
+        """
+        # Call the parent method first
+        super().confirm_email(request, email_address)
+
+        # Send welcome email
+        user = email_address.user
+        logger.info(f"Sending welcome email to {user.email}")
+
+        # Use send_mail to send welcome email asynchronously
+        context = {
+            'user': user,
+            'request': request,
+        }
+        self.send_mail('account/email/welcome', user.email, context)

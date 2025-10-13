@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Ski Dashboard</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+        <h1 style="margin: 0; font-size: 28px;">Welcome to Ski Dashboard! 🎿</h1>
+    </div>
+
+    <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+
+        <p style="font-size: 16px; margin-bottom: 20px;">
+            Hi <strong>{{ user.email }}</strong>!
+        </p>
+
+        <p style="font-size: 16px; margin-bottom: 20px;">
+            Your email has been verified and your account is now fully active. You're all set to start tracking your skiing adventures!
+        </p>
+
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;">
+            <h2 style="color: #667eea; font-size: 20px; margin-top: 0;">Here's what you can do:</h2>
+            <ul style="padding-left: 20px; margin: 10px 0;">
+                <li style="margin-bottom: 10px;">Connect your Strava account to automatically import your ski activities</li>
+                <li style="margin-bottom: 10px;">Track your lift rides and vertical meters</li>
+                <li style="margin-bottom: 10px;">Analyze your performance across different ski resorts</li>
+                <li style="margin-bottom: 10px;">See your season statistics and progress</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="http{% if request.is_secure %}s{% endif %}://{{ current_site.domain }}/"
+               style="display: inline-block; background: #667eea; color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
+                Go to Dashboard
+            </a>
+        </div>
+
+        <div style="background: #f0f4ff; border-left: 4px solid #667eea; padding: 15px 20px; margin: 30px 0; border-radius: 4px;">
+            <p style="font-size: 14px; color: #333; margin: 0 0 10px 0;">
+                <strong>💡 Pro Tip:</strong> Visit your
+                <a href="http{% if request.is_secure %}s{% endif %}://{{ current_site.domain }}/accounts/profile/"
+                   style="color: #667eea; text-decoration: none; font-weight: bold;">
+                    user profile
+                </a>
+                to set up your preferences, connect your Strava account, opt in for email notifications, and more.
+            </p>
+        </div>
+
+        <p style="font-size: 14px; color: #666; margin-top: 20px;">
+            If you have any questions or need help, feel free to reach out.
+        </p>
+
+        <p style="font-size: 16px; margin-top: 30px;">
+            Happy skiing! ⛷️<br>
+            <strong>The Ski Dashboard Team</strong>
+        </p>
+
+    </div>
+
+    <div style="text-align: center; padding: 20px; font-size: 12px; color: #999;">
+        <p>{{ current_site.domain }}</p>
+    </div>
+
+</body>
+</html>

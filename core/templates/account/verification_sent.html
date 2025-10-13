@@ -1,0 +1,45 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-5 text-center" style="max-width: 560px;">
+
+  <div class="p-4 bg-light rounded shadow-sm">
+    <h1 class="text-primary fw-bold">{% trans "Verify Your Email Address" %} 📬</h1>
+  </div>
+
+  <div class="mt-4 p-4 bg-white rounded shadow-sm">
+    <div class="alert alert-info" role="alert">
+      <strong>{% trans "Check Your Inbox!" %}</strong>
+    </div>
+
+    <p class="lead mt-4">
+      {% trans "We have sent an email to you for verification. Follow the link provided to finalize the signup process." %}
+    </p>
+
+    <div class="mt-4 p-3 bg-light rounded">
+      <p class="text-muted mb-2">
+        <strong>{% trans "Don't see the email?" %}</strong>
+      </p>
+      <ul class="text-start text-muted">
+        <li>{% trans "Check your spam or junk folder" %}</li>
+        <li>{% trans "Make sure you entered the correct email address" %}</li>
+        <li>{% trans "Wait a few minutes for the email to arrive" %}</li>
+      </ul>
+      <p class="text-muted mt-3 mb-0">
+        <small>
+          {% url 'account_login' as login_url %}
+          {% blocktrans %}
+            Need to resend? Try to <a href="{{ login_url }}">sign in</a> and you'll be given the option to resend the verification email.
+          {% endblocktrans %}
+        </small>
+      </p>
+    </div>
+
+    <div class="mt-4">
+      <a href="{% url 'home' %}" class="btn btn-outline-primary">{% trans "Back to Home" %}</a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

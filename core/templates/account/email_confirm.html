@@ -1,0 +1,62 @@
+{% extends "base/base.html" %}
+{% load i18n %}
+{% load account %}
+
+{% block content %}
+<div class="container mt-5 text-center" style="max-width: 560px;">
+
+  <div class="p-4 bg-light rounded shadow-sm">
+    <h1 class="text-primary fw-bold">{% trans "Confirm Email Address" %} ✉️</h1>
+  </div>
+
+  {% if confirmation %}
+    {% user_display confirmation.email_address.user as user_display %}
+
+    {% if can_confirm %}
+      <div class="mt-4 p-4 bg-white rounded shadow-sm">
+        <p class="lead mb-4">
+          {% blocktrans with email=confirmation.email_address.email %}
+            Please confirm that <strong>{{ email }}</strong> is an email address for user {{ user_display }}.
+          {% endblocktrans %}
+        </p>
+
+        <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+          {% csrf_token %}
+          {% if redirect_field_value %}
+            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+          {% endif %}
+          <button type="submit" class="btn btn-success w-100 fw-bold">{% trans "Confirm Email Address" %}</button>
+        </form>
+      </div>
+    {% else %}
+      <div class="mt-4 p-4 bg-white rounded shadow-sm">
+        <div class="alert alert-warning" role="alert">
+          <strong>{% trans "Unable to Confirm" %}</strong>
+          <p class="mb-0 mt-2">
+            {% blocktrans with email=confirmation.email_address.email %}
+              Unable to confirm {{ email }} because it is already confirmed by a different account.
+            {% endblocktrans %}
+          </p>
+        </div>
+        <a href="{% url 'home' %}" class="btn btn-primary">{% trans "Go to Home" %}</a>
+      </div>
+    {% endif %}
+
+  {% else %}
+    {# Invalid or expired confirmation link #}
+    <div class="mt-4 p-4 bg-white rounded shadow-sm">
+      <div class="alert alert-danger" role="alert">
+        <strong>{% trans "Invalid Link" %}</strong>
+        <p class="mb-0 mt-2">
+          {% trans "This email confirmation link expired or is invalid." %}
+        </p>
+      </div>
+      <p class="text-muted mt-3">
+        {% trans "Please request a new email confirmation from your account settings." %}
+      </p>
+      <a href="{% url 'account_email' %}" class="btn btn-primary">{% trans "Manage Email Addresses" %}</a>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

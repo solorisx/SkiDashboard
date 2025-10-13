@@ -11,6 +11,9 @@ django-silk==5.4.0
 # Auth & user mgmt
 django-allauth==65.4.1
 
+# Email
+django-anymail[mailgun]==13.1
+
 # Celery + Redis
 celery==5.5.1
 redis==5.2.1
