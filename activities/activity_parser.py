@@ -987,12 +987,12 @@ class ActivityParser:
             activity_laps = load_activity_laps(user, activity_id)
 
             # Process the activity using the new structured approach
-            activity_instance = self._process_strava_activity(
+            activity_instance, was_created = self._process_strava_activity(
                 activity, activity_streams, activity_laps, user, activity_id, update
             )
 
             # Finalize processing
-            self._finalize_activity_processing(activity_instance, activity_streams)
+            self._finalize_activity_processing(activity_instance, activity_streams, was_created)
 
             # Update processing metadata
             activity_instance.processing_time = timedelta(seconds=time.time() - start_time)
@@ -1006,8 +1006,12 @@ class ActivityParser:
             logger.error(f"Error parsing Strava activity {activity_id}: {str(e)}", exc_info=True, stack_info=True)
             raise
 
-    def _process_strava_activity(self, activity, activity_streams, activity_laps, user: User, activity_id: str, update: bool) -> Activity:
-        """Process the core Strava activity data and create/update the Activity instance."""
+    def _process_strava_activity(self, activity, activity_streams, activity_laps, user: User, activity_id: str, update: bool) -> Tuple[Activity, bool]:
+        """Process the core Strava activity data and create/update the Activity instance.
+
+        Returns:
+            Tuple[Activity, bool]: (activity_instance, was_created)
+        """
         self.profiler.start_operation('process_strava_activity')
 
         # Extract start point and find ski area
@@ -1065,7 +1069,7 @@ class ActivityParser:
         self._process_lift_rides(activity_instance, activity_streams)
 
         self.profiler.end_operation('process_strava_activity')
-        return activity_instance
+        return activity_instance, created
 
     def _process_activity_laps(self, activity_instance: Activity, activity_laps, activity_streams) -> None:
         """Process and create lap instances from Strava lap data."""
@@ -1260,8 +1264,145 @@ class ActivityParser:
             self.profiler.end_operation('update_strava_description')
             return False
 
-    def _finalize_activity_processing(self, activity_instance: Activity, activity_streams: Dict) -> None:
-        """Finalize activity processing with calculations and badges."""
+    def send_activity_summary_email(self, activity_instance: Activity) -> bool:
+        """
+        Send activity summary email to user if they have opted in.
+        Only sends if user has opt_in_summary_email = True in their profile.
+
+        Returns:
+            bool: True if email was sent successfully, False otherwise
+        """
+        self.profiler.start_operation('send_activity_summary_email')
+
+        try:
+            # Check if user has opted in for summary emails
+            profile = UserProfile.objects.get(user=activity_instance.user)
+            if not profile.opt_in_summary_email:
+                logger.debug(f"User {activity_instance.user.username} has not opted in for summary emails")
+                self.profiler.end_operation('send_activity_summary_email')
+                return False
+
+            # Check if user has an email address
+            if not activity_instance.user.email:
+                logger.warning(f"User {activity_instance.user.username} has no email address")
+                self.profiler.end_operation('send_activity_summary_email')
+                return False
+
+            # Gather activity data for email
+            from django.template.loader import render_to_string
+            from django.core.mail import send_mail
+            from django.conf import settings
+
+            # Get lift rides (uphill only for summary)
+            lift_rides = LiftRide.objects.filter(
+                lap__activity=activity_instance,
+                uphill=True
+            ).select_related('aerialway', 'lap').order_by('timestamp')
+
+            # Get badges earned for this activity
+            from activities.models import BadgeAchievement
+            badges = BadgeAchievement.objects.filter(
+                activity=activity_instance
+            ).select_related('badge')
+
+            # Get completeness data
+            completeness_data = None
+            try:
+                from activities.utils.completeness import calculate_activity_completeness
+                completeness_data = calculate_activity_completeness(activity_instance)
+            except Exception as e:
+                logger.warning(f"Could not get completeness data for activity {activity_instance.id}: {e}")
+
+            # Build email context
+            # Get site URL from settings or construct from ALLOWED_HOSTS
+            site_url = getattr(settings, 'SITE_URL', None)
+            if not site_url:
+                allowed_hosts = getattr(settings, 'ALLOWED_HOSTS', [])
+                if allowed_hosts and allowed_hosts[0]:
+                    site_url = f"https://{allowed_hosts[0]}"
+                else:
+                    site_url = "https://skidashboard.com"  # fallback
+
+            context = {
+                'activity': activity_instance,
+                'device_name': activity_instance.device_name,
+                'has_season_pass': activity_instance.has_valid_season_pass(),
+                'total_descent': round(activity_instance.total_descent or 0),
+                'total_distance_km': round(activity_instance.total_distance / 1000, 2) if activity_instance.total_distance else 0,
+                'num_lift_rides': activity_instance.num_lift_rides or 0,
+                'total_elapsed_time': activity_instance.total_elapsed_time,
+                'total_ascent': round(activity_instance.total_ascent or 0),
+                'avg_speed': round(activity_instance.avg_speed * 3.6, 1) if activity_instance.avg_speed else None,
+                'max_speed': round(activity_instance.max_speed * 3.6, 1) if activity_instance.max_speed else None,
+                'lift_rides': lift_rides,
+                'badges': badges,
+                'completeness_percentage': round(completeness_data.get('daily_completion_percentage', 0)) if completeness_data else None,
+                'lifts_used_today': completeness_data.get('lifts_used_today', 0) if completeness_data else 0,
+                'total_lifts_available': completeness_data.get('total_lifts_available', 0) if completeness_data else 0,
+                'new_lifts_discovered': completeness_data.get('new_lifts_discovered', 0) if completeness_data else 0,
+                'activity_url': f"{site_url}/activities/activity/{activity_instance.id}/",
+                'settings_url': f"{site_url}/account/profile/",
+            }
+
+            # Render email template
+            html_message = render_to_string('emails/activity_summary.html', context)
+
+            # Create plain text version (simple fallback)
+            plain_message = f"""
+{activity_instance.name}
+
+Your ski activity at {activity_instance.ski_area.name} on {activity_instance.start_time.strftime('%B %d, %Y')}
+
+Key Stats:
+- Descent: {context['total_descent']}m
+- Distance: {context['total_distance_km']}km
+- Lift Rides: {context['num_lift_rides']}
+- Duration: {context['total_elapsed_time']}
+
+View full details: {context['activity_url']}
+
+---
+You're receiving this email because you opted in to activity summaries.
+Manage your preferences: {context['settings_url']}
+            """.strip()
+
+            # Send email
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+            if not from_email:
+                logger.error("DEFAULT_FROM_EMAIL is not set in settings. Cannot send activity summary.")
+                self.profiler.end_operation('send_activity_summary_email')
+                return False
+
+            send_mail(
+                subject=f"🎿 {activity_instance.name} - Activity Summary",
+                message=plain_message,
+                from_email=from_email,
+                recipient_list=[activity_instance.user.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+
+            logger.info(f"Activity summary email sent to {activity_instance.user.email} for activity {activity_instance.id}")
+            self.profiler.end_operation('send_activity_summary_email')
+            return True
+
+        except UserProfile.DoesNotExist:
+            logger.warning(f"No profile found for user {activity_instance.user.username}")
+            self.profiler.end_operation('send_activity_summary_email')
+            return False
+        except Exception as e:
+            logger.error(f"Error sending activity summary email for activity {activity_instance.id}: {e}", exc_info=True, stack_info=True)
+            self.profiler.end_operation('send_activity_summary_email')
+            return False
+
+    def _finalize_activity_processing(self, activity_instance: Activity, activity_streams: Dict, was_created: bool = False) -> None:
+        """Finalize activity processing with calculations and badges.
+
+        Args:
+            activity_instance: The activity to finalize
+            activity_streams: Activity stream data
+            was_created: True if this is a newly created activity (not a reprocessing)
+        """
         self.profiler.start_operation('finalize_activity_processing')
 
         # Calculate vertical metrics
@@ -1299,6 +1440,13 @@ class ActivityParser:
 
         # Update Strava description if user has opted in
         self.update_strava_description(activity_instance)
+
+        # Send activity summary email if user has opted in (only on initial creation)
+        if was_created:
+            self.send_activity_summary_email(activity_instance)
+            logger.info(f"Sent activity summary email for newly created activity {activity_instance.id}")
+        else:
+            logger.debug(f"Skipping activity summary email for reprocessed activity {activity_instance.id}")
 
         self.profiler.end_operation('finalize_activity_processing')
 
