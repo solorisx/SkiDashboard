@@ -137,6 +137,13 @@
               <strong>{% trans "Allow Write Access to Strava" %}</strong>
               <div class="text-muted small">{{ form.opt_in_strava_write.help_text }}</div>
             </label>
+            {% if form.opt_in_strava_write.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.opt_in_strava_write.errors %}
+                  {{ error }}
+                {% endfor %}
+              </div>
+            {% endif %}
           </div>
 
           <div class="alert alert-info" role="alert">

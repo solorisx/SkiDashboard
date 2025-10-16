@@ -1300,8 +1300,8 @@ class ActivityParser:
             ).select_related('aerialway', 'lap').order_by('timestamp')
 
             # Get badges earned for this activity
-            from activities.models import BadgeAchievement
-            badges = BadgeAchievement.objects.filter(
+            from activities.models import ActivityBadge
+            badges = ActivityBadge.objects.filter(
                 activity=activity_instance
             ).select_related('badge')
 

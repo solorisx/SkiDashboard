@@ -49,8 +49,43 @@ def round_to(value, arg):
 def format_money(value):
     if value is None:
         return ''
-    
+
     currency = value.currency
     amount = value.amount
-    
+
     return f"{currency} {amount:,.2f}"
+
+@register.filter
+def icon_to_emoji(icon_class):
+    """
+    Convert Font Awesome icon classes to emoji for use in emails.
+    Falls back to a default trophy emoji if no mapping is found.
+    """
+    if not icon_class:
+        return '🏆'
+
+    # Mapping of Font Awesome classes to emoji
+    icon_map = {
+        'fa-solid fa-cable-car': '🚡',
+        'fa-solid fa-medal': '🥇',
+        'fa-solid fa-trophy': '🏆',
+        'fa-solid fa-mountain': '⛰️',
+        'fa-solid fa-mountain-sun': '🏔️',
+        'fa-solid fa-map-location-dot': '📍',
+        'fa-solid fa-map-pin': '📌',
+        'fa-solid fa-compass': '🧭',
+        'fa-solid fa-map': '🗺️',
+        'fa-solid fa-crown': '👑',
+        'fa-solid fa-calendar-day': '📅',
+        'fa-solid fa-calendar-check': '✅',
+        'fa-solid fa-calendar-star': '⭐',
+        'fa-solid fa-calendar-crown': '👑',
+        'fa-solid fa-list': '📋',
+        'fa-solid fa-grip': '⚡',
+        'fa-solid fa-star': '⭐',
+        'fa-solid fa-gem': '💎',
+        'fa-solid fa-fire': '🔥',
+    }
+
+    # Return mapped emoji or default
+    return icon_map.get(icon_class, '🏆')

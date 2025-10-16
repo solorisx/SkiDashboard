@@ -1,6 +1,7 @@
 from django import forms
 from .models import UserProfile
 from osm.models import LiftFilterConfig
+from allauth.socialaccount.models import SocialAccount
 
 import logging
 
@@ -59,6 +60,28 @@ class UserProfileForm(forms.ModelForm):
         # Set initial value from JSONField
         if self.instance and self.instance.pk:
             self.fields['excluded_lift_types'].initial = self.instance.excluded_lift_types or []
+
+    def clean_opt_in_strava_write(self):
+        """Validate that user has Strava connected before enabling write access."""
+        opt_in_strava_write = self.cleaned_data.get('opt_in_strava_write')
+
+        # Only validate if trying to enable (True)
+        if opt_in_strava_write:
+            # Check if user has Strava account connected
+            user = self.instance.user if self.instance and self.instance.pk else None
+            if user:
+                has_strava = SocialAccount.objects.filter(
+                    user=user,
+                    provider="strava"
+                ).exists()
+
+                if not has_strava:
+                    raise forms.ValidationError(
+                        "You must connect your Strava account before enabling write access. "
+                        "Please connect Strava first."
+                    )
+
+        return opt_in_strava_write
 
     def save(self, commit=True):
         logger.debug("Saving UserProfileForm with cleaned_data: %s", self.cleaned_data)

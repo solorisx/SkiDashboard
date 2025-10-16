@@ -1,3 +1,4 @@
+{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -139,7 +140,7 @@
                                 {% for badge_achievement in badges %}
                                 <div style="padding: 10px 12px; margin-bottom: 8px; background-color: #ffffff; border-radius: 6px; border: 1px solid #ffc107;">
                                     <div style="display: flex; align-items: center;">
-                                        <div style="font-size: 24px; margin-right: 12px;">{{ badge_achievement.badge.icon|default:"🏆" }}</div>
+                                        <div style="font-size: 24px; margin-right: 12px;">{{ badge_achievement.badge.icon|icon_to_emoji }}</div>
                                         <div style="flex: 1;">
                                             <div style="font-weight: 600; color: #212529; margin-bottom: 2px;">{{ badge_achievement.badge.name }}</div>
                                             <div style="font-size: 12px; color: #6c757d;">{{ badge_achievement.badge.description }}</div>
