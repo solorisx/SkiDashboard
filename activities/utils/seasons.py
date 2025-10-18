@@ -10,6 +10,7 @@ def get_seasons(user):
     activities = Activity.objects.filter(user=user)
     seasons = get_seasons_from_activities(activities)
     seasons = [f"{a}-{b}" for (a, b) in seasons]
+    seasons.sort(reverse=True)
     return seasons
 
 
