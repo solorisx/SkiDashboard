@@ -8,26 +8,8 @@ def get_seasons(user):
     from activities.models import Activity
 
     activities = Activity.objects.filter(user=user)
-    years = set(activities.dates("timestamp", "year", order="DESC"))
-    years = [y.year for y in years]
-    years.sort(reverse=True)
-
-    # Use user's custom season end date or default to June 30
-    if user and hasattr(user, 'userprofile'):
-        try:
-            end_date = user.userprofile.get_season_end_date(2000) # Year doesn't matter here
-            end_month = end_date.month
-            end_day = end_date.day
-        except AttributeError:
-            end_month, end_day = 6, 30
-    else:
-        end_month, end_day = 6, 30
-
-    if years:
-        if not activities.filter(timestamp__lte=datetime(years[-1], end_month, end_day)):
-            years.pop(len(years)-1)
-
-    seasons = [f"{y-1}-{y}" for y in years]
+    seasons = get_seasons_from_activities(activities)
+    seasons = [f"{a}-{b}" for (a, b) in seasons]
     return seasons
 
 
@@ -136,3 +118,11 @@ def get_season_for_activity(activity):
 
     # Otherwise it's in the previous year's season
     return (activity_date.year - 1, activity_date.year)
+
+def get_seasons_from_activities(activities):
+    """Extract unique seasons from a queryset of activities."""
+    seasons = set()
+    for activity in activities:
+        season = get_season_for_activity(activity)
+        seasons.add(season)
+    return sorted(seasons)
