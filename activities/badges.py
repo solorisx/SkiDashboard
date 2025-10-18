@@ -147,6 +147,38 @@ BADGE_CONFIGS = {
         'rarity': 'platinum',
         'sort_key': '400_lift_variety_30'
     },
+
+    # Season best badges
+    'SEASON_BEST_LIFTS': {
+        'name': 'Season Best - Lifts',
+        'description': 'Your best lift rides day this season!',
+        'icon': 'fa-solid fa-award',
+        'rarity': 'gold',
+        'sort_key': '300_season_best_lifts'
+    },
+    'SEASON_BEST_DISTANCE': {
+        'name': 'Season Best - Distance',
+        'description': 'Your longest distance day this season!',
+        'icon': 'fa-solid fa-route',
+        'rarity': 'gold',
+        'sort_key': '300_season_best_distance'
+    },
+
+    # Overall best badges
+    'OVERALL_BEST_LIFTS': {
+        'name': 'Overall Best - Lifts',
+        'description': 'Your all-time best lift rides day!',
+        'icon': 'fa-solid fa-trophy',
+        'rarity': 'platinum',
+        'sort_key': '400_overall_best_lifts'
+    },
+    'OVERALL_BEST_DISTANCE': {
+        'name': 'Overall Best - Distance',
+        'description': 'Your all-time longest distance day!',
+        'icon': 'fa-solid fa-road',
+        'rarity': 'platinum',
+        'sort_key': '400_overall_best_distance'
+    },
 }
 
 
@@ -397,6 +429,102 @@ def assign_badges(activity: Activity):
                 activity__ski_area=activity.ski_area,
                 activity__start_time__gt=activity.start_time
             ).delete()
+
+    # Season best and overall best badges
+    from .utils.seasons import get_season_for_activity
+
+    season_years = get_season_for_activity(activity)
+    season_start_year, season_end_year = season_years
+
+    # Get season boundaries for filtering
+    if hasattr(activity.user, 'userprofile'):
+        try:
+            season_start_date = activity.user.userprofile.get_season_start_date(season_start_year)
+            season_end_date = activity.user.userprofile.get_season_end_date(season_start_year)
+        except AttributeError:
+            from datetime import datetime
+            season_start_date = datetime(season_start_year, 7, 1)
+            season_end_date = datetime(season_end_year, 6, 30)
+    else:
+        from datetime import datetime
+        season_start_date = datetime(season_start_year, 7, 1)
+        season_end_date = datetime(season_end_year, 6, 30)
+
+    # Season best - lift rides
+    if activity.num_lift_rides:
+        season_activities = Activity.objects.filter(
+            user=activity.user,
+            start_time__gte=season_start_date,
+            start_time__lte=season_end_date,
+            num_lift_rides__isnull=False
+        ).order_by('-num_lift_rides')
+
+        if season_activities.exists() and season_activities.first().id == activity.id:
+            badge, _ = get_or_create_badge_by_natural_key('SEASON_BEST_LIFTS')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+
+            # Remove badge from other activities in the same season
+            ActivityBadge.objects.filter(
+                badge=badge,
+                activity__user=activity.user,
+                activity__start_time__gte=season_start_date,
+                activity__start_time__lte=season_end_date
+            ).exclude(activity=activity).delete()
+
+    # Season best - distance
+    if activity.total_distance:
+        season_activities = Activity.objects.filter(
+            user=activity.user,
+            start_time__gte=season_start_date,
+            start_time__lte=season_end_date,
+            total_distance__isnull=False
+        ).order_by('-total_distance')
+
+        if season_activities.exists() and season_activities.first().id == activity.id:
+            badge, _ = get_or_create_badge_by_natural_key('SEASON_BEST_DISTANCE')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+
+            # Remove badge from other activities in the same season
+            ActivityBadge.objects.filter(
+                badge=badge,
+                activity__user=activity.user,
+                activity__start_time__gte=season_start_date,
+                activity__start_time__lte=season_end_date
+            ).exclude(activity=activity).delete()
+
+    # Overall best - lift rides
+    if activity.num_lift_rides:
+        all_activities = Activity.objects.filter(
+            user=activity.user,
+            num_lift_rides__isnull=False
+        ).order_by('-num_lift_rides')
+
+        if all_activities.exists() and all_activities.first().id == activity.id:
+            badge, _ = get_or_create_badge_by_natural_key('OVERALL_BEST_LIFTS')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+
+            # Remove badge from all other activities
+            ActivityBadge.objects.filter(
+                badge=badge,
+                activity__user=activity.user
+            ).exclude(activity=activity).delete()
+
+    # Overall best - distance
+    if activity.total_distance:
+        all_activities = Activity.objects.filter(
+            user=activity.user,
+            total_distance__isnull=False
+        ).order_by('-total_distance')
+
+        if all_activities.exists() and all_activities.first().id == activity.id:
+            badge, _ = get_or_create_badge_by_natural_key('OVERALL_BEST_DISTANCE')
+            ActivityBadge.objects.get_or_create(activity=activity, badge=badge, defaults={'achieved_on': activity.start_time})
+
+            # Remove badge from all other activities
+            ActivityBadge.objects.filter(
+                badge=badge,
+                activity__user=activity.user
+            ).exclude(activity=activity).delete()
 
 
 def reassign_all_badges(user=None):

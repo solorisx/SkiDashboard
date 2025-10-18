@@ -99,3 +99,40 @@ def parse_season_string(season, user=None):
     end_date = datetime(year2, end_month, end_day)
 
     return start_date, end_date
+
+
+def get_season_for_activity(activity):
+    """
+    Determine which ski season an activity belongs to based on user's season preferences.
+    Returns a tuple of (season_start_year, season_end_year).
+    For example, an activity on 2023-12-25 might return (2023, 2024) if season starts July 1.
+    """
+    activity_date = activity.start_time.date()
+    user = activity.user
+
+    # Get season boundaries from user preferences or defaults
+    if user and hasattr(user, 'userprofile'):
+        try:
+            start_date = user.userprofile.get_season_start_date(2000)  # Year doesn't matter here
+            end_date = user.userprofile.get_season_end_date(2000)
+            start_month = start_date.month
+            start_day = start_date.day
+            end_month = end_date.month
+            end_day = end_date.day
+        except AttributeError:
+            start_month, start_day = 7, 1
+            end_month, end_day = 6, 30
+    else:
+        start_month, start_day = 7, 1
+        end_month, end_day = 6, 30
+
+    # Check which season the activity falls into
+    # Try current year's season first
+    season_start_current = datetime(activity_date.year, start_month, start_day).date()
+    season_end_current = datetime(activity_date.year + 1, end_month, end_day).date()
+
+    if season_start_current <= activity_date <= season_end_current:
+        return (activity_date.year, activity_date.year + 1)
+
+    # Otherwise it's in the previous year's season
+    return (activity_date.year - 1, activity_date.year)
