@@ -38,10 +38,31 @@ def update_strava_descriptions(modeladmin, request, queryset):
 update_strava_descriptions.short_description = "Update Strava descriptions for selected activities"
 
 
+class SkiAreaWithActivitiesFilter(admin.SimpleListFilter):
+    """Filter ski areas to only show those that have activities."""
+    title = 'ski area'
+    parameter_name = 'ski_area'
+
+    def lookups(self, request, model_admin):
+        """Return only ski areas that have at least one activity."""
+        from osm.models import SkiArea
+        # Get ski areas that are referenced by at least one activity
+        ski_areas = SkiArea.objects.filter(
+            activity__isnull=False
+        ).distinct().order_by('name')
+        return [(ski_area.id, ski_area.name) for ski_area in ski_areas]
+
+    def queryset(self, request, queryset):
+        """Filter the queryset based on the selected ski area."""
+        if self.value():
+            return queryset.filter(ski_area__id=self.value())
+        return queryset
+
+
 @admin.register(Activity)
 class ActivityAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'user', 'start_time', 'ski_area', 'num_lift_rides', 'strava_id']
-    list_filter = ['ski_area', 'start_time', 'user']
+    list_filter = [SkiAreaWithActivitiesFilter, 'start_time', 'user']
     search_fields = ['name', 'user__username', 'strava_id']
     actions = [update_strava_descriptions]
     readonly_fields = ['strava_id', 'created_on', 'modified_on', 'processed_on']
