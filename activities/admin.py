@@ -1,8 +1,52 @@
 from django.contrib import admin
+from django.contrib import messages
 from .models import Activity, ActivityBadge, Badge
 from .models import StravaSyncSettings
 
-admin.site.register(Activity)
+
+def update_strava_descriptions(modeladmin, request, queryset):
+    """Admin action to update Strava activity descriptions for selected activities."""
+    from .activity_parser import ActivityParser
+
+    parser = ActivityParser()
+    success_count = 0
+    error_count = 0
+    skipped_count = 0
+
+    for activity in queryset:
+        if not activity.strava_id:
+            skipped_count += 1
+            continue
+
+        try:
+            success = parser.update_strava_description(activity)
+            if success:
+                success_count += 1
+            else:
+                skipped_count += 1
+        except Exception as e:
+            error_count += 1
+            messages.error(request, f"Error updating activity {activity.id}: {str(e)}")
+
+    if success_count > 0:
+        messages.success(request, f"Successfully updated {success_count} Strava description(s).")
+    if skipped_count > 0:
+        messages.info(request, f"Skipped {skipped_count} activity/activities (no Strava ID or user opted out).")
+    if error_count > 0:
+        messages.error(request, f"Failed to update {error_count} activity/activities.")
+
+update_strava_descriptions.short_description = "Update Strava descriptions for selected activities"
+
+
+@admin.register(Activity)
+class ActivityAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'user', 'start_time', 'ski_area', 'num_lift_rides', 'strava_id']
+    list_filter = ['ski_area', 'start_time', 'user']
+    search_fields = ['name', 'user__username', 'strava_id']
+    actions = [update_strava_descriptions]
+    readonly_fields = ['strava_id', 'created_on', 'modified_on', 'processed_on']
+
+
 admin.site.register(ActivityBadge)
 
 
