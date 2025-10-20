@@ -200,6 +200,10 @@ def lift_ride_api(request, lift_ride_id=None):
             return JsonResponse({"error": "Lift ride not found or does not belong to user."}, status=404)
 
     if request.method == "DELETE":
+        # Mark activity as manually modified
+        activity = lift_ride.lap.activity
+        activity.manually_modified = True
+        activity.save(update_fields=['manually_modified'])
         lift_ride.delete()
         return HttpResponse(status=204)
 
@@ -212,14 +216,40 @@ def lift_ride_api(request, lift_ride_id=None):
                 return JsonResponse({"error": "Aerialway not found."}, status=404)
             lift_ride.aerialway = aerialway
         if data.get("timestamp"):
-            activity_date = lift_ride.lap.activity.start_time.date()
-            combined_dt = datetime.strptime(f"{activity_date} {data['timestamp']}", "%Y-%m-%d %H:%M")
-            lift_ride.timestamp = combined_dt
+            activity = lift_ride.lap.activity
+            activity_date = activity.start_time.date()
+            time_str = data["timestamp"]
+
+            # Create naive datetime from the date and time
+            naive_dt = datetime.strptime(f"{activity_date} {time_str}", "%Y-%m-%d %H:%M")
+
+            # Convert to timezone-aware datetime in activity's local timezone, then to UTC
+            if activity.timezone:
+                import pytz
+                try:
+                    local_tz = pytz.timezone(activity.timezone)
+                    # Localize to activity's timezone
+                    local_dt = local_tz.localize(naive_dt)
+                    # Convert to UTC
+                    lift_ride.timestamp = local_dt.astimezone(pytz.UTC)
+                except Exception as e:
+                    logger.error(f"Error converting timestamp to timezone: {e}")
+                    # Fallback to UTC if timezone conversion fails
+                    from django.utils import timezone as django_tz
+                    lift_ride.timestamp = django_tz.make_aware(naive_dt, pytz.UTC)
+            else:
+                # No timezone info, assume UTC
+                from django.utils import timezone as django_tz
+                lift_ride.timestamp = django_tz.make_aware(naive_dt, pytz.UTC)
         if data.get("lap"):
             lift_ride.lap_id = int(data["lap"])
         if data.get("uphill"):
             lift_ride.uphill = (str(data["uphill"]).lower() == "true")
         lift_ride.save()
+        # Mark activity as manually modified
+        activity = lift_ride.lap.activity
+        activity.manually_modified = True
+        activity.save(update_fields=['manually_modified'])
         return HttpResponse(status=204)
     
     elif request.method == "POST":
@@ -232,19 +262,46 @@ def lift_ride_api(request, lift_ride_id=None):
             lap = Lap.objects.filter(id=data["lap"], activity__user=request.user).first()
             if not lap:
                 return JsonResponse({"error": "Lap not found or does not belong to user."}, status=404)
+
+            activity = lap.activity
             time_str = data["timestamp"]
-            activity_date = lap.activity.start_time.date()
-            combined_dt = datetime.strptime(f"{activity_date} {time_str}", "%Y-%m-%d %H:%M")
+            activity_date = activity.start_time.date()
+
+            # Create naive datetime from the date and time
+            naive_dt = datetime.strptime(f"{activity_date} {time_str}", "%Y-%m-%d %H:%M")
+
+            # Convert to timezone-aware datetime in activity's local timezone, then to UTC
+            if activity.timezone:
+                import pytz
+                try:
+                    local_tz = pytz.timezone(activity.timezone)
+                    # Localize to activity's timezone
+                    local_dt = local_tz.localize(naive_dt)
+                    # Convert to UTC for storage
+                    utc_dt = local_dt.astimezone(pytz.UTC)
+                except Exception as e:
+                    logger.error(f"Error converting timestamp to timezone: {e}")
+                    # Fallback to UTC if timezone conversion fails
+                    from django.utils import timezone as django_tz
+                    utc_dt = django_tz.make_aware(naive_dt, pytz.UTC)
+            else:
+                # No timezone info, assume UTC
+                from django.utils import timezone as django_tz
+                utc_dt = django_tz.make_aware(naive_dt, pytz.UTC)
+
             uphill = str(data["uphill"]).lower() == "true"
             lift_ride = LiftRide.objects.create(
                 aerialway=aerialway,
-                timestamp=combined_dt,
+                timestamp=utc_dt,
                 lap=lap,
                 uphill=uphill
             )
             lift_ride.save()
+            # Mark activity as manually modified
+            activity.manually_modified = True
+            activity.save(update_fields=['manually_modified'])
             return HttpResponse(status=201)
-        
+
         else:
             return HttpResponse(status=400)
         

@@ -504,6 +504,20 @@
         </div>
       </div>
 
+      <!-- Update Strava Description -->
+      {% if user_opt_in_strava_write and activity.strava_id %}
+      <div class="col">
+        <div class="h-100 p-3 rounded-3 bg-info bg-opacity-10 border border-info border-opacity-25">
+          <h6 class="fw-bold mb-1 text-info text-center">Update Strava</h6>
+          <p class="text-muted small mb-3 text-center">Update activity description with lift rides</p>
+          <button type="button" class="btn btn-outline-info btn-sm w-100 fw-medium"
+                  onclick="updateStravaDescription({{ activity.id }})">
+            <i class="bi bi-cloud-upload me-1"></i>Update
+          </button>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Delete -->
       <div class="col">
         <div class="h-100 p-3 rounded-3 bg-danger bg-opacity-10 border border-danger border-opacity-25">
@@ -895,6 +909,31 @@ function getCookie(name) {
   return cookieValue;
 }
 
+// Toast notification helpers
+function showSuccessToast(message) {
+  const toast = document.getElementById('successToast');
+  const toastBody = toast.querySelector('.toast-body');
+  toastBody.textContent = message || '✅ Success!';
+  const bsToast = new bootstrap.Toast(toast);
+  bsToast.show();
+}
+
+function showErrorToast(message) {
+  const toast = document.getElementById('errorToast');
+  const toastBody = toast.querySelector('.toast-body');
+  toastBody.textContent = message || '❌ Something went wrong.';
+  const bsToast = new bootstrap.Toast(toast);
+  bsToast.show();
+}
+
+function showInfoToast(message) {
+  const toast = document.getElementById('infoToast');
+  const toastBody = toast.querySelector('.toast-body');
+  toastBody.textContent = message || 'ℹ️ Info message.';
+  const bsToast = new bootstrap.Toast(toast);
+  bsToast.show();
+}
+
 // ---- DELETE: 204 No Content ----
 async function deleteActivity(activityId) {
   if (!confirm('Are you sure you want to permanently delete this activity? This action cannot be undone.')) return;
@@ -919,6 +958,33 @@ async function deleteActivity(activityId) {
   } catch (err) {
     console.error('Network error:', err);
     alert('Network error while deleting activity.');
+  }
+}
+
+// ---- UPDATE STRAVA DESCRIPTION ----
+async function updateStravaDescription(activityId) {
+  if (!confirm('Update the Strava description with lift ride information?')) return;
+
+  try {
+    const res = await fetch(`/activities/api/update-strava-description/${activityId}/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    });
+
+    const payload = await parseJSONSafe(res);
+
+    if (res.ok) {
+      showSuccessToast('Strava description updated successfully!');
+      return;
+    }
+
+    // Handle error responses
+    const msg = payload?.error || payload?.detail || 'Failed to update Strava description.';
+    console.error('Update failed:', msg);
+    showErrorToast(msg);
+  } catch (err) {
+    console.error('Network error:', err);
+    showErrorToast('Network error while updating Strava description.');
   }
 }
 

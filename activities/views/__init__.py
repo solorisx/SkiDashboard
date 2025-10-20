@@ -20,6 +20,7 @@ from .api import (
     activity_completeness_batch_api,
     home_stats as home_stats_data,
     season_stats,
+    update_strava_description_api,
 )
 
 from .statistics import (
@@ -82,6 +83,7 @@ __all__ = [
     'activity_completeness_batch_api',
     'home_stats',
     'season_stats',
+    'update_strava_description_api',
     
     # Statistics views
     'activity_list_skiarea_detail',

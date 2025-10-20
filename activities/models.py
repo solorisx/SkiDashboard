@@ -40,6 +40,7 @@ class Activity(models.Model):
     processing_time = models.DurationField(null=True)
     version = models.PositiveIntegerField(default=1)
     device_name = models.CharField(max_length=255, null=True)
+    manually_modified = models.BooleanField(default=False, help_text="True if user has manually added/edited lift rides")
 
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
 

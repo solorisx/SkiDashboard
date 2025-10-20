@@ -213,3 +213,58 @@ def activity_completeness_batch_api(request):
     except Exception as e:
         logger.error(f"Error in batch completeness API: {e}")
         return JsonResponse({'error': 'Server error'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_strava_description_api(request, activity_id):
+    """API endpoint to update the Strava description for an activity."""
+    try:
+        # Get the activity
+        activity = Activity.objects.select_related('user').get(id=activity_id, user=request.user)
+
+        # Check if user has opted in to Strava write
+        try:
+            user_profile = request.user.userprofile
+            if not user_profile.opt_in_strava_write:
+                return JsonResponse({
+                    'error': 'You must opt in to Strava write access in settings to update descriptions'
+                }, status=403)
+        except Exception:
+            return JsonResponse({
+                'error': 'User profile not found'
+            }, status=500)
+
+        # Check if activity has been manually modified
+        if not activity.manually_modified:
+            return JsonResponse({
+                'error': 'Activity must be manually modified (add/edit lift rides) before updating Strava description'
+            }, status=400)
+
+        # Check if activity has a Strava ID
+        if not activity.strava_id:
+            return JsonResponse({
+                'error': 'Activity does not have a Strava ID'
+            }, status=400)
+
+        # Import and use the activity parser to update description
+        from ..activity_parser import ActivityParser
+        parser = ActivityParser()
+
+        success = parser.update_strava_description(activity)
+
+        if success:
+            return JsonResponse({
+                'success': True,
+                'message': 'Strava description updated successfully'
+            })
+        else:
+            return JsonResponse({
+                'error': 'Failed to update Strava description. Check logs for details.'
+            }, status=500)
+
+    except Activity.DoesNotExist:
+        return JsonResponse({'error': 'Activity not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error updating Strava description for activity {activity_id}: {e}", exc_info=True)
+        return JsonResponse({'error': f'Server error: {str(e)}'}, status=500)

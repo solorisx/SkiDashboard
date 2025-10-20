@@ -197,6 +197,13 @@ def activity_detail(request, activity_id):
         key=lambda x: (-x.badge.rarity_order, x.badge.name)
     )
 
+    # Check if user has opted in to Strava write
+    user_opt_in_strava_write = False
+    try:
+        user_opt_in_strava_write = request.user.userprofile.opt_in_strava_write
+    except:
+        pass
+
     return render(
         request,
         "activities/activity_detail.html",
@@ -207,6 +214,7 @@ def activity_detail(request, activity_id):
             "badges": badges,
             "aerialways": aerialways,
             "aerialways_dropdown": aerialways_dropdown,
+            "user_opt_in_strava_write": user_opt_in_strava_write,
         },
     )
 
