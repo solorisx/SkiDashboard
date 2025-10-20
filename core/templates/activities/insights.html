@@ -133,7 +133,10 @@
                       <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                           <h6 class="mb-1 fw-bold">{{ activity.name }}</h6>
-                          <small class="text-muted">{{ activity.timestamp|date:"DATE_FORMAT" }} • {{ activity.ski_area.name }}</small>
+                          {% load tz %}
+                          {% timezone activity.timezone %}
+                          <small class="text-muted">{{ activity.start_time|date:"DATE_FORMAT" }} • {{ activity.ski_area.name }}</small>
+                          {% endtimezone %}
                         </div>
                         <a href="{% url 'activity_detail' activity.id %}" class="btn btn-sm btn-outline-primary">
                           <i class="bi bi-eye"></i>
@@ -194,7 +197,10 @@
               <div class="mb-2">
                 <div class="fs-5 fw-bold">{{ most_vertical_activity.total_descent|round_to:0 }}m</div>
                 <div class="text-muted">{{ most_vertical_activity.name }}</div>
-                <small class="text-muted">{{ most_vertical_activity.timestamp|date:"DATE_FORMAT" }}</small>
+                {% load tz %}
+                {% timezone most_vertical_activity.timezone %}
+                <small class="text-muted">{{ most_vertical_activity.start_time|date:"DATE_FORMAT" }}</small>
+                {% endtimezone %}
               </div>
             </div>
           </div>
@@ -216,7 +222,10 @@
               <div class="mb-2">
                 <div class="fs-5 fw-bold">{{ most_lifts_activity.num_lift_rides }} lifts</div>
                 <div class="text-muted">{{ most_lifts_activity.name }}</div>
-                <small class="text-muted">{{ most_lifts_activity.timestamp|date:"DATE_FORMAT" }}</small>
+                {% load tz %}
+                {% timezone most_lifts_activity.timezone %}
+                <small class="text-muted">{{ most_lifts_activity.start_time|date:"DATE_FORMAT" }}</small>
+                {% endtimezone %}
               </div>
             </div>
           </div>

@@ -18,6 +18,7 @@ class Activity(models.Model):
     type = models.CharField(max_length=255, null=True)
     timestamp = models.DateTimeField()
     start_time = models.DateTimeField()
+    timezone = models.CharField(max_length=100, null=True, blank=True, help_text="IANA timezone name (e.g., Europe/Zurich)")
     total_elapsed_time = models.DurationField()
     total_timer_time = models.DurationField()
     total_distance = models.FloatField()
@@ -50,7 +51,7 @@ class Activity(models.Model):
 
     def get_strava_url(self):
         return f"https://www.strava.com/activities/{self.strava_id}" if self.strava_id else None
-    
+
     def get_num_lift_rides(self):
         return sum(lap.lift_rides.count() for lap in self.laps.all())
     
@@ -118,7 +119,7 @@ class Lap(models.Model):
     lift_rides = models.ManyToManyField(Aerialway, through='LiftRide')
 
     class Meta:
-        unique_together = ('activity', 'lap_index')    
+        unique_together = ('activity', 'lap_index')
 
 
 class Record(models.Model):

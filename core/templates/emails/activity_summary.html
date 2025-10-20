@@ -15,10 +15,13 @@
                     <tr>
                         <td style="padding: 30px 30px 20px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
                             <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">{{ activity.name }}</h1>
+                            {% load tz %}
+                            {% timezone activity.timezone %}
                             <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 14px; opacity: 0.9;">
                                 <span style="display: inline-block; margin-right: 15px;">📍 {{ activity.ski_area.name }}</span>
                                 <span style="display: inline-block;">📅 {{ activity.start_time|date:"F d, Y" }}</span>
                             </p>
+                            {% endtimezone %}
                             {% if device_name %}
                             <p style="margin: 5px 0 0 0; color: #ffffff; font-size: 12px; opacity: 0.8;">
                                 ⌚ {{ device_name }}
@@ -118,7 +121,9 @@
                                 {% for lift_ride in lift_rides %}
                                 <div style="padding: 8px 12px; margin-bottom: 6px; background-color: #ffffff; border-left: 3px solid {% if lift_ride.uphill %}#28a745{% else %}#dc3545{% endif %}; border-radius: 4px;">
                                     <span style="font-weight: 600; color: #212529;">{{ lift_ride.aerialway.name }}</span>
+                                    {% timezone activity.timezone %}
                                     <span style="margin-left: 8px; font-size: 12px; color: #6c757d;">{{ lift_ride.timestamp|date:"H:i" }}</span>
+                                    {% endtimezone %}
                                     {% if lift_ride.uphill %}
                                     <span style="margin-left: 8px; padding: 2px 8px; background-color: #d4edda; color: #155724; border-radius: 3px; font-size: 11px;">⬆ Uphill</span>
                                     {% else %}

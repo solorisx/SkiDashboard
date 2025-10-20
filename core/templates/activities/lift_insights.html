@@ -89,7 +89,10 @@
                           <h6 class="mb-1 fw-bold">{{ ride.aerialway.name }}</h6>
                           <small class="text-muted">
                             {{ ride.lap.activity.ski_area.name }} •
+                            {% load tz %}
+                            {% timezone ride.lap.activity.timezone %}
                             {{ ride.timestamp|date:"DATE_FORMAT" }}
+                            {% endtimezone %}
                           </small>
                         </div>
                         <a href="{% url 'activity_detail' ride.lap.activity.id %}" class="btn btn-sm btn-outline-info">
@@ -153,7 +156,10 @@
               <div class="mt-2">
                 <div class="fs-5 fw-bold">{{ best_single_day_activity.num_lift_rides }} rides</div>
                 <div class="text-muted">{{ best_single_day_activity.name }}</div>
-                <small class="text-muted">{{ best_single_day_activity.timestamp|date:"DATE_FORMAT" }}</small>
+                {% load tz %}
+                {% timezone best_single_day_activity.timezone %}
+                <small class="text-muted">{{ best_single_day_activity.start_time|date:"DATE_FORMAT" }}</small>
+                {% endtimezone %}
               </div>
             </div>
           </div>
@@ -175,7 +181,10 @@
               <div class="mt-2">
                 <div class="fs-5 fw-bold">{{ most_unique_lifts_day.1 }} unique lifts</div>
                 <div class="text-muted">{{ most_unique_lifts_day.0.name }}</div>
+                {% load tz %}
+                {% timezone most_unique_lifts_day.0.timezone %}
                 <small class="text-muted">{{ most_unique_lifts_day.0.timestamp|date:"DATE_FORMAT" }}</small>
+                {% endtimezone %}
               </div>
             </div>
           </div>

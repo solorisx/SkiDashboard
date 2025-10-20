@@ -216,12 +216,15 @@
               <i class="bi bi-ticket-perforated me-1"></i><span class="d-none d-sm-inline">Season Pass</span><span class="d-inline d-sm-none">Pass</span>
             </span>
             {% endif %}
+            {% load tz %}
+            {% timezone activity.timezone %}
             <span class="text-muted d-none d-md-inline">
               <i class="bi bi-clock me-1"></i>{{ activity.start_time|date:"DATETIME_FORMAT" }}
             </span>
             <span class="text-muted d-inline d-md-none small">
               <i class="bi bi-clock me-1"></i>{{ activity.start_time|date:"SHORT_DATETIME_FORMAT" }}
             </span>
+            {% endtimezone %}
           </div>
         </div>
       </div>
@@ -389,7 +392,11 @@
                       {% if lift_ride.uphill %}Uphill{% elif lift_ride.uphill == False %}Downhill{% else %}Unknown{% endif %}
                     </span>
                   </td>
-                  <td class="text-muted">{{ lift_ride.timestamp|date:"H:i:s" }}</td>
+                  <td class="text-muted">
+                    {% timezone activity.timezone %}
+                    {{ lift_ride.timestamp|date:"H:i:s" }}
+                    {% endtimezone %}
+                  </td>
                   <td>
                     <div class="btn-group" role="group">
                       <button class="btn btn-outline-primary btn-sm" onclick="editLiftRide({{ lift_ride.id }})" title="Edit">

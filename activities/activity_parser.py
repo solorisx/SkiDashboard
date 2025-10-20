@@ -51,6 +51,7 @@ class ActivityParserConfig:
     TURNING_POINT_PROMINENCE: int = 100
     LAP_POSITION_OFFSET: int = 5
     DEGREE_TO_METERS_APPROX: float = 111320.0
+    MIN_LIFT_DISTANCE_METERS: int = 200
     NOTIFY_ADMIN: bool = True
     ADMIN_EMAIL: str = os.environ.get('ADMIN_EMAIL')
     FROM_EMAIL: str = os.environ.get('DEFAULT_FROM_EMAIL')
@@ -175,26 +176,39 @@ class ActivityParser:
 
     def _make_timezone_aware(self, dt: datetime, tz_string: Optional[str]) -> datetime:
         """Convert naive datetime to timezone-aware using Strava timezone string."""
+        logger.debug(f"_make_timezone_aware called with dt={dt}, tz_string={tz_string}")
+        logger.debug(f"Input datetime is_aware: {timezone.is_aware(dt)}, tzinfo: {dt.tzinfo}")
+
         if not tz_string:
-            return timezone.make_aware(dt)
+            logger.warning(f"No timezone string provided, using UTC for datetime {dt}")
+            self.timezone = pytz.UTC
+            result = pytz.UTC.localize(dt)
+            logger.debug(f"Result after UTC localize: {result}, is_aware: {timezone.is_aware(result)}")
+            return result
 
         # Extract timezone name from Strava format like "(GMT+01:00) Europe/Zurich"
         # Look for the part after ") " which should be the timezone name
         match = re.search(r'\)\s+(.+)$', tz_string)
         if match:
             tz_name = match.group(1)
+            logger.debug(f"Extracted timezone name from regex: '{tz_name}'")
         else:
             # Fallback: use the original string
             tz_name = tz_string
+            logger.debug(f"Using original string as timezone name: '{tz_name}'")
 
         try:
             tz = pytz.timezone(tz_name)
             self.timezone = tz
-            return tz.localize(dt)
+            result = tz.localize(dt)
+            logger.debug(f"Successfully localized to {tz_name}: {result}, tzinfo: {result.tzinfo}")
+            return result
         except pytz.UnknownTimeZoneError:
             logger.warning(f"Unknown timezone '{tz_name}' from Strava timezone '{tz_string}', using UTC")
             self.timezone = pytz.UTC
-            return timezone.make_aware(dt)
+            result = pytz.UTC.localize(dt)
+            logger.debug(f"Fallback to UTC: {result}")
+            return result
 
     def apply_exceptions(self, aerialway: Aerialway) -> Aerialway:
 
@@ -1027,11 +1041,17 @@ class ActivityParser:
             logger.debug(f"Found ski area from relation: {ski_area}")
 
         # Create activity data structure
+        logger.debug(f"Raw Strava activity data:")
+        logger.debug(f"  activity.start_date_local: {activity.start_date_local}")
+        logger.debug(f"  activity.start_date (UTC): {activity.start_date if hasattr(activity, 'start_date') else 'N/A'}")
+        logger.debug(f"  activity.timezone: {activity.timezone}")
+
         activity_data = {
             "name": activity.name,
             "type": activity.type,
             "start_time": self._make_timezone_aware(activity.start_date_local, activity.timezone),
             "timestamp": self._make_timezone_aware(activity.start_date_local, activity.timezone),
+            "timezone": str(self.timezone) if self.timezone else None,
             "summary_polyline": activity.map.summary_polyline,
             "polyline": None,
             "total_elapsed_time": timedelta(seconds=activity.elapsed_time),
@@ -1055,6 +1075,9 @@ class ActivityParser:
         )
         self.activity = activity_instance
         logger.info(f'{"Created" if created else "Updated"} Activity: {activity_instance.id}')
+        logger.debug(f"Saved activity times:")
+        logger.debug(f"  start_time: {activity_instance.start_time}, tzinfo: {activity_instance.start_time.tzinfo}")
+        logger.debug(f"  timestamp: {activity_instance.timestamp}, tzinfo: {activity_instance.timestamp.tzinfo}")
 
         # Handle updates
         if not created:
@@ -1139,6 +1162,10 @@ class ActivityParser:
             if prev_lap:
                 lift_start_pos = prev_lap.end_position
                 lift_start_time = prev_lap.end_time
+                logger.debug(f"Distance to previous lap end: {lift_start_pos.distance(lap.start_position) * self.config.DEGREE_TO_METERS_APPROX:.2f} meters")
+                if lift_start_pos.distance(lap.start_position) * self.config.DEGREE_TO_METERS_APPROX < self.config.MIN_LIFT_DISTANCE_METERS:
+                    logger.debug("Lift start and end positions are too close, skipping lift ride detection for this lap")
+                    continue
             else:
                 lift_start_pos = None
                 lift_start_time = lap.start_time

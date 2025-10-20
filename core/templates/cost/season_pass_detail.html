@@ -142,8 +142,11 @@
                         </td>
                         <td class="modern-table-cell">
                             <div class="cell-content">
-                                <span class="date-display">{{activity.timestamp|date:"M d, Y"}}</span>
-                                <small class="text-muted d-block">{{activity.timestamp|time:"H:i"}}</small>
+                                {% load tz %}
+                                {% timezone activity.timezone %}
+                                <span class="date-display">{{activity.start_time|date:"M d, Y"}}</span>
+                                <small class="text-muted d-block">{{activity.start_time|time:"H:i"}}</small>
+                                {% endtimezone %}
                             </div>
                         </td>
                         <td class="modern-table-cell">
