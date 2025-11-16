@@ -13,6 +13,7 @@ from .activity import (
     get_unique_lift_rides,
     segment_map,
     ActivityAPI,
+    generate_share_image,
 )
 
 from .api import (
@@ -77,6 +78,7 @@ __all__ = [
     'get_unique_lift_rides',
     'segment_map',
     'ActivityAPI',
+    'generate_share_image',
     
     # API views
     'activity_completeness_api',

@@ -281,3 +281,38 @@ class ActivityAPI(LoginRequiredMixin, View):
             "success": True,
             "message": f"Activity '{activity_name}' deleted successfully"
         }, status=204)
+
+
+@login_required
+def generate_share_image(request, activity_id):
+    """
+    Generate and download a shareable Instagram story-sized image for an activity.
+
+    Returns a PNG image with activity details, mini map, and statistics.
+    """
+    from ..utils.image_generator import generate_activity_share_image_bytes
+
+    # Get activity and verify ownership
+    activity = get_object_or_404(Activity, id=activity_id, user=request.user)
+
+    try:
+        # Generate the image
+        img_bytes = generate_activity_share_image_bytes(activity)
+
+        # Create filename
+        activity_name_slug = activity.name.replace(' ', '_')[:30] if activity.name else 'activity'
+        filename = f"{activity_name_slug}_{activity_id}_share.png"
+
+        # Return as downloadable PNG
+        response = HttpResponse(img_bytes.read(), content_type='image/png')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        logger.info(f"Generated share image for activity {activity_id} by user {request.user}")
+        return response
+
+    except Exception as e:
+        logger.error(f"Error generating share image for activity {activity_id}: {e}")
+        return HttpResponse(
+            "Error generating share image. Please try again later.",
+            status=500
+        )

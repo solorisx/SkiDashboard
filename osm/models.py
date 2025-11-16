@@ -113,6 +113,7 @@ class Node(models.Model):
     tags = models.JSONField(default=dict)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+    verified_on = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Node {self.osm_id}"
@@ -127,6 +128,7 @@ class Way(models.Model):
     tags = models.JSONField(default=dict)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+    verified_on = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Way {self.osm_id}"
@@ -198,6 +200,7 @@ class Station(models.Model):
     altitude = models.FloatField(blank=True, null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+    verified_on = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Station {self.name or self.node.id}"
@@ -221,6 +224,7 @@ class Aerialway(models.Model):
     name = models.CharField(max_length=255, blank=True, null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+    verified_on = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Aerialway {self.way.osm_id} - {self.name}"
@@ -261,6 +265,7 @@ class Piste(models.Model):
     segments_generated = models.BooleanField(default=False)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+    verified_on = models.DateTimeField(null=True, blank=True)
 
     def is_geom_outdated(self):
         """
@@ -413,6 +418,7 @@ class SkiArea(AbstractSkiArea):
     country = CountryField(null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+    verified_on = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.name}"

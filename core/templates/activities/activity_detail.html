@@ -504,6 +504,19 @@
         </div>
       </div>
 
+      <!-- Share Image -->
+      <div class="col">
+        <div class="h-100 p-3 rounded-3 bg-success bg-opacity-10 border border-success border-opacity-25">
+          <h6 class="fw-bold mb-1 text-success text-center">Share Image</h6>
+          <p class="text-muted small mb-3 text-center">Download shareable story image</p>
+          <a href="{% url 'generate_share_image' activity.id %}"
+             class="btn btn-outline-success btn-sm w-100 fw-medium"
+             download>
+            <i class="bi bi-download me-1"></i>Download
+          </a>
+        </div>
+      </div>
+
       <!-- Update Strava Description -->
       {% if user_opt_in_strava_write and activity.strava_id %}
       <div class="col">

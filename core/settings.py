@@ -291,6 +291,10 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
+# Media files (User uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / "media"
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -393,6 +397,10 @@ CELERY_TIMEZONE = 'UTC'
 broker_connection_retry_on_startup = True
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+# Add localhost/development hosts when in DEBUG mode or ALLOWED_HOSTS is empty
+if DEBUG or not any(ALLOWED_HOSTS):
+    ALLOWED_HOSTS.extend(['localhost', '127.0.0.1', '0.0.0.0', '[::1]'])
+
 CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 

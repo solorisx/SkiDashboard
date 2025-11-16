@@ -45,6 +45,10 @@ python-dateutil==2.9.0.post0
 humanize==4.12.2
 babel==2.17.0
 
+# Image processing
+Pillow==11.0.0
+matplotlib==3.9.4
+
 # HTTP / OAuth
 requests==2.32.3
 requests-oauthlib==2.0.0

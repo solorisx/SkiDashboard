@@ -2,6 +2,8 @@ import osmium
 import osmium.geom
 import logging
 import time
+from datetime import datetime
+from django.utils import timezone
 from .models import Way, Node, Aerialway, Piste, SkiArea, Station, SkiAreaBoundary
 from django.db import transaction
 from django.db.models import Q
@@ -87,10 +89,11 @@ def process_nodes(handler):
     chunk_size = 1000
     logger.info(f"Starting to process nodes with chunk size {chunk_size}")
     node_chunks = [handler.nodes[i:i + chunk_size] for i in range(0, len(handler.nodes), chunk_size)]
+    verification_time = timezone.now()
     for i, chunk in enumerate(node_chunks):
         try:
-            node_objs = [Node(osm_id=node['osm_id'], geom=node['geom'], tags=node.get('tags', {})) for node in chunk]
-            Node.objects.bulk_create(node_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['geom', 'tags'], unique_fields=['osm_id'])
+            node_objs = [Node(osm_id=node['osm_id'], geom=node['geom'], tags=node.get('tags', {}), verified_on=verification_time) for node in chunk]
+            Node.objects.bulk_create(node_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['geom', 'tags', 'verified_on'], unique_fields=['osm_id'])
             logger.debug(f"Processed {min((i + 1) * chunk_size, len(handler.nodes))} / {len(handler.nodes)} nodes")
             if i % 100 == 0:
                 logger.info(f"Processed {round(i * chunk_size / len(handler.nodes) * 100,2)}% ({i * chunk_size} / {len(handler.nodes)} nodes)")
@@ -114,6 +117,7 @@ def process_ways(handler):
 
     chunk_size = 1000
     logger.info(f"Starting to process way with chunk size {chunk_size}")
+    verification_time = timezone.now()
 
     # Split handler.ways into chunks
     ways_chunks = [handler.ways[i:i + chunk_size] for i in range(0, len(handler.ways), chunk_size)]
@@ -121,8 +125,8 @@ def process_ways(handler):
     for i, chunk in enumerate(ways_chunks):
         try:
             # Create Way objects without assigning nodes
-            way_objs = [Way(osm_id=way['osm_id'], tags=way.get('tags', {})) for way in chunk]
-            Way.objects.bulk_create(way_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['tags'], unique_fields=['osm_id'])
+            way_objs = [Way(osm_id=way['osm_id'], tags=way.get('tags', {}), verified_on=verification_time) for way in chunk]
+            Way.objects.bulk_create(way_objs, batch_size=chunk_size, update_conflicts=True, update_fields=['tags', 'verified_on'], unique_fields=['osm_id'])
 
             logger.debug(f"Created {len(way_objs)} ways")
 
@@ -234,6 +238,7 @@ def process_ways(handler):
                             'aerialway_heating': 'heating' in tags and tags['aerialway:heating'] == 'yes',
                             'aerialway_occupancy': str_to_int(tags.get('aerialway:occupancy')),
                             'name': tags.get('name')[0:255] if 'name' in tags else f"Unnamed aerialway {way['osm_id']}",
+                            'verified_on': verification_time,
                         }
                     )
                     station_nodes = [node for node in node_instances if node.tags.get('aerialway') == 'station']
@@ -244,7 +249,8 @@ def process_ways(handler):
                             defaults={
                                 'name': node.tags.get('name'),
                                 'altitude': ele_to_float(node.tags.get('ele')),
-                                'station': node.tags.get('aerialway:station')
+                                'station': node.tags.get('aerialway:station'),
+                                'verified_on': verification_time,
                             }
                         )
                         stations.append(station)
@@ -270,7 +276,8 @@ def process_ways(handler):
                             'piste_difficulty': tags.get('piste:difficulty'),
                             'piste_grooming': tags.get('piste:grooming'),
                             'piste_type': tags.get('piste:type'),
-                            'ref': tags.get('ref')
+                            'ref': tags.get('ref'),
+                            'verified_on': verification_time,
                         }
                     )
                     logger.debug(f"Processed piste for way: {way['osm_id']}")
@@ -284,6 +291,7 @@ def process_ways(handler):
     
 def process_areas(handler):
     logger.info("Starting to process areas")
+    verification_time = timezone.now()
     for area_data in handler.areas:
         try:
             with transaction.atomic():
@@ -291,7 +299,7 @@ def process_areas(handler):
                 way = Way.objects.filter(osm_id=area_data['osm_id']).first()
                 if way is None:
                     logger.info(f"Way {area_data['osm_id']} for area {name} does not exist")
-                    way = Way.objects.create(osm_id=area_data['osm_id'], tags=area_data.get('tags', {}))
+                    way = Way.objects.create(osm_id=area_data['osm_id'], tags=area_data.get('tags', {}), verified_on=verification_time)
                     logger.info(f"Created way {area_data['osm_id']} for area {name} with tags {area_data.get('tags', {})}")
 
                 _, created = SkiAreaBoundary.objects.update_or_create(
@@ -310,7 +318,8 @@ def process_areas(handler):
                     defaults={
                         'geom': area_data['geom'],
                         'name': area_data['name'] or f"Unnamed area {area_data['osm_id']}",
-                        'tags': area_data.get('tags', {})
+                        'tags': area_data.get('tags', {}),
+                        'verified_on': verification_time,
                     }
                 )
                 logger.debug(f"{'Created' if created else 'Updated'} ski area: {area_data['osm_id']}")
@@ -329,6 +338,7 @@ def process_areas(handler):
 
 def process_relations(handler):
         logger.info("Starting to process relations")
+        verification_time = timezone.now()
         for relation_data in handler.relations:
             try:
                 with transaction.atomic():
@@ -338,7 +348,8 @@ def process_relations(handler):
                             'name': relation_data['name'] or f"Unnamed relation {relation_data['osm_id']}",
                             'url': relation_data['url'],
                             'wikipedia': relation_data['wikipedia'],
-                            'tags': relation_data.get('tags', {})
+                            'tags': relation_data.get('tags', {}),
+                            'verified_on': verification_time,
                         }
                     )
                     if relation_data['name'] is None:

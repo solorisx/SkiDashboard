@@ -5,6 +5,7 @@ urlpatterns = [
     path('admin/', views.sync_strava_admin, name="sync_strava_admin"),
     path("", views.activity_list, name="activity_list"),
     path("<int:activity_id>/", views.activity_detail, name="activity_detail"),
+    path("<int:activity_id>/share-image/", views.generate_share_image, name="generate_share_image"),
     path("<int:activity_id>/reprocess/", views.reprocess_activity, name="reprocess_activity"),
     path("strava/webhook/", views.strava_webhook, name="strava_webhook"),
     path("strava/<strava_id>/", views.activity_detail_strava, name="activity_detail_strava"),
