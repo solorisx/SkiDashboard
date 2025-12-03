@@ -73,10 +73,13 @@ def generate_activity_map(activity, size=(600, 600)):
         lons = [coord[0] for coord in coords]
         lats = [coord[1] for coord in coords]
 
-        # Create figure
+        # Create figure with tight layout to fill the entire space
         fig, ax = plt.subplots(figsize=(size[0]/100, size[1]/100), dpi=100)
         fig.patch.set_facecolor(COLOR_CARD_BG)
         ax.set_facecolor(COLOR_BG)
+
+        # Remove all margins and padding
+        fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
         # Plot the track
         ax.plot(lons, lats, color=COLOR_ACCENT, linewidth=3, alpha=0.9,
@@ -105,13 +108,13 @@ def generate_activity_map(activity, size=(600, 600)):
         ax.set_xlim(min(lons) - x_range * padding, max(lons) + x_range * padding)
         ax.set_ylim(min(lats) - y_range * padding, max(lats) + y_range * padding)
 
-        # Ensure equal aspect ratio
-        ax.set_aspect('equal')
+        # Set aspect ratio to 'auto' to fill the entire rectangle
+        ax.set_aspect('auto')
 
         # Convert matplotlib figure to PIL Image
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight',
-                   facecolor=fig.get_facecolor(), edgecolor='none', pad_inches=0.1)
+        plt.savefig(buf, format='png', bbox_inches=None, pad_inches=0,
+                   facecolor=fig.get_facecolor(), edgecolor='none')
         plt.close(fig)
         buf.seek(0)
 
