@@ -267,7 +267,7 @@ def process_ways(handler):
                         # TODO: add support for polygons
                         logger.warning(f"Piste {way['osm_id']} has the same start and end node, probably a polygon - not supported")
                         continue
-                    Piste.objects.update_or_create(
+                    piste, created = Piste.objects.update_or_create(
                         way=way_obj,
                         defaults={
                             'lit': 'lit' in tags and tags['lit'] == 'yes',
@@ -280,6 +280,8 @@ def process_ways(handler):
                             'verified_on': verification_time,
                         }
                     )
+                    if created or piste.geom is None:
+                        piste.update_geometry()
                     logger.debug(f"Processed piste for way: {way['osm_id']}")
                 else:
                     counter += 1

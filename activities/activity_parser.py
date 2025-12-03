@@ -11,8 +11,8 @@ import polyline
 from django.utils import timezone
 import pytz
 import re
-from activities.models import Activity, Lap, Record, LiftRide, ActivityPisteSegment
-from osm.models import Node, Way, Aerialway, SkiArea, Station, SkiAreaBoundary, PisteSegment
+from activities.models import Activity, Lap, Record, LiftRide, ActivityPisteSegment, PisteRide
+from osm.models import Node, Way, Aerialway, SkiArea, Station, SkiAreaBoundary, PisteSegment, Piste
 from core.models import UserProfile
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point, LineString
@@ -1200,6 +1200,110 @@ class ActivityParser:
 
         self.profiler.end_operation('process_lift_rides')
 
+    def _calculate_piste_coverage(self, piste: Piste, buffered_activity_geom) -> float:
+        """
+        Calculate what percentage of a piste is covered by the activity track.
+
+        Args:
+            piste: The piste to check coverage for
+            buffered_activity_geom: Activity geometry buffered by ~50m
+
+        Returns:
+            Coverage percentage (0-100)
+        """
+        if not piste.geom or piste.geom.empty:
+            return 0.0
+
+        try:
+            # Get intersection of piste with buffered activity track
+            intersection = piste.geom.intersection(buffered_activity_geom)
+
+            # Calculate lengths (in degrees - consistent for percentage calculation)
+            covered_length = intersection.length if intersection else 0
+            total_length = piste.geom.length
+
+            if total_length <= 0:
+                return 0.0
+
+            coverage_pct = (covered_length / total_length) * 100
+            return min(coverage_pct, 100.0)  # Cap at 100%
+
+        except Exception as e:
+            logger.warning(f"Error calculating coverage for piste {piste.id}: {e}")
+            return 0.0
+
+    def _process_piste_rides(self, activity_instance: Activity, activity_streams=None) -> None:
+        """
+        Process and create piste ride instances based on 80% coverage threshold.
+
+        A piste is considered "ridden" if 80% or more of its length intersects
+        with the activity's GPS track (buffered by ~50m).
+
+        Args:
+            activity_instance: The activity to process
+            activity_streams: Optional activity stream data (unused but kept for consistency)
+        """
+        self.profiler.start_operation('process_piste_rides')
+
+        # Delete existing PisteRides for reprocessing
+        lap_ids = activity_instance.laps.values_list('id', flat=True)
+        PisteRide.objects.filter(lap_id__in=lap_ids).delete()
+
+        # Get activity geometry
+        if not activity_instance.geom:
+            logger.warning(f"No geometry for activity {activity_instance.id}")
+            self.profiler.end_operation('process_piste_rides')
+            return
+
+        # Buffer geometry by ~50 meters
+        buffer_width = self.config.DEFAULT_BUFFER_METERS / 40000000 * 360
+        buffered_geom = activity_instance.geom.buffer(buffer_width)
+
+        # Find intersecting pistes
+        intersecting_pistes = Piste.objects.filter(
+            geom__intersects=buffered_geom,
+            geom__isnull=False
+        )
+
+        logger.info(f"Found {intersecting_pistes.count()} intersecting pistes for activity {activity_instance.id}")
+
+        # Calculate coverage and identify ridden pistes
+        ridden_pistes = []
+        for piste in intersecting_pistes:
+            coverage_pct = self._calculate_piste_coverage(piste, buffered_geom)
+
+            logger.debug(f"Piste {piste.id} ({piste.name or 'unnamed'}): {coverage_pct:.1f}% coverage")
+
+            if coverage_pct >= 80.0:
+                ridden_pistes.append(piste)
+                logger.info(f"Piste {piste.id} ({piste.name or 'unnamed'}) qualified with {coverage_pct:.1f}% coverage")
+
+        # Create PisteRides for each lap
+        piste_rides_to_create = []
+        laps = list(activity_instance.laps.all().order_by('lap_index'))
+
+        for lap in laps:
+            for piste_index, piste in enumerate(ridden_pistes):
+                # Calculate timestamp (sequential within lap)
+                timestamp = lap.start_time + timedelta(seconds=piste_index)
+
+                piste_rides_to_create.append(
+                    PisteRide(
+                        lap=lap,
+                        piste=piste,
+                        timestamp=timestamp
+                    )
+                )
+
+        # Bulk create
+        if piste_rides_to_create:
+            PisteRide.objects.bulk_create(piste_rides_to_create)
+            logger.info(f"Created {len(piste_rides_to_create)} PisteRides for activity {activity_instance.id}")
+        else:
+            logger.info(f"No pistes met 80% threshold for activity {activity_instance.id}")
+
+        self.profiler.end_operation('process_piste_rides')
+
     def generate_strava_description(self, activity_instance: Activity, existing_description: str = "") -> str:
         """
         Generate a description for the Strava activity with lift ride information.
@@ -1440,6 +1544,9 @@ Manage your preferences: {context['settings_url']}
 
         # Calculate ridden segments
         self.calc_ridden_segments(activity_instance)
+
+        # Process piste rides
+        self._process_piste_rides(activity_instance, activity_streams)
 
         # Assign cost
         self.assign_cost(activity_instance)

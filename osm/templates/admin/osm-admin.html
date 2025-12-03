@@ -33,6 +33,12 @@
             <td style="padding: 5px;">{{ db_stats.pistes|default:0 }}</td>
         </tr>
         <tr>
+            <td style="padding: 5px; font-weight: bold;">Pistes without geometry:</td>
+            <td style="padding: 5px; {% if db_stats.pistes_without_geom > 0 %}color: #d32f2f; font-weight: bold;{% endif %}">
+                {{ db_stats.pistes_without_geom|default:0 }}
+            </td>
+        </tr>
+        <tr>
             <td style="padding: 5px; font-weight: bold;">Aerialways:</td>
             <td style="padding: 5px;">{{ db_stats.aerialways|default:0 }}</td>
         </tr>
@@ -73,6 +79,21 @@
     {% csrf_token %}
     {{ form4.as_p }}
     <button type="submit" class="button">Update</button>
+</form>
+
+<h2>Generate piste geometry</h2>
+<div style="background: #fff3cd; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ffc107;">
+    <strong>⚠️ Note:</strong> This will generate geometry for pistes that don't have it by calling <code>Piste.update_geometry()</code>.
+    {% if db_stats.pistes_without_geom > 0 %}
+    <br><strong style="color: #d32f2f;">{{ db_stats.pistes_without_geom }} pistes currently need geometry.</strong>
+    {% else %}
+    <br><strong style="color: #2e7d32;">All pistes have geometry!</strong>
+    {% endif %}
+</div>
+<form action="{% url 'update_piste_geometry' %}" method="post" class="form">
+    {% csrf_token %}
+    {{ form5.as_p }}
+    <button type="submit" class="button" style="background-color: #28a745; color: white;">Generate Geometry (Async)</button>
 </form>
 
 {% endblock %}

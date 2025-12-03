@@ -52,3 +52,13 @@ class SkiAreaNetworkForm(forms.Form):
 
 class SegmentUpdateForm(forms.Form):
     osm_id = forms.IntegerField(label="OSM ID", widget=forms.TextInput(attrs={"class": "form-control"}), required=False)
+
+
+class PisteGeometryUpdateForm(forms.Form):
+    ski_area = forms.ModelChoiceField(
+        queryset=SkiArea.objects.filter(~Q(name__icontains="unnamed"), way__isnull=False).order_by("name"),
+        label="Ski Area (Optional)",
+        widget=forms.Select(attrs={"class": "form-control"}),
+        required=False,
+        help_text="Leave empty to update all pistes without geometry"
+    )

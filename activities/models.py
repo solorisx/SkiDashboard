@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from djmoney.models.fields import MoneyField
-from osm.models import Aerialway, SkiArea, SkiAreaBoundary, PisteSegment
+from osm.models import Aerialway, Piste, SkiArea, SkiAreaBoundary, PisteSegment
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
@@ -139,6 +139,12 @@ class LiftRide(models.Model):
     lap = models.ForeignKey(Lap, on_delete=models.CASCADE)
     aerialway = models.ForeignKey(Aerialway, on_delete=models.PROTECT)
     uphill = models.BooleanField(null=True)
+    timestamp = models.DateTimeField()
+
+
+class PisteRide(models.Model):
+    lap = models.ForeignKey(Lap, on_delete=models.CASCADE)
+    piste = models.ForeignKey(Piste, on_delete=models.PROTECT)
     timestamp = models.DateTimeField()
 
 

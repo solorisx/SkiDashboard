@@ -422,6 +422,81 @@
       </div>
     </div>
 
+    <!-- Piste Rides Section -->
+    <div class="col-12 col-xl-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-bottom py-3">
+          <h4 class="card-title mb-0 fw-bold">
+            <i class="bi bi-snow me-2 text-primary"></i>Piste Rides
+          </h4>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="fw-bold">Lap</th>
+                  <th class="fw-bold">Piste</th>
+                  <th class="fw-bold">Difficulty</th>
+                  <th class="fw-bold">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for piste_ride in piste_rides %}
+                <tr class="table-row-hover">
+                  <td>
+                    <span class="badge bg-primary-subtle text-primary px-2 py-1">
+                      {{ piste_ride.lap.lap_index }}
+                    </span>
+                  </td>
+                  <td class="fw-medium">{{ piste_ride.piste.name|default:"Unnamed Piste" }}</td>
+                  <td>
+                    {% if piste_ride.piste.piste_difficulty %}
+                      {% if piste_ride.piste.piste_difficulty == "novice" or piste_ride.piste.piste_difficulty == "easy" %}
+                        <span class="badge bg-success-subtle text-success px-2 py-1">
+                          <i class="bi bi-circle-fill me-1"></i>{{ piste_ride.piste.piste_difficulty|title }}
+                        </span>
+                      {% elif piste_ride.piste.piste_difficulty == "intermediate" %}
+                        <span class="badge bg-primary-subtle text-primary px-2 py-1">
+                          <i class="bi bi-square-fill me-1"></i>{{ piste_ride.piste.piste_difficulty|title }}
+                        </span>
+                      {% elif piste_ride.piste.piste_difficulty == "advanced" %}
+                        <span class="badge bg-danger-subtle text-danger px-2 py-1">
+                          <i class="bi bi-diamond-fill me-1"></i>{{ piste_ride.piste.piste_difficulty|title }}
+                        </span>
+                      {% elif piste_ride.piste.piste_difficulty == "expert" or piste_ride.piste.piste_difficulty == "freeride" %}
+                        <span class="badge bg-dark text-white px-2 py-1">
+                          <i class="bi bi-diamond-fill me-1"></i>{{ piste_ride.piste.piste_difficulty|title }}
+                        </span>
+                      {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary px-2 py-1">
+                          {{ piste_ride.piste.piste_difficulty|title }}
+                        </span>
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted small">Unknown</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-muted">
+                    {% timezone activity.timezone %}
+                    {{ piste_ride.timestamp|date:"H:i:s" }}
+                    {% endtimezone %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center py-4 text-muted">
+                    <i class="bi bi-info-circle me-2"></i>No piste rides recorded
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Badges Section -->
     <div class="col-12">
       <div class="card border-0 shadow-sm">

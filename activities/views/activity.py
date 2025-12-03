@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from itertools import groupby
 from operator import attrgetter
 
-from activities.models import LiftRide, Badge
+from activities.models import LiftRide, Badge, PisteRide
 from cost.forms import CostForm
 from cost.models import SeasonPass
 from osm.models import Aerialway, Piste, PisteSegment, SkiArea
@@ -181,6 +181,7 @@ def activity_detail(request, activity_id):
         
     laps = activity.laps.all().order_by("lap_index")
     lift_rides = LiftRide.objects.filter(lap__activity=activity).order_by("lap__lap_index", "timestamp")
+    piste_rides = PisteRide.objects.filter(lap__activity=activity).select_related('piste').order_by("lap__lap_index", "timestamp")
     aerialways = (
         Aerialway.objects
         .filter(liftride__lap__activity=activity)
@@ -211,6 +212,7 @@ def activity_detail(request, activity_id):
             "activity": activity,
             "laps": laps,
             "lift_rides": lift_rides,
+            "piste_rides": piste_rides,
             "badges": badges,
             "aerialways": aerialways,
             "aerialways_dropdown": aerialways_dropdown,

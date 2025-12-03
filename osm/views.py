@@ -19,6 +19,7 @@ from .forms import (
     OSMFileSyncForm,
     SkiAreaNetworkForm,
     SegmentUpdateForm,
+    PisteGeometryUpdateForm,
 )
 from .models import (
     Aerialway,
@@ -33,18 +34,19 @@ from .models import (
 )
 from .osm_interface import load_osm_data
 from .osm_segments import update_piste_segments
-from .tasks import parse_osm_file_task
+from .tasks import parse_osm_file_task, update_piste_geometry_task
 
 
 logger = logging.getLogger('core')
 
 
 @staff_member_required
-def sync_osm(request):    
+def sync_osm(request):
     form1 = OSMSyncForm()
     form2 = OSMFileSyncForm()
     form3 = SkiAreaNetworkForm()
     form4 = SegmentUpdateForm()
+    form5 = PisteGeometryUpdateForm()
 
     # Get database counts
     db_stats = {
@@ -53,12 +55,13 @@ def sync_osm(request):
         'ski_area_network_members': SkiAreaNetworkMember.objects.count(),
         'ways': Way.objects.count(),
         'pistes': Piste.objects.count(),
+        'pistes_without_geom': Piste.objects.filter(geom__isnull=True).count(),
         'aerialways': Aerialway.objects.count(),
         'stations': Station.objects.count(),
         'nodes': Node.objects.count(),
     }
 
-    return render(request, "admin/osm-admin.html", {"form1": form1, "form2": form2, "form3": form3, "form4": form4, "db_stats": db_stats})
+    return render(request, "admin/osm-admin.html", {"form1": form1, "form2": form2, "form3": form3, "form4": form4, "form5": form5, "db_stats": db_stats})
     
 
 @staff_member_required
@@ -192,6 +195,36 @@ def update_segments(request, osm_id=None):
         messages.success(request, f"Updated segments for piste {osm_id}")
     except Exception as e:
         messages.error(request, f"Error updating segments: {e}")
+    return redirect("sync_osm")
+
+
+@staff_member_required
+def update_piste_geometry(request):
+    """Update geometry for pistes that don't have it."""
+    if request.method == "POST":
+        form = PisteGeometryUpdateForm(request.POST)
+        if form.is_valid():
+            ski_area = form.cleaned_data.get("ski_area")
+            ski_area_id = ski_area.id if ski_area else None
+
+            # Get count of pistes to update
+            pistes_query = Piste.objects.filter(geom__isnull=True)
+            if ski_area_id:
+                pistes_query = pistes_query.filter(way__skiarea__id=ski_area_id)
+            piste_count = pistes_query.count()
+
+            # Launch async task
+            try:
+                update_piste_geometry_task.delay(ski_area_id)
+                if ski_area:
+                    messages.success(request, f"Initiated geometry update for {piste_count} pistes in {ski_area.name}. Task is running in the background.")
+                else:
+                    messages.success(request, f"Initiated geometry update for {piste_count} pistes across all ski areas. Task is running in the background.")
+            except Exception as e:
+                messages.error(request, f"Error initiating geometry update: {e}")
+        else:
+            messages.error(request, f"Form validation error: {form.errors}")
+        return redirect("sync_osm")
     return redirect("sync_osm")
 
 
