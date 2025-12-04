@@ -78,16 +78,24 @@
       <h1 class="mb-1">Activity Map</h1>
       <h5 class="text-muted mb-0">{{ activity.name }}</h5>
     </div>
-    <a href="{% url 'activity_detail' activity.id %}" class="btn btn-outline-primary">
-      <i class="bi bi-arrow-left me-1"></i>Back to Activity
-    </a>
+    <div class="d-flex gap-2">
+      <select id="lapFilter" class="form-select" style="width: auto;">
+        <option value="all">All Laps</option>
+        {% for lap in activity.laps.all %}
+        <option value="{{ lap.lap_index }}">Lap {{ lap.lap_index }}</option>
+        {% endfor %}
+      </select>
+      <a href="{% url 'activity_detail' activity.id %}" class="btn btn-outline-primary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Activity
+      </a>
+    </div>
   </div>
 
   <!-- Stats -->
   <div class="stats-container">
     <div class="stat-item">
-      <div class="stat-label">GPS Track</div>
-      <div class="stat-value" style="color: #000000;">1 track</div>
+      <div class="stat-label">Lap Tracks</div>
+      <div class="stat-value" style="color: #000000;">{{ activity.laps.count }} lap{{ activity.laps.count|pluralize }}</div>
     </div>
     <div class="stat-item">
       <div class="stat-label">Unique Lifts</div>
@@ -149,10 +157,18 @@ document.addEventListener("DOMContentLoaded", function() {
     }).addTo(map);
   }
 
-  // Add GPS track (black)
-  var activityTrack = {{ activity_track|safe }};
-  if (activityTrack && activityTrack.coordinates) {
-    var trackLayer = L.geoJSON(activityTrack, {
+  // Store layer references for filtering
+  var allLayers = {
+    tracks: null,
+    lifts: null,
+    pistes: null,
+    belowThreshold: null
+  };
+
+  // Add lap tracks (black)
+  var lapTracks = {{ lap_tracks_geojson|safe }};
+  if (lapTracks && lapTracks.features && lapTracks.features.length > 0) {
+    allLayers.tracks = L.geoJSON(lapTracks, {
       style: {
         color: '#000000',
         weight: 4,
@@ -162,7 +178,7 @@ document.addEventListener("DOMContentLoaded", function() {
       }
     }).addTo(map);
 
-    allBounds.extend(trackLayer.getBounds());
+    allBounds.extend(allLayers.tracks.getBounds());
   }
 
   // Add lift rides (blue)
@@ -238,7 +254,7 @@ document.addEventListener("DOMContentLoaded", function() {
       '</div>' +
       '<div class="legend-item">' +
       '<div class="legend-line track"></div>' +
-      '<span>GPS Track</span>' +
+      '<span>Lap Tracks</span>' +
       '</div>' +
       '<div class="legend-item">' +
       '<div class="legend-line lifts"></div>' +
@@ -263,6 +279,94 @@ document.addEventListener("DOMContentLoaded", function() {
     // Fallback to activity centroid
     map.setView([{{ activity.geom.centroid.y|unlocalize }}, {{ activity.geom.centroid.x|unlocalize }}], 13);
   }
+
+  // Lap filter functionality
+  var lapFilterSelect = document.getElementById('lapFilter');
+  var originalData = {
+    tracks: lapTracks,
+    lifts: liftRides,
+    pistes: pisteRides,
+    belowThreshold: belowThreshold
+  };
+
+  lapFilterSelect.addEventListener('change', function() {
+    var selectedLap = this.value;
+
+    // Clear existing layers
+    if (allLayers.tracks) map.removeLayer(allLayers.tracks);
+    if (allLayers.lifts) map.removeLayer(allLayers.lifts);
+    if (allLayers.pistes) map.removeLayer(allLayers.pistes);
+    if (allLayers.belowThreshold) map.removeLayer(allLayers.belowThreshold);
+
+    var newBounds = L.latLngBounds([]);
+
+    if (selectedLap === 'all') {
+      // Show all laps
+      if (originalData.tracks && originalData.tracks.features.length > 0) {
+        allLayers.tracks = L.geoJSON(originalData.tracks, {
+          style: { color: '#000000', weight: 4, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }
+        }).addTo(map);
+        newBounds.extend(allLayers.tracks.getBounds());
+      }
+    } else {
+      // Filter to selected lap
+      var lapIndex = parseInt(selectedLap);
+      var filteredTracks = {
+        type: "FeatureCollection",
+        features: originalData.tracks.features.filter(f => f.properties.lap_index === lapIndex)
+      };
+
+      if (filteredTracks.features.length > 0) {
+        allLayers.tracks = L.geoJSON(filteredTracks, {
+          style: { color: '#000000', weight: 4, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }
+        }).addTo(map);
+        newBounds.extend(allLayers.tracks.getBounds());
+      }
+    }
+
+    // Always show lifts and pistes (not filtered by lap)
+    if (originalData.lifts && originalData.lifts.features.length > 0) {
+      allLayers.lifts = L.geoJSON(originalData.lifts, {
+        style: { color: '#0066ff', weight: 5, opacity: 0.7, lineCap: 'round', lineJoin: 'round' },
+        onEachFeature: function (feature, layer) {
+          if (feature.properties && feature.properties.name) {
+            layer.bindPopup('<strong>' + feature.properties.name + '</strong>');
+          }
+        }
+      }).addTo(map);
+    }
+
+    if (originalData.pistes && originalData.pistes.features.length > 0) {
+      allLayers.pistes = L.geoJSON(originalData.pistes, {
+        style: { color: '#ff0000', weight: 5, opacity: 0.6, lineCap: 'round', lineJoin: 'round' },
+        onEachFeature: function (feature, layer) {
+          if (feature.properties && feature.properties.name) {
+            layer.bindPopup('<strong>' + feature.properties.name + '</strong><br>' +
+                           'Difficulty: ' + (feature.properties.difficulty || 'Unknown') + '<br>' +
+                           '<span style="color: #ff0000;">✓ Qualified (≥80%)</span>');
+          }
+        }
+      }).addTo(map);
+    }
+
+    if (originalData.belowThreshold && originalData.belowThreshold.features.length > 0) {
+      allLayers.belowThreshold = L.geoJSON(originalData.belowThreshold, {
+        style: { color: '#ffa500', weight: 4, opacity: 0.5, lineCap: 'round', lineJoin: 'round', dashArray: '5, 5' },
+        onEachFeature: function (feature, layer) {
+          if (feature.properties && feature.properties.name) {
+            layer.bindPopup('<strong>' + feature.properties.name + '</strong><br>' +
+                           'Difficulty: ' + (feature.properties.difficulty || 'Unknown') + '<br>' +
+                           '<span style="color: #ffa500;">✗ Below threshold (&lt;80%)</span>');
+          }
+        }
+      }).addTo(map);
+    }
+
+    // Fit bounds to visible layers
+    if (newBounds.isValid()) {
+      map.fitBounds(newBounds, { padding: [50, 50] });
+    }
+  });
 });
 </script>
 

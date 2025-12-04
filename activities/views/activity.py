@@ -284,11 +284,35 @@ def activity_map(request, activity_id):
         below_threshold_pistes = Piste.objects.none()
         buffered_geom = None
 
-    # Serialize activity track
-    activity_track = json.loads(activity.geom.geojson) if activity.geom else None
+    # Serialize lap geometries instead of full GPS track
+    lap_tracks_geojson = {
+        "type": "FeatureCollection",
+        "features": []
+    }
+    for lap in activity.laps.all().order_by('lap_index'):
+        if lap.geom:
+            feature = {
+                "type": "Feature",
+                "geometry": json.loads(lap.geom.geojson),
+                "properties": {
+                    "lap_index": lap.lap_index
+                }
+            }
+            lap_tracks_geojson["features"].append(feature)
 
-    # Serialize buffered track (for visualization)
-    buffered_track = json.loads(buffered_geom.geojson) if buffered_geom else None
+    # Calculate buffered track from lap geometries
+    if lap_tracks_geojson["features"]:
+        # Union all lap geometries for buffering
+        from django.contrib.gis.geos import GEOSGeometry, MultiLineString
+        lap_geoms = [lap.geom for lap in activity.laps.all() if lap.geom]
+        if lap_geoms:
+            combined_geom = MultiLineString(*lap_geoms) if len(lap_geoms) > 1 else lap_geoms[0]
+            buffered_geom = combined_geom.buffer(buffer_width)
+            buffered_track = json.loads(buffered_geom.geojson)
+        else:
+            buffered_track = None
+    else:
+        buffered_track = None
 
     # Serialize unique lift geometries
     lift_rides_geojson = {
@@ -346,7 +370,7 @@ def activity_map(request, activity_id):
         "activities/activity_map.html",
         {
             "activity": activity,
-            "activity_track": json.dumps(activity_track),
+            "lap_tracks_geojson": json.dumps(lap_tracks_geojson),
             "buffered_track": json.dumps(buffered_track),
             "lift_rides_geojson": json.dumps(lift_rides_geojson),
             "piste_rides_geojson": json.dumps(piste_rides_geojson),

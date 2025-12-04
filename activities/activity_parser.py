@@ -1131,6 +1131,14 @@ class ActivityParser:
             lap_instance, created = Lap.objects.update_or_create(
                 lap_index=lap.lap_index, activity=activity_instance, defaults=lap_data
             )
+            lap_instance.geom = LineString([
+                (
+                    activity_streams["latlng"].data[i][1],
+                    activity_streams["latlng"].data[i][0]
+                )
+                for i in range(lap.start_index, lap.end_index - 5)
+            ], srid=4326)
+            lap_instance.save()
             logger.info(f'{"Created" if created else "Updated"} Lap: {lap_instance.lap_index}')
 
         # Handle lap splitting for activities with insufficient auto-pause data
@@ -1284,38 +1292,13 @@ class ActivityParser:
         laps = list(activity_instance.laps.all().order_by('lap_index'))
         logger.info(f"Processing {len(laps)} laps for activity {activity_instance.id}")
 
-        # Check if activity has geometry
-        if not activity_instance.geom or activity_instance.geom.empty:
-            logger.warning(f"Activity {activity_instance.id} has no geometry, cannot process piste rides")
-            self.profiler.end_operation('process_piste_rides')
-            return
-
-        # Get activity geometry coordinates
-        activity_coords = list(activity_instance.geom.coords)
-
         for lap in laps:
             logger.debug(f"Processing lap {lap.lap_index} for activity {activity_instance.id}")
 
-            # Check if lap has valid stream indices
-            if lap.start_index_stream is None or lap.end_index_stream is None:
-                logger.debug(f"Lap {lap.lap_index} has no stream indices, skipping")
+            lap_geom = lap.geom
+            if not lap_geom:
+                logger.warning(f"Lap {lap.lap_index} has no geometry, skipping piste ride processing")
                 continue
-
-            # Extract lap segment from activity geometry using stream indices
-            start_idx = lap.start_index_stream
-            end_idx = lap.end_index_stream + 1  # +1 because slicing is exclusive at the end
-
-            if start_idx >= len(activity_coords) or end_idx > len(activity_coords):
-                logger.warning(f"Lap {lap.lap_index} has invalid stream indices ({start_idx}-{end_idx}) for activity with {len(activity_coords)} points")
-                continue
-
-            if end_idx - start_idx < 2:
-                logger.debug(f"Lap {lap.lap_index} has insufficient points ({end_idx - start_idx}), skipping")
-                continue
-
-            # Create LineString from lap segment
-            lap_coords = activity_coords[start_idx:end_idx]
-            lap_geom = LineString(lap_coords)
 
             # Buffer the lap geometry
             buffered_lap_geom = lap_geom.buffer(buffer_width)

@@ -97,6 +97,7 @@ class Activity(models.Model):
 
 class Lap(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='laps')
+    geom = models.LineStringField(null=True)
     lap_index = models.PositiveIntegerField(null=True)
     start_index_stream = models.PositiveIntegerField(null=True)
     end_index_stream = models.PositiveIntegerField(null=True)
