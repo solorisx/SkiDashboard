@@ -39,7 +39,7 @@ logger = logging.getLogger('core')
 class ActivityParserConfig:
     """Configuration settings for the activity parser."""
     DEFAULT_MAX_DISTANCE: int = 250
-    DEFAULT_BUFFER_METERS: int = 50
+    DEFAULT_BUFFER_METERS: int = 200
     CACHE_TIMEOUT_SECONDS: int = None # no expiration
     MAX_SPATIAL_INDEX_ENTRIES: int = 300
     MIN_LAPS_FOR_SPLIT: int = 30
@@ -949,7 +949,7 @@ class ActivityParser:
         if not activity.geom:
             self.calc_line_geom(activity)
 
-        buffer_width = self.config.DEFAULT_BUFFER_METERS / 40000000 * 360  # roughly 50 meters
+        buffer_width = self.config.DEFAULT_BUFFER_METERS / 40000000 * 360  # roughly 100 meters
         buffered_geom = activity.geom.buffer(buffer_width)
         segments = PisteSegment.objects.filter(geom__coveredby=buffered_geom)
 
@@ -1200,13 +1200,14 @@ class ActivityParser:
 
         self.profiler.end_operation('process_lift_rides')
 
-    def _calculate_piste_coverage(self, piste: Piste, buffered_activity_geom) -> float:
+    def _calculate_piste_coverage(self, piste: Piste, buffered_lap_geom) -> float:
         """
-        Calculate what percentage of a piste is covered by the activity track.
+        Calculate what percentage of a piste is covered by the lap track.
+        Handles both line-based and area-based pistes differently.
 
         Args:
             piste: The piste to check coverage for
-            buffered_activity_geom: Activity geometry buffered by ~50m
+            buffered_lap_geom: Lap geometry buffered by ~100m
 
         Returns:
             Coverage percentage (0-100)
@@ -1215,17 +1216,38 @@ class ActivityParser:
             return 0.0
 
         try:
-            # Get intersection of piste with buffered activity track
-            intersection = piste.geom.intersection(buffered_activity_geom)
+            # Get intersection of piste with buffered lap track
+            intersection = piste.geom.intersection(buffered_lap_geom)
 
-            # Calculate lengths (in degrees - consistent for percentage calculation)
-            covered_length = intersection.length if intersection else 0
-            total_length = piste.geom.length
-
-            if total_length <= 0:
+            if not intersection or intersection.empty:
                 return 0.0
 
-            coverage_pct = (covered_length / total_length) * 100
+            # Determine if piste is area or line based on way nodes
+            is_area = piste.is_area()
+
+            if is_area:
+                # For area pistes (closed ways), use area coverage
+                # The buffered track intersection with the piste area
+                covered_area = intersection.area if hasattr(intersection, 'area') else 0
+                total_area = piste.geom.area
+
+                if total_area <= 0:
+                    return 0.0
+
+                coverage_pct = (covered_area / total_area) * 100
+                logger.debug(f"Piste {piste.id} is area-based (closed way): covered={covered_area:.6f}, total={total_area:.6f}")
+
+            else:
+                # For line pistes (open ways), use length coverage
+                covered_length = intersection.length if hasattr(intersection, 'length') else 0
+                total_length = piste.geom.length
+
+                if total_length <= 0:
+                    return 0.0
+
+                coverage_pct = (covered_length / total_length) * 100
+                logger.debug(f"Piste {piste.id} is line-based (open way): covered={covered_length:.6f}, total={total_length:.6f}")
+
             return min(coverage_pct, 100.0)  # Cap at 100%
 
         except Exception as e:
@@ -1237,7 +1259,8 @@ class ActivityParser:
         Process and create piste ride instances based on 80% coverage threshold.
 
         A piste is considered "ridden" if 80% or more of its length intersects
-        with the activity's GPS track (buffered by ~50m).
+        with a lap's GPS track (buffered by ~100m). Processing is done lap by lap
+        to avoid counting pistes during lift rides (gaps between laps).
 
         Args:
             activity_instance: The activity to process
@@ -1249,41 +1272,87 @@ class ActivityParser:
         lap_ids = activity_instance.laps.values_list('id', flat=True)
         PisteRide.objects.filter(lap_id__in=lap_ids).delete()
 
-        # Get activity geometry
-        if not activity_instance.geom:
-            logger.warning(f"No geometry for activity {activity_instance.id}")
+        # Track unique pistes by name across all laps to avoid duplicates
+        # (some pistes are modeled as both line and area)
+        seen_piste_names = {}  # name -> piste object (first occurrence)
+        piste_rides_to_create = []
+
+        # Buffer width for ~100 meters
+        buffer_width = self.config.DEFAULT_BUFFER_METERS / 40000000 * 360
+
+        # Process each lap separately
+        laps = list(activity_instance.laps.all().order_by('lap_index'))
+        logger.info(f"Processing {len(laps)} laps for activity {activity_instance.id}")
+
+        # Check if activity has geometry
+        if not activity_instance.geom or activity_instance.geom.empty:
+            logger.warning(f"Activity {activity_instance.id} has no geometry, cannot process piste rides")
             self.profiler.end_operation('process_piste_rides')
             return
 
-        # Buffer geometry by ~50 meters
-        buffer_width = self.config.DEFAULT_BUFFER_METERS / 40000000 * 360
-        buffered_geom = activity_instance.geom.buffer(buffer_width)
-
-        # Find intersecting pistes
-        intersecting_pistes = Piste.objects.filter(
-            geom__intersects=buffered_geom,
-            geom__isnull=False
-        )
-
-        logger.info(f"Found {intersecting_pistes.count()} intersecting pistes for activity {activity_instance.id}")
-
-        # Calculate coverage and identify ridden pistes
-        ridden_pistes = []
-        for piste in intersecting_pistes:
-            coverage_pct = self._calculate_piste_coverage(piste, buffered_geom)
-
-            logger.debug(f"Piste {piste.id} ({piste.name or 'unnamed'}): {coverage_pct:.1f}% coverage")
-
-            if coverage_pct >= 80.0:
-                ridden_pistes.append(piste)
-                logger.info(f"Piste {piste.id} ({piste.name or 'unnamed'}) qualified with {coverage_pct:.1f}% coverage")
-
-        # Create PisteRides for each lap
-        piste_rides_to_create = []
-        laps = list(activity_instance.laps.all().order_by('lap_index'))
+        # Get activity geometry coordinates
+        activity_coords = list(activity_instance.geom.coords)
 
         for lap in laps:
-            for piste_index, piste in enumerate(ridden_pistes):
+            logger.debug(f"Processing lap {lap.lap_index} for activity {activity_instance.id}")
+
+            # Check if lap has valid stream indices
+            if lap.start_index_stream is None or lap.end_index_stream is None:
+                logger.debug(f"Lap {lap.lap_index} has no stream indices, skipping")
+                continue
+
+            # Extract lap segment from activity geometry using stream indices
+            start_idx = lap.start_index_stream
+            end_idx = lap.end_index_stream + 1  # +1 because slicing is exclusive at the end
+
+            if start_idx >= len(activity_coords) or end_idx > len(activity_coords):
+                logger.warning(f"Lap {lap.lap_index} has invalid stream indices ({start_idx}-{end_idx}) for activity with {len(activity_coords)} points")
+                continue
+
+            if end_idx - start_idx < 2:
+                logger.debug(f"Lap {lap.lap_index} has insufficient points ({end_idx - start_idx}), skipping")
+                continue
+
+            # Create LineString from lap segment
+            lap_coords = activity_coords[start_idx:end_idx]
+            lap_geom = LineString(lap_coords)
+
+            # Buffer the lap geometry
+            buffered_lap_geom = lap_geom.buffer(buffer_width)
+
+            # Find intersecting pistes for this lap
+            intersecting_pistes = Piste.objects.filter(
+                geom__intersects=buffered_lap_geom,
+                geom__isnull=False
+            ).select_related('way')
+
+            logger.debug(f"Lap {lap.lap_index}: Found {intersecting_pistes.count()} intersecting pistes")
+
+            # Calculate coverage for each piste
+            lap_ridden_pistes = []
+            for piste in intersecting_pistes:
+                coverage_pct = self._calculate_piste_coverage(piste, buffered_lap_geom)
+
+                piste_name = piste.name or f"unnamed_{piste.id}"
+                logger.debug(f"Lap {lap.lap_index} - Piste {piste.id} '{piste_name}': {coverage_pct:.1f}% coverage")
+
+                if coverage_pct >= 80.0:
+                    lap_ridden_pistes.append(piste)
+                    logger.info(f"Lap {lap.lap_index} - Piste '{piste_name}' qualified with {coverage_pct:.1f}% coverage")
+
+                    '''
+                    # Check if we've already seen this piste name
+                    if piste_name not in seen_piste_names:
+                        seen_piste_names[piste_name] = piste
+                        lap_ridden_pistes.append(piste)
+                        logger.info(f"Lap {lap.lap_index} - Piste '{piste_name}' qualified with {coverage_pct:.1f}% coverage")
+                    else:
+                        # Skip duplicate (e.g., same piste as line and area)
+                        logger.debug(f"Lap {lap.lap_index} - Skipping duplicate piste '{piste_name}' (already seen)")
+                    '''
+                    
+            # Create PisteRides for this lap
+            for piste_index, piste in enumerate(lap_ridden_pistes):
                 # Calculate timestamp (sequential within lap)
                 timestamp = lap.start_time + timedelta(seconds=piste_index)
 
@@ -1295,10 +1364,13 @@ class ActivityParser:
                     )
                 )
 
-        # Bulk create
+            logger.debug(f"Lap {lap.lap_index}: {len(lap_ridden_pistes)} unique pistes qualified")
+
+        # Bulk create all piste rides
         if piste_rides_to_create:
             PisteRide.objects.bulk_create(piste_rides_to_create)
-            logger.info(f"Created {len(piste_rides_to_create)} PisteRides for activity {activity_instance.id}")
+            logger.info(f"Created {len(piste_rides_to_create)} PisteRides across {len(laps)} laps for activity {activity_instance.id}")
+            logger.info(f"Unique pistes by name: {len(seen_piste_names)}")
         else:
             logger.info(f"No pistes met 80% threshold for activity {activity_instance.id}")
 
@@ -1430,6 +1502,22 @@ class ActivityParser:
                 uphill=True
             ).select_related('aerialway', 'lap').order_by('timestamp')
 
+            # Get piste rides (>500m only for summary)
+            piste_rides = PisteRide.objects.filter(
+                lap__activity=activity_instance
+            ).select_related('piste', 'piste__way', 'lap').order_by('lap__lap_index', 'timestamp')
+
+            # Calculate length in meters and filter to >500m
+            piste_rides_filtered = []
+            for piste_ride in piste_rides:
+                if piste_ride.piste.geom:
+                    # Transform to Web Mercator (EPSG:3857) for accurate length calculation
+                    geom_meters = piste_ride.piste.geom.transform(3857, clone=True)
+                    length_meters = int(geom_meters.length)
+                    if length_meters > 500:
+                        piste_ride.length_meters = length_meters
+                        piste_rides_filtered.append(piste_ride)
+
             # Get badges earned for this activity
             from activities.models import ActivityBadge
             badges = ActivityBadge.objects.filter(
@@ -1466,6 +1554,7 @@ class ActivityParser:
                 'avg_speed': round(activity_instance.avg_speed * 3.6, 1) if activity_instance.avg_speed else None,
                 'max_speed': round(activity_instance.max_speed * 3.6, 1) if activity_instance.max_speed else None,
                 'lift_rides': lift_rides,
+                'piste_rides': piste_rides_filtered,
                 'badges': badges,
                 'completeness_percentage': round(completeness_data.get('daily_completion_percentage', 0)) if completeness_data else None,
                 'lifts_used_today': completeness_data.get('lifts_used_today', 0) if completeness_data else 0,

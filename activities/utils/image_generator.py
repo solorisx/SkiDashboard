@@ -339,6 +339,64 @@ def create_shareable_image(activity):
                      fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_lift_name)
             y_offset += line_height
 
+        y_offset += 40  # Extra spacing before piste rides
+    else:
+        # No lifts, add some spacing
+        y_offset += 20
+
+    # --- TOP PISTES SECTION ---
+    from activities.models import PisteRide
+
+    # Get piste rides for this activity (>500m only)
+    piste_rides = PisteRide.objects.filter(
+        lap__activity=activity
+    ).select_related('piste', 'piste__way').order_by('lap__lap_index', 'timestamp')
+
+    # Calculate length in meters and filter to >500m
+    piste_counts = Counter()
+    for piste_ride in piste_rides:
+        if piste_ride.piste.geom:
+            # Transform to Web Mercator (EPSG:3857) for accurate length calculation
+            geom_meters = piste_ride.piste.geom.transform(3857, clone=True)
+            length_meters = int(geom_meters.length)
+            if length_meters > 500:
+                piste_name = piste_ride.piste.name or f"Unnamed Piste {piste_ride.piste.id}"
+                piste_counts[piste_name] += 1
+
+    if piste_counts and y_offset < IMAGE_HEIGHT - 200:  # Make sure we have space
+        # Get top 5 pistes
+        top_pistes = piste_counts.most_common(5)
+        total_pistes = sum(piste_counts.values())
+        top_pistes_count = sum(count for _, count in top_pistes)
+        other_pistes_count = total_pistes - top_pistes_count
+
+        # Draw top pistes section heading
+        draw.text((IMAGE_WIDTH // 2, y_offset), "Top Pistes",
+                 fill=hex_to_rgb(COLOR_TEXT_PRIMARY), anchor="mt", font=font_heading)
+        y_offset += 60
+
+        # Draw piste list with counts
+        font_piste_count = get_font(36, bold=True)
+        font_piste_name = get_font(32)
+        line_height = 50
+
+        for piste_name, count in top_pistes:
+            # Truncate long piste names
+            display_name = piste_name[:35] + "..." if len(piste_name) > 35 else piste_name
+
+            # Draw count and piste name
+            text = f"{count}× {display_name}"
+            draw.text((IMAGE_WIDTH // 2, y_offset), text,
+                     fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_piste_name)
+            y_offset += line_height
+
+        # Add "other pistes" if there are more than 5 unique pistes
+        if other_pistes_count > 0:
+            text = f"{other_pistes_count}× Other pistes"
+            draw.text((IMAGE_WIDTH // 2, y_offset), text,
+                     fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_piste_name)
+            y_offset += line_height
+
         y_offset += 40  # Extra spacing before branding
 
     # --- BRANDING SECTION ---

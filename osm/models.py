@@ -267,6 +267,22 @@ class Piste(models.Model):
     modified_on = models.DateTimeField(auto_now=True)
     verified_on = models.DateTimeField(null=True, blank=True)
 
+    def is_area(self):
+        """
+        Determines if the piste represents an area (closed polygon) or a line.
+
+        A piste is considered an area if its associated way forms a closed loop,
+        i.e., the first node equals the last node.
+
+        Returns:
+            bool: True if the way is closed (area), False if open (line).
+                  Returns False if way has insufficient nodes.
+        """
+        nodes = list(self.way.nodes.all().order_by('waynode__sequence'))
+        if len(nodes) < 3:  # Need at least 3 nodes to form an area
+            return False
+        return nodes[0].id == nodes[-1].id
+
     def is_geom_outdated(self):
         """
         Checks if the geometry is outdated based on the last node update.

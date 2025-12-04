@@ -181,7 +181,19 @@ def activity_detail(request, activity_id):
         
     laps = activity.laps.all().order_by("lap_index")
     lift_rides = LiftRide.objects.filter(lap__activity=activity).order_by("lap__lap_index", "timestamp")
-    piste_rides = PisteRide.objects.filter(lap__activity=activity).select_related('piste').order_by("lap__lap_index", "timestamp")
+    piste_rides = PisteRide.objects.filter(lap__activity=activity).select_related('piste', 'piste__way').order_by("lap__lap_index", "timestamp")
+
+    # Calculate length in meters for each piste (transform from degrees to meters)
+    for piste_ride in piste_rides:
+        if piste_ride.piste.geom:
+            # Transform to Web Mercator (EPSG:3857) for accurate length calculation
+            geom_meters = piste_ride.piste.geom.transform(3857, clone=True)
+            piste_ride.length_meters = int(geom_meters.length)
+        else:
+            piste_ride.length_meters = None
+
+    # Filter to only show piste rides > 500m
+    piste_rides = [pr for pr in piste_rides if pr.length_meters and pr.length_meters > 500]
     aerialways = (
         Aerialway.objects
         .filter(liftride__lap__activity=activity)
@@ -226,6 +238,124 @@ def activity_detail_strava(request, strava_id):
     """Show details of a single activity from Strava ID."""
     activity = get_object_or_404(Activity, strava_id=strava_id, user=request.user)
     return redirect("activity_detail", activity_id=activity.id)
+
+
+from django.contrib.admin.views.decorators import staff_member_required
+import json
+
+
+@staff_member_required
+def activity_map(request, activity_id):
+    """
+    Display a map view of the activity with GPS track, lift rides, and piste rides.
+    Shows pistes that met the 80% threshold and those that didn't in different colors.
+    Staff only.
+    """
+    activity = get_object_or_404(Activity, id=activity_id)
+
+    # Get unique lift rides
+    unique_lifts = Aerialway.objects.filter(
+        liftride__lap__activity=activity
+    ).distinct()
+
+    # Get unique piste rides (those that met the 80% threshold)
+    qualified_pistes = Piste.objects.filter(
+        pisteride__lap__activity=activity
+    ).distinct()
+
+    # Find pistes that intersected but didn't qualify (below 80% threshold)
+    # Buffer the activity geometry to find all intersecting pistes
+    if activity.geom:
+        # Use same buffer as activity_parser (200 meters)
+        buffer_width = 200 / 40000000 * 360  # ~200 meters in degrees
+        buffered_geom = activity.geom.buffer(buffer_width)
+
+        # Find all intersecting pistes
+        all_intersecting_pistes = Piste.objects.filter(
+            geom__intersects=buffered_geom,
+            geom__isnull=False
+        )
+
+        # Exclude the ones that qualified
+        below_threshold_pistes = all_intersecting_pistes.exclude(
+            id__in=qualified_pistes.values_list('id', flat=True)
+        ).distinct()
+    else:
+        below_threshold_pistes = Piste.objects.none()
+        buffered_geom = None
+
+    # Serialize activity track
+    activity_track = json.loads(activity.geom.geojson) if activity.geom else None
+
+    # Serialize buffered track (for visualization)
+    buffered_track = json.loads(buffered_geom.geojson) if buffered_geom else None
+
+    # Serialize unique lift geometries
+    lift_rides_geojson = {
+        "type": "FeatureCollection",
+        "features": []
+    }
+    for lift in unique_lifts:
+        if lift.geom:
+            feature = {
+                "type": "Feature",
+                "geometry": json.loads(lift.geom.geojson),
+                "properties": {
+                    "name": lift.name or "Unnamed Lift",
+                    "type": lift.aerialway_type or "Unknown"
+                }
+            }
+            lift_rides_geojson["features"].append(feature)
+
+    # Serialize qualified piste geometries (met 80% threshold)
+    piste_rides_geojson = {
+        "type": "FeatureCollection",
+        "features": []
+    }
+    for piste in qualified_pistes:
+        if piste.geom:
+            feature = {
+                "type": "Feature",
+                "geometry": json.loads(piste.geom.geojson),
+                "properties": {
+                    "name": piste.name or "Unnamed Piste",
+                    "difficulty": piste.piste_difficulty or "Unknown"
+                }
+            }
+            piste_rides_geojson["features"].append(feature)
+
+    # Serialize below-threshold piste geometries
+    below_threshold_geojson = {
+        "type": "FeatureCollection",
+        "features": []
+    }
+    for piste in below_threshold_pistes:
+        if piste.geom:
+            feature = {
+                "type": "Feature",
+                "geometry": json.loads(piste.geom.geojson),
+                "properties": {
+                    "name": piste.name or "Unnamed Piste",
+                    "difficulty": piste.piste_difficulty or "Unknown"
+                }
+            }
+            below_threshold_geojson["features"].append(feature)
+
+    return render(
+        request,
+        "activities/activity_map.html",
+        {
+            "activity": activity,
+            "activity_track": json.dumps(activity_track),
+            "buffered_track": json.dumps(buffered_track),
+            "lift_rides_geojson": json.dumps(lift_rides_geojson),
+            "piste_rides_geojson": json.dumps(piste_rides_geojson),
+            "below_threshold_geojson": json.dumps(below_threshold_geojson),
+            "unique_lifts_count": unique_lifts.count(),
+            "unique_pistes_count": qualified_pistes.count(),
+            "below_threshold_count": below_threshold_pistes.count(),
+        },
+    )
 
 
 def swap_coords(geom):

@@ -1,0 +1,269 @@
+{% extends '../base/base.html' %}
+{% load l10n %}
+
+{% block pagetitle %}Activity Map - {{ activity.name }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<style>
+  #activityMap {
+    height: calc(100vh - 200px);
+    width: 100%;
+    min-height: 600px;
+  }
+
+  .map-legend {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    font-size: 14px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .legend-line {
+    width: 30px;
+    height: 3px;
+    margin-right: 10px;
+  }
+
+  .legend-line.buffer { background-color: rgba(0, 0, 0, 0.15); border: 1px solid #666; }
+  .legend-line.track { background-color: #000000; }
+  .legend-line.lifts { background-color: #0066ff; }
+  .legend-line.pistes { background-color: #ff0000; }
+  .legend-line.below-threshold { background-color: #ffa500; }
+
+  .stats-container {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+  }
+
+  .stat-item {
+    display: inline-block;
+    margin-right: 20px;
+    padding: 8px 15px;
+    background: #f8f9fa;
+    border-radius: 5px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: #6c757d;
+    font-weight: 500;
+  }
+
+  .stat-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: #212529;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="mb-1">Activity Map</h1>
+      <h5 class="text-muted mb-0">{{ activity.name }}</h5>
+    </div>
+    <a href="{% url 'activity_detail' activity.id %}" class="btn btn-outline-primary">
+      <i class="bi bi-arrow-left me-1"></i>Back to Activity
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-container">
+    <div class="stat-item">
+      <div class="stat-label">GPS Track</div>
+      <div class="stat-value" style="color: #000000;">1 track</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Unique Lifts</div>
+      <div class="stat-value" style="color: #0066ff;">{{ unique_lifts_count }}</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Qualified Pistes (≥80%)</div>
+      <div class="stat-value" style="color: #ff0000;">{{ unique_pistes_count }}</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Below Threshold (&lt;80%)</div>
+      <div class="stat-value" style="color: #ffa500;">{{ below_threshold_count }}</div>
+    </div>
+  </div>
+
+  <!-- Map Container -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div id="activityMap"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Initialize map
+  var map = L.map('activityMap', {
+    zoomControl: true,
+    scrollWheelZoom: true,
+    doubleClickZoom: true,
+    touchZoom: true,
+    boxZoom: true,
+    keyboard: true
+  });
+
+  // Add tile layer
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Track all bounds for fitting
+  var allBounds = L.latLngBounds([]);
+
+  // Add buffered track (light gray shading - 200m buffer zone)
+  var bufferedTrack = {{ buffered_track|safe }};
+  if (bufferedTrack) {
+    L.geoJSON(bufferedTrack, {
+      style: {
+        color: '#666666',
+        weight: 1,
+        opacity: 0.3,
+        fillColor: '#000000',
+        fillOpacity: 0.1,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }
+    }).addTo(map);
+  }
+
+  // Add GPS track (black)
+  var activityTrack = {{ activity_track|safe }};
+  if (activityTrack && activityTrack.coordinates) {
+    var trackLayer = L.geoJSON(activityTrack, {
+      style: {
+        color: '#000000',
+        weight: 4,
+        opacity: 0.8,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }
+    }).addTo(map);
+
+    allBounds.extend(trackLayer.getBounds());
+  }
+
+  // Add lift rides (blue)
+  var liftRides = {{ lift_rides_geojson|safe }};
+  if (liftRides && liftRides.features && liftRides.features.length > 0) {
+    L.geoJSON(liftRides, {
+      style: {
+        color: '#0066ff',
+        weight: 5,
+        opacity: 0.7,
+        lineCap: 'round',
+        lineJoin: 'round'
+      },
+      onEachFeature: function (feature, layer) {
+        if (feature.properties && feature.properties.name) {
+          layer.bindPopup('<strong>' + feature.properties.name + '</strong>');
+        }
+      }
+    }).addTo(map);
+  }
+
+  // Add qualified piste rides (red - met 80% threshold)
+  var pisteRides = {{ piste_rides_geojson|safe }};
+  if (pisteRides && pisteRides.features && pisteRides.features.length > 0) {
+    L.geoJSON(pisteRides, {
+      style: {
+        color: '#ff0000',
+        weight: 5,
+        opacity: 0.6,
+        lineCap: 'round',
+        lineJoin: 'round'
+      },
+      onEachFeature: function (feature, layer) {
+        if (feature.properties && feature.properties.name) {
+          layer.bindPopup('<strong>' + feature.properties.name + '</strong><br>' +
+                         'Difficulty: ' + (feature.properties.difficulty || 'Unknown') + '<br>' +
+                         '<span style="color: #ff0000;">✓ Qualified (≥80%)</span>');
+        }
+      }
+    }).addTo(map);
+  }
+
+  // Add below-threshold pistes (orange - below 80%)
+  var belowThreshold = {{ below_threshold_geojson|safe }};
+  if (belowThreshold && belowThreshold.features && belowThreshold.features.length > 0) {
+    L.geoJSON(belowThreshold, {
+      style: {
+        color: '#ffa500',
+        weight: 4,
+        opacity: 0.5,
+        lineCap: 'round',
+        lineJoin: 'round',
+        dashArray: '5, 5'
+      },
+      onEachFeature: function (feature, layer) {
+        if (feature.properties && feature.properties.name) {
+          layer.bindPopup('<strong>' + feature.properties.name + '</strong><br>' +
+                         'Difficulty: ' + (feature.properties.difficulty || 'Unknown') + '<br>' +
+                         '<span style="color: #ffa500;">✗ Below threshold (&lt;80%)</span>');
+        }
+      }
+    }).addTo(map);
+  }
+
+  // Add legend
+  var legend = L.control({position: 'topright'});
+  legend.onAdd = function (map) {
+    var div = L.DomUtil.create('div', 'map-legend');
+    div.innerHTML = '<div style="font-weight: bold; margin-bottom: 10px;">Map Legend</div>' +
+      '<div class="legend-item">' +
+      '<div class="legend-line buffer"></div>' +
+      '<span>200m Buffer Zone</span>' +
+      '</div>' +
+      '<div class="legend-item">' +
+      '<div class="legend-line track"></div>' +
+      '<span>GPS Track</span>' +
+      '</div>' +
+      '<div class="legend-item">' +
+      '<div class="legend-line lifts"></div>' +
+      '<span>Lift Rides (' + {{ unique_lifts_count }} + ')</span>' +
+      '</div>' +
+      '<div class="legend-item">' +
+      '<div class="legend-line pistes"></div>' +
+      '<span>Qualified Pistes (' + {{ unique_pistes_count }} + ')</span>' +
+      '</div>' +
+      '<div class="legend-item">' +
+      '<div class="legend-line below-threshold"></div>' +
+      '<span>Below Threshold (' + {{ below_threshold_count }} + ')</span>' +
+      '</div>';
+    return div;
+  };
+  legend.addTo(map);
+
+  // Fit map to all features
+  if (allBounds.isValid()) {
+    map.fitBounds(allBounds, { padding: [50, 50] });
+  } else {
+    // Fallback to activity centroid
+    map.setView([{{ activity.geom.centroid.y|unlocalize }}, {{ activity.geom.centroid.x|unlocalize }}], 13);
+  }
+});
+</script>
+
+{% endblock %}
