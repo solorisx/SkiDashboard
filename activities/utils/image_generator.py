@@ -292,112 +292,119 @@ def create_shareable_image(activity):
 
     y_offset += 2 * (card_height + 20) + 60
 
-    # --- TOP LIFTS SECTION ---
+    # --- TOP LIFTS & PISTES SECTION (TWO COLUMNS) ---
     from collections import Counter
+    from activities.models import PisteRide
 
     # Get lift rides for this activity
     lift_counts = Counter()
-
-    # Query lift rides through laps (use liftride_set to access the through model)
     for lap in activity.laps.all():
         for lift_ride in lap.liftride_set.select_related('aerialway').all():
             if lift_ride.aerialway:
                 lift_name = lift_ride.aerialway.name or f"Lift {lift_ride.aerialway.id}"
                 lift_counts[lift_name] += 1
 
-    if lift_counts:
-        # Get top 5 lifts
-        top_lifts = lift_counts.most_common(5)
-        total_lifts = sum(lift_counts.values())
-        top_lifts_count = sum(count for _, count in top_lifts)
-        other_lifts_count = total_lifts - top_lifts_count
-
-        # Draw top lifts section heading
-        draw.text((IMAGE_WIDTH // 2, y_offset), "Top Lifts",
-                 fill=hex_to_rgb(COLOR_TEXT_PRIMARY), anchor="mt", font=font_heading)
-        y_offset += 60
-
-        # Draw lift list with counts
-        font_lift_count = get_font(36, bold=True)
-        font_lift_name = get_font(32)
-        line_height = 50
-
-        for lift_name, count in top_lifts:
-            # Truncate long lift names
-            display_name = lift_name[:35] + "..." if len(lift_name) > 35 else lift_name
-
-            # Draw count and lift name
-            text = f"{count}× {display_name}"
-            draw.text((IMAGE_WIDTH // 2, y_offset), text,
-                     fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_lift_name)
-            y_offset += line_height
-
-        # Add "other lifts" if there are more than 5 unique lifts
-        if other_lifts_count > 0:
-            text = f"{other_lifts_count}× Other lifts"
-            draw.text((IMAGE_WIDTH // 2, y_offset), text,
-                     fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_lift_name)
-            y_offset += line_height
-
-        y_offset += 40  # Extra spacing before piste rides
-    else:
-        # No lifts, add some spacing
-        y_offset += 20
-
-    # --- TOP PISTES SECTION ---
-    from activities.models import PisteRide
-
     # Get piste rides for this activity (>500m only)
     piste_rides = PisteRide.objects.filter(
         lap__activity=activity
-    ).select_related('piste', 'piste__way').order_by('lap__lap_index', 'timestamp')
+    ).select_related('piste', 'piste__way', 'lap').order_by('lap__lap_index', 'timestamp')
+
+    logger.info(f"Found {piste_rides.count()} total piste rides for activity {activity.id}")
 
     # Calculate length in meters and filter to >500m
+    # Track (lap_id, piste_id) to count each piste only once per lap
+    seen_lap_piste = set()
     piste_counts = Counter()
+
     for piste_ride in piste_rides:
         if piste_ride.piste.geom:
-            # Transform to Web Mercator (EPSG:3857) for accurate length calculation
             geom_meters = piste_ride.piste.geom.transform(3857, clone=True)
             length_meters = int(geom_meters.length)
-            if length_meters > 500:
-                piste_name = piste_ride.piste.name or f"Unnamed Piste {piste_ride.piste.id}"
-                piste_counts[piste_name] += 1
+            logger.debug(f"Piste {piste_ride.piste.name or piste_ride.piste.id}: {length_meters}m")
 
-    if piste_counts and y_offset < IMAGE_HEIGHT - 200:  # Make sure we have space
-        # Get top 5 pistes
-        top_pistes = piste_counts.most_common(5)
-        total_pistes = sum(piste_counts.values())
+            if length_meters > 500 and piste_ride.piste.name:  # Only count named pistes
+                # Create unique key for this lap + piste combination
+                lap_piste_key = (piste_ride.lap.id, piste_ride.piste.id)
+
+                if lap_piste_key not in seen_lap_piste:
+                    seen_lap_piste.add(lap_piste_key)
+                    piste_counts[piste_ride.piste.name] += 1
+                    logger.debug(f"Added piste to counts: {piste_ride.piste.name}")
+                else:
+                    logger.debug(f"Skipping duplicate piste {piste_ride.piste.name} in lap {piste_ride.lap.lap_index}")
+        else:
+            logger.warning(f"Piste {piste_ride.piste.id} has no geometry")
+
+    logger.info(f"Filtered to {len(piste_counts)} unique named pistes >500m: {dict(piste_counts)}")
+
+    # Only draw if we have either lifts or pistes
+    if lift_counts or piste_counts:
+        # Prepare data for both columns
+        top_lifts = lift_counts.most_common(5) if lift_counts else []
+        total_lifts = sum(lift_counts.values()) if lift_counts else 0
+        top_lifts_count = sum(count for _, count in top_lifts)
+        other_lifts_count = total_lifts - top_lifts_count
+
+        top_pistes = piste_counts.most_common(5) if piste_counts else []
+        total_pistes = sum(piste_counts.values()) if piste_counts else 0
         top_pistes_count = sum(count for _, count in top_pistes)
         other_pistes_count = total_pistes - top_pistes_count
 
-        # Draw top pistes section heading
-        draw.text((IMAGE_WIDTH // 2, y_offset), "Top Pistes",
+        logger.info(f"Top 5 lifts: {top_lifts}")
+        logger.info(f"Top 5 pistes: {top_pistes}")
+
+        # Column setup
+        column_padding = 60
+        column_width = (IMAGE_WIDTH - column_padding * 3) // 2
+        left_x = column_padding + column_width // 2
+        right_x = column_padding * 2 + column_width + column_width // 2
+
+        # Fonts
+        font_item_name = get_font(28)
+        line_height = 45
+
+        # Draw column headings
+        draw.text((left_x, y_offset), "Top Lifts",
+                 fill=hex_to_rgb(COLOR_TEXT_PRIMARY), anchor="mt", font=font_heading)
+        draw.text((right_x, y_offset), "Top Pistes",
                  fill=hex_to_rgb(COLOR_TEXT_PRIMARY), anchor="mt", font=font_heading)
         y_offset += 60
 
-        # Draw piste list with counts
-        font_piste_count = get_font(36, bold=True)
-        font_piste_name = get_font(32)
-        line_height = 50
+        # Draw items (up to 5 rows)
+        max_items = max(len(top_lifts) + (1 if other_lifts_count > 0 else 0),
+                       len(top_pistes) + (1 if other_pistes_count > 0 else 0))
 
-        for piste_name, count in top_pistes:
-            # Truncate long piste names
-            display_name = piste_name[:35] + "..." if len(piste_name) > 35 else piste_name
+        for i in range(max_items):
+            # Left column: Lifts
+            if i < len(top_lifts):
+                lift_name, count = top_lifts[i]
+                display_name = lift_name[:18] + "..." if len(lift_name) > 18 else lift_name
+                text = f"{count}× {display_name}"
+                draw.text((left_x, y_offset), text,
+                         fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_item_name)
+            elif i == len(top_lifts) and other_lifts_count > 0:
+                text = f"{other_lifts_count}× Other lifts"
+                draw.text((left_x, y_offset), text,
+                         fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_item_name)
 
-            # Draw count and piste name
-            text = f"{count}× {display_name}"
-            draw.text((IMAGE_WIDTH // 2, y_offset), text,
-                     fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_piste_name)
+            # Right column: Pistes
+            if i < len(top_pistes):
+                piste_name, count = top_pistes[i]
+                display_name = piste_name[:18] + "..." if len(piste_name) > 18 else piste_name
+                text = f"{count}× {display_name}"
+                draw.text((right_x, y_offset), text,
+                         fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_item_name)
+            elif i == len(top_pistes) and other_pistes_count > 0:
+                text = f"{other_pistes_count}× Other pistes"
+                draw.text((right_x, y_offset), text,
+                         fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_item_name)
+
             y_offset += line_height
 
-        # Add "other pistes" if there are more than 5 unique pistes
-        if other_pistes_count > 0:
-            text = f"{other_pistes_count}× Other pistes"
-            draw.text((IMAGE_WIDTH // 2, y_offset), text,
-                     fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_piste_name)
-            y_offset += line_height
-
-        y_offset += 40  # Extra spacing before branding
+        y_offset += 30  # Extra spacing before branding
+    else:
+        logger.info("No lifts or pistes to display")
+        y_offset += 20
 
     # --- BRANDING SECTION ---
     branding_text = "SkiDashboard.com"
