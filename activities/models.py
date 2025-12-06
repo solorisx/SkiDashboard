@@ -56,6 +56,10 @@ class Activity(models.Model):
     def get_num_lift_rides(self):
         return sum(lap.lift_rides.count() for lap in self.laps.all())
     
+    def set_num_lift_rides(self):
+        self.num_lift_rides = self.get_num_lift_rides()
+        self.save()
+    
     def has_valid_season_pass(self):
         """Check if this activity is covered by a valid season pass."""
         from cost.models import SeasonPass

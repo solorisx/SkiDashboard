@@ -205,6 +205,7 @@ def lift_ride_api(request, lift_ride_id=None):
         activity.manually_modified = True
         activity.save(update_fields=['manually_modified'])
         lift_ride.delete()
+        activity.set_num_lift_rides()
         return HttpResponse(status=204)
 
     elif request.method == "PATCH":
@@ -300,6 +301,7 @@ def lift_ride_api(request, lift_ride_id=None):
             # Mark activity as manually modified
             activity.manually_modified = True
             activity.save(update_fields=['manually_modified'])
+            activity.set_num_lift_rides()
             return HttpResponse(status=201)
 
         else:
