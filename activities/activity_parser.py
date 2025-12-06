@@ -844,6 +844,14 @@ class ActivityParser:
                     "end_index_stream": next,
                 })
 
+        total_distance = sum(lap['total_distance'] for lap in lap_data)
+        total_descent = sum(lap['total_descent'] for lap in lap_data)
+        total_ascent = sum(lap['total_ascent'] for lap in lap_data)
+        activity.total_distance = total_distance
+        activity.total_descent = total_descent
+        activity.total_ascent = total_ascent
+        activity.save()
+
         for i, lap_data_item in enumerate(lap_data):
             lap_instance, created = Lap.objects.update_or_create(lap_index=i+1, activity=activity, defaults=lap_data_item)
             lap_instance.geom = LineString([
