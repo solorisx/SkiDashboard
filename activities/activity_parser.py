@@ -1370,6 +1370,13 @@ class ActivityParser:
             PisteRide.objects.bulk_create(piste_rides_to_create)
             logger.info(f"Created {len(piste_rides_to_create)} PisteRides across {len(laps)} laps for activity {activity_instance.id}")
             logger.info(f"Unique pistes by name: {len(seen_piste_names)}")
+
+            # Clear piste completeness cache
+            from activities.utils.completeness import clear_piste_completeness_cache
+            clear_piste_completeness_cache(
+                user_id=activity_instance.user.id,
+                ski_area_id=activity_instance.ski_area.id if activity_instance.ski_area else None
+            )
         else:
             logger.info(f"No pistes met 80% threshold for activity {activity_instance.id}")
 

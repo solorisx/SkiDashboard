@@ -266,6 +266,19 @@ class Piste(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
     verified_on = models.DateTimeField(null=True, blank=True)
+    length = models.FloatField(null=True, blank=True, help_text="Length in meters (EPSG:3857)")
+
+    def save(self, *args, **kwargs):
+        """Override save to auto-calculate length for line-based pistes."""
+        if self.geom and not self.is_area():
+            try:
+                metric_geom = self.geom.transform(3857, clone=True)
+                self.length = metric_geom.length
+            except GEOSException:
+                self.length = None
+        else:
+            self.length = None
+        super().save(*args, **kwargs)
 
     def is_area(self):
         """

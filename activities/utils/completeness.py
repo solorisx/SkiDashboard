@@ -2,8 +2,8 @@ import logging
 from django.core.cache import cache
 from django.db.models import Count
 
-from activities.models import LiftRide
-from osm.models import Aerialway, SkiArea, LiftFilterConfig
+from activities.models import LiftRide, PisteRide
+from osm.models import Aerialway, SkiArea, LiftFilterConfig, Piste
 
 logger = logging.getLogger(__name__)
 
@@ -532,3 +532,365 @@ def clear_completeness_cache(user_id, ski_area_id=None, season=None):
         # Clear all ski area caches for this user (less efficient but comprehensive)
         # In production, you might want to use cache versioning instead
         pass
+
+
+# ============================================================================
+# PISTE COMPLETENESS FUNCTIONS
+# ============================================================================
+# The following functions provide distance-based completeness tracking for
+# pistes, mirroring the count-based lift completeness logic above.
+# ============================================================================
+
+
+def get_available_pistes_in_ski_area(ski_area, user=None):
+    """
+    Get all available downhill, line-based pistes in a ski area.
+
+    Args:
+        ski_area: SkiArea object
+        user: User object (currently unused, reserved for future filtering)
+
+    Returns:
+        QuerySet of Piste objects (downhill, line-based only, with cached length)
+    """
+    # Check cache first
+    cache_key = f"available_pistes_{ski_area.id}_{user.id if user else 'anon'}"
+    cached_piste_ids = cache.get(cache_key)
+    if cached_piste_ids:
+        logger.debug(f"Using cached available pistes for ski area {ski_area.id}")
+        return Piste.objects.filter(id__in=cached_piste_ids)
+
+    try:
+        pistes = Piste.objects.none()
+
+        # Strategy 1: Direct geometry intersection
+        if ski_area.geom:
+            pistes_with_geom = Piste.objects.exclude(geom__isnull=True).exists()
+            if pistes_with_geom:
+                # Filter for downhill pistes (piste_type='downhill' or NULL)
+                from django.db.models import Q
+                pistes = Piste.objects.filter(
+                    geom__intersects=ski_area.geom
+                ).filter(
+                    Q(piste_type='downhill') | Q(piste_type__isnull=True)
+                ).exclude(geom__isnull=True).distinct()
+                logger.info(f"Using direct geometry intersection for ski area {ski_area.id}")
+
+        # Strategy 2: Boundary way constructed geometry
+        if not pistes.exists() and ski_area.way:
+            boundary_geom = ski_area.way.constructed_geom
+            if boundary_geom:
+                from django.db.models import Q
+                pistes = Piste.objects.filter(
+                    geom__intersects=boundary_geom
+                ).filter(
+                    Q(piste_type='downhill') | Q(piste_type__isnull=True)
+                ).exclude(geom__isnull=True).distinct()
+                logger.info(f"Using constructed geometry for ski area {ski_area.id}")
+
+        # Strategy 3: Way relationships fallback
+        if not pistes.exists():
+            from django.db.models import Q
+            pistes = Piste.objects.filter(
+                way__ski_areas=ski_area
+            ).filter(
+                Q(piste_type='downhill') | Q(piste_type__isnull=True)
+            ).exclude(geom__isnull=True).distinct()
+            if pistes.exists():
+                logger.info(f"Found {pistes.count()} pistes using way relationships for ski area {ski_area.id}")
+
+        # Strategy 4: Check duplicate ski areas
+        if not pistes.exists():
+            duplicate_areas = SkiArea.objects.filter(name=ski_area.name).exclude(id=ski_area.id)
+            for dup in duplicate_areas:
+                from django.db.models import Q
+                if dup.geom:
+                    pistes = Piste.objects.filter(
+                        geom__intersects=dup.geom
+                    ).filter(
+                        Q(piste_type='downhill') | Q(piste_type__isnull=True)
+                    ).exclude(geom__isnull=True).distinct()
+                elif dup.way:
+                    pistes = Piste.objects.filter(
+                        way__ski_areas=dup
+                    ).filter(
+                        Q(piste_type='downhill') | Q(piste_type__isnull=True)
+                    ).exclude(geom__isnull=True).distinct()
+                if pistes.exists():
+                    logger.info(f"Found pistes using duplicate ski area {dup.id}")
+                    break
+
+        # Strategy 5: Actual ride data fallback
+        if not pistes.exists():
+            from django.db.models import Q
+            ridden_piste_ids = PisteRide.objects.filter(
+                lap__activity__ski_area=ski_area
+            ).values_list('piste', flat=True).distinct()
+
+            if ridden_piste_ids:
+                pistes = Piste.objects.filter(
+                    id__in=ridden_piste_ids
+                ).filter(
+                    Q(piste_type='downhill') | Q(piste_type__isnull=True)
+                ).exclude(geom__isnull=True)
+                logger.info(f"Found {pistes.count()} pistes using ride data for ski area {ski_area.id}")
+
+        # CRITICAL: Post-filter for line-based pistes only
+        # Since is_area() is a Python method, we must do this in-memory
+        line_piste_ids = []
+        for piste in pistes:
+            if not piste.is_area():
+                line_piste_ids.append(piste.id)
+
+        logger.info(f"Found {len(line_piste_ids)} line-based pistes for ski area {ski_area.id}")
+
+        # Cache the result for 30 minutes
+        cache.set(cache_key, line_piste_ids, 1800)
+
+        return Piste.objects.filter(id__in=line_piste_ids)
+
+    except Exception as e:
+        logger.warning(f"Error finding pistes in ski area {ski_area.id}: {e}")
+        return Piste.objects.none()
+
+
+def calculate_ski_area_piste_completeness(user, ski_area, force_calc=False, season=None):
+    """
+    Calculate distance-based piste completeness for a user in a specific ski area.
+
+    Uses distance-based metric: (total_distance_ridden / total_distance_available) × 100
+
+    Args:
+        user: User object
+        ski_area: SkiArea object
+        force_calc: Whether to force recalculation (ignore cache)
+        season: Optional season string (e.g., "2023-2024") for season-specific filtering
+
+    Returns:
+        dict: {
+            'total_distance_available': float (meters),
+            'total_distance_ridden': float (meters),
+            'completion_percentage': float,
+            'pistes_ridden': list of dicts,
+            'pistes_not_ridden': list of dicts
+        }
+    """
+    logger.debug(f"Calculating piste completeness for user {user.id} in ski area {ski_area.id}, season={season}")
+
+    # Cache key includes season
+    cache_key = f"piste_completeness_{user.id}_{ski_area.id}"
+    if season:
+        cache_key += f"_{season}"
+
+    if not force_calc:
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            logger.debug(f"Using cached piste completeness")
+            return cached_result
+
+    # Get all available line-based pistes
+    available_pistes = get_available_pistes_in_ski_area(ski_area, user=user)
+
+    # Calculate total available distance
+    total_distance_available = sum(
+        p.length for p in available_pistes if p.length
+    )
+
+    if total_distance_available == 0:
+        result = {
+            'total_distance_available': 0,
+            'total_distance_ridden': 0,
+            'completion_percentage': 0,
+            'pistes_ridden': [],
+            'pistes_not_ridden': []
+        }
+        cache.set(cache_key, result, 3600)  # Cache for 1 hour even if no pistes
+        return result
+
+    # Get pistes the user has ridden
+    user_piste_rides_query = PisteRide.objects.filter(
+        lap__activity__user=user,
+        lap__activity__ski_area=ski_area,
+        piste__in=available_pistes
+    )
+
+    # Apply season filtering
+    if season:
+        from activities.utils.seasons import parse_season_string
+        season_start, season_end = parse_season_string(season, user=user)
+        if season_start and season_end:
+            user_piste_rides_query = user_piste_rides_query.filter(
+                lap__activity__start_time__gte=season_start,
+                lap__activity__start_time__lte=season_end
+            )
+
+    # Get unique pistes ridden
+    ridden_piste_ids = user_piste_rides_query.values_list('piste', flat=True).distinct()
+    ridden_pistes = available_pistes.filter(id__in=ridden_piste_ids)
+    not_ridden_pistes = available_pistes.exclude(id__in=ridden_piste_ids)
+
+    # Calculate total distance ridden
+    total_distance_ridden = sum(
+        p.length for p in ridden_pistes if p.length
+    )
+
+    completion_percentage = 0
+    if total_distance_available > 0:
+        completion_percentage = round(
+            (total_distance_ridden / total_distance_available) * 100, 1
+        )
+
+    result = {
+        'total_distance_available': round(total_distance_available, 1),
+        'total_distance_ridden': round(total_distance_ridden, 1),
+        'completion_percentage': completion_percentage,
+        'pistes_ridden': list(ridden_pistes.values('id', 'name', 'length', 'piste_difficulty')),
+        'pistes_not_ridden': list(not_ridden_pistes.values('id', 'name', 'length', 'piste_difficulty'))
+    }
+
+    # Cache indefinitely, clear on data change
+    cache.set(cache_key, result, None)
+    return result
+
+
+def calculate_activity_piste_completeness(activity):
+    """
+    Calculate piste completeness for a single activity.
+
+    Args:
+        activity: Activity object
+
+    Returns:
+        dict: {
+            'distance_skied_today': float (meters),
+            'total_distance_available': float (meters),
+            'daily_completion_percentage': float,
+            'new_pistes_discovered': int,
+            'new_distance_discovered': float (meters)
+        }
+    """
+    if not activity.ski_area:
+        return {
+            'distance_skied_today': 0,
+            'total_distance_available': 0,
+            'daily_completion_percentage': 0,
+            'new_pistes_discovered': 0,
+            'new_distance_discovered': 0
+        }
+
+    # Get pistes ridden in this activity
+    activity_piste_rides = PisteRide.objects.filter(
+        lap__activity=activity
+    ).select_related('piste')
+
+    activity_piste_ids = activity_piste_rides.values_list('piste', flat=True).distinct()
+    activity_pistes = Piste.objects.filter(id__in=activity_piste_ids)
+
+    # Calculate distance skied today (only line-based pistes)
+    distance_skied_today = sum(
+        p.length for p in activity_pistes if p.length and not p.is_area()
+    )
+
+    # Get all available pistes in ski area
+    available_pistes = get_available_pistes_in_ski_area(activity.ski_area, user=activity.user)
+    total_distance_available = sum(p.length for p in available_pistes if p.length)
+
+    # Calculate daily completion percentage
+    daily_percentage = 0
+    if total_distance_available > 0:
+        daily_percentage = round((distance_skied_today / total_distance_available) * 100, 1)
+
+    # Calculate new pistes discovered (not ridden before this activity)
+    previous_piste_rides = PisteRide.objects.filter(
+        lap__activity__user=activity.user,
+        lap__activity__ski_area=activity.ski_area,
+        lap__activity__start_time__lt=activity.start_time
+    ).values_list('piste', flat=True).distinct()
+
+    new_piste_ids = set(activity_piste_ids) - set(previous_piste_rides)
+    new_pistes = Piste.objects.filter(id__in=new_piste_ids)
+
+    new_distance_discovered = sum(
+        p.length for p in new_pistes if p.length and not p.is_area()
+    )
+
+    return {
+        'distance_skied_today': round(distance_skied_today, 1),
+        'total_distance_available': round(total_distance_available, 1),
+        'daily_completion_percentage': daily_percentage,
+        'new_pistes_discovered': len(new_piste_ids),
+        'new_distance_discovered': round(new_distance_discovered, 1)
+    }
+
+
+def calculate_overall_piste_completeness(user):
+    """
+    Calculate overall piste completeness across all visited ski areas for a user.
+
+    Args:
+        user: User object
+
+    Returns:
+        dict: Overall completeness statistics
+    """
+    cache_key = f"overall_piste_completeness_{user.id}"
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        logger.debug(f"Using cached overall piste completeness for user {user.id}")
+        return cached_result
+
+    # Get all ski areas the user has visited
+    visited_ski_areas = SkiArea.objects.filter(
+        activity__user=user
+    ).distinct()
+
+    if not visited_ski_areas.exists():
+        result = {
+            'total_ski_areas': 0,
+            'total_distance_available': 0,
+            'total_distance_ridden': 0,
+            'overall_percentage': 0,
+            'ski_area_breakdown': []
+        }
+        cache.set(cache_key, result, 3600)
+        return result
+
+    ski_area_breakdown = []
+    total_distance_available = 0
+    total_distance_ridden = 0
+
+    for ski_area in visited_ski_areas:
+        completeness = calculate_ski_area_piste_completeness(user, ski_area)
+        ski_area_breakdown.append({
+            'ski_area_id': ski_area.id,
+            'ski_area_name': ski_area.name,
+            'completeness': completeness
+        })
+        total_distance_available += completeness['total_distance_available']
+        total_distance_ridden += completeness['total_distance_ridden']
+
+    overall_percentage = 0
+    if total_distance_available > 0:
+        overall_percentage = round(
+            (total_distance_ridden / total_distance_available) * 100, 1
+        )
+
+    result = {
+        'total_ski_areas': visited_ski_areas.count(),
+        'total_distance_available': round(total_distance_available, 1),
+        'total_distance_ridden': round(total_distance_ridden, 1),
+        'overall_percentage': overall_percentage,
+        'ski_area_breakdown': ski_area_breakdown
+    }
+
+    cache.set(cache_key, result, 3600)  # 1 hour cache
+    return result
+
+
+def clear_piste_completeness_cache(user_id, ski_area_id=None, season=None):
+    """Clear piste completeness cache for a user."""
+    cache.delete(f"overall_piste_completeness_{user_id}")
+
+    if ski_area_id:
+        cache.delete(f"piste_completeness_{user_id}_{ski_area_id}_{season or ''}")
+        cache.delete(f"available_pistes_{ski_area_id}_{user_id}")

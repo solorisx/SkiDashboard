@@ -217,6 +217,12 @@ def activity_detail(request, activity_id):
     except:
         pass
 
+    # Calculate piste completeness for this activity
+    piste_completeness = None
+    if activity.ski_area:
+        from activities.utils.completeness import calculate_activity_piste_completeness
+        piste_completeness = calculate_activity_piste_completeness(activity)
+
     return render(
         request,
         "activities/activity_detail.html",
@@ -229,6 +235,7 @@ def activity_detail(request, activity_id):
             "aerialways": aerialways,
             "aerialways_dropdown": aerialways_dropdown,
             "user_opt_in_strava_write": user_opt_in_strava_write,
+            "piste_completeness": piste_completeness,
         },
     )
 

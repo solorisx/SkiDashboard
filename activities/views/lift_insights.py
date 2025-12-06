@@ -182,6 +182,11 @@ def ski_area_completeness_detail(request, ski_area_id, season=None):
     # Calculate completeness for this ski area (with season filtering)
     completeness = calculate_ski_area_completeness(request.user, ski_area, season=season)
 
+    # Calculate piste completeness for this ski area
+    from .piste_insights import get_available_pistes_in_ski_area
+    from ..utils.completeness import calculate_ski_area_piste_completeness
+    piste_completeness = calculate_ski_area_piste_completeness(request.user, ski_area, season=season)
+
     # Get lifts the user has ridden with additional stats
     user_lift_rides = LiftRide.objects.filter(
         lap__activity__user=request.user,
@@ -246,6 +251,7 @@ def ski_area_completeness_detail(request, ski_area_id, season=None):
     context = {
         'ski_area': ski_area,
         'completeness': completeness,
+        'piste_completeness': piste_completeness,
         'ridden_lifts_with_stats': ridden_lifts_with_stats,
         'not_ridden_lifts': not_ridden_lifts,
         'recent_activities': recent_activities,

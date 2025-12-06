@@ -61,6 +61,13 @@ from .lift_insights import (
     reload_ski_area_completeness,
 )
 
+from .piste_insights import (
+    piste_insights,
+    ski_area_piste_completeness_detail,
+    ski_area_piste_completeness_all,
+    reload_ski_area_piste_completeness,
+)
+
 # For backward compatibility, we also need to ensure the home_stats view 
 # returns a proper HttpResponse for template rendering
 from django.shortcuts import render
@@ -116,4 +123,10 @@ __all__ = [
     'ski_area_completeness_detail',
     'ski_area_completeness_all',
     'reload_ski_area_completeness',
+
+    # Piste insights views
+    'piste_insights',
+    'ski_area_piste_completeness_detail',
+    'ski_area_piste_completeness_all',
+    'reload_ski_area_piste_completeness',
 ]

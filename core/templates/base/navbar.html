@@ -59,7 +59,7 @@
 
                 <!-- Lift Rides Dropdown -->
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle fw-medium px-3 py-2 rounded-3 nav-link-modern" 
+                    <a class="nav-link dropdown-toggle fw-medium px-3 py-2 rounded-3 nav-link-modern"
                        href="#" id="liftRidesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-arrow-up-circle me-2"></i>Lift Rides
                     </a>
@@ -73,6 +73,27 @@
                         <li>
                             <a class="dropdown-item dropdown-item-modern" href="{% url 'lift_ride_list_season_all' %}">
                                 <i class="bi bi-snow2 me-2 text-warning"></i>By Season
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- Piste Rides Dropdown -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle fw-medium px-3 py-2 rounded-3 nav-link-modern"
+                       href="#" id="pisteRidesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-arrow-down-circle me-2"></i>Piste Rides
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-modern shadow-lg border-0 mt-2" aria-labelledby="pisteRidesDropdown">
+                        <li>
+                            <a class="dropdown-item dropdown-item-modern" href="{% url 'piste_insights' %}">
+                                <i class="bi bi-graph-up me-2 text-success"></i>Piste Insights
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-2"></li>
+                        <li>
+                            <a class="dropdown-item dropdown-item-modern" href="{% url 'ski_area_piste_completeness_all' %}">
+                                <i class="bi bi-pie-chart me-2 text-info"></i>All Ski Areas
                             </a>
                         </li>
                     </ul>
