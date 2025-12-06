@@ -826,7 +826,7 @@ class ActivityParser:
         for i, (index, direction) in enumerate(turning_points):
             logger.debug(f"Turning point {i+1}: {index}, {direction}")
             logger.debug(f"OSM URL: {self.get_osm_url(Point(activity_streams['latlng'].data[index][1], activity_streams['latlng'].data[index][0]))}")
-            if direction == "valley":
+            if direction == "peak":
                 next = turning_points[i+1][0] if i+1 < len(turning_points)-1 else len(activity_streams["altitude"].data)-1
                 lap_diff = diff[index:next]
                 lap_data.append({
@@ -845,7 +845,15 @@ class ActivityParser:
                 })
 
         for i, lap_data_item in enumerate(lap_data):
-            Lap.objects.update_or_create(lap_index=i+1, activity=activity, defaults=lap_data_item)
+            lap_instance, created = Lap.objects.update_or_create(lap_index=i+1, activity=activity, defaults=lap_data_item)
+            lap_instance.geom = LineString([
+                (
+                    activity_streams["latlng"].data[i][1],
+                    activity_streams["latlng"].data[i][0]
+                )
+                for i in range(lap_instance.start_index_stream, lap_instance.end_index_stream - 5)
+            ], srid=4326)
+            lap_instance.save()
 
         self.profiler.end_operation('split_activity')
 
