@@ -328,10 +328,10 @@ def create_shareable_image(activity):
 
                 if lap_piste_key not in seen_lap_piste:
                     seen_lap_piste.add(lap_piste_key)
-                    piste_counts[piste_ride.piste.name] += 1
-                    logger.debug(f"Added piste to counts: {piste_ride.piste.name}")
+                    piste_counts[piste_ride.piste.id] += 1
+                    logger.debug(f"Added piste to counts: {piste_ride.piste.id} ({piste_ride.piste.name})")
                 else:
-                    logger.debug(f"Skipping duplicate piste {piste_ride.piste.name} in lap {piste_ride.lap.lap_index}")
+                    logger.debug(f"Skipping duplicate piste {piste_ride.piste.id} ({piste_ride.piste.name}) in lap {piste_ride.lap.lap_index}")
         else:
             logger.warning(f"Piste {piste_ride.piste.id} has no geometry")
 
@@ -389,7 +389,8 @@ def create_shareable_image(activity):
 
             # Right column: Pistes
             if i < len(top_pistes):
-                piste_name, count = top_pistes[i]
+                piste_id, count = top_pistes[i]
+                piste_name = PisteRide.objects.filter(piste_id=piste_id).first().piste.name
                 display_name = piste_name[:18] + "..." if len(piste_name) > 18 else piste_name
                 text = f"{count}× {display_name}"
                 draw.text((right_x, y_offset), text,
