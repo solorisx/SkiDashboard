@@ -665,9 +665,9 @@ document.addEventListener("DOMContentLoaded", function() {
     .then(data => {
       // Update the card with piste completeness data
       const percentage = Math.round(data.daily_completion_percentage || 0);
-      const distanceSkied = Math.round(data.distance_skied_today || 0);
-      const totalDistance = Math.round(data.total_distance_available || 0);
-      const newPistes = data.new_pistes_discovered || 0;
+      const distanceSkiedKm = ((data.distance_skied_today || 0) / 1000).toFixed(1);
+      const totalDistanceKm = ((data.total_distance_available || 0) / 1000).toFixed(1);
+      const newPistes = ((data.new_distance_discovered || 0) / 1000).toFixed(1);
 
       let badgeClass = 'secondary';
       if (percentage >= 75) badgeClass = 'success';
@@ -688,10 +688,10 @@ document.addEventListener("DOMContentLoaded", function() {
             <div class="text-end">
               <div class="d-flex align-items-center gap-1 mb-1">
                 <i class="bi bi-${badgeIcon} text-${badgeClass}"></i>
-                <small class="text-muted">${distanceSkied}m/${totalDistance}m</small>
+                <small class="text-muted">${distanceSkiedKm}km/${totalDistanceKm}km</small>
               </div>
               <div class="mb-1" style="min-height: 20px;">
-                ${newPistes > 0 ? `<div class="badge bg-success text-white small">+${newPistes} new!</div>` : ''}
+                ${newPistes > 0 ? `<div class="badge bg-success text-white small">+${newPistes}km new!</div>` : ''}
               </div>
               <div class="text-center">
                 <small class="text-primary fw-medium">

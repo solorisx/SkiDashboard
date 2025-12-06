@@ -349,7 +349,7 @@ def activity_map(request, activity_id):
                 "type": "Feature",
                 "geometry": json.loads(piste.geom.geojson),
                 "properties": {
-                    "name": piste.name or "Unnamed Piste",
+                    "name": piste.name or piste.ref or "Unnamed Piste",
                     "difficulty": piste.piste_difficulty or "Unknown"
                 }
             }
@@ -366,7 +366,7 @@ def activity_map(request, activity_id):
                 "type": "Feature",
                 "geometry": json.loads(piste.geom.geojson),
                 "properties": {
-                    "name": piste.name or "Unnamed Piste",
+                    "name": piste.name or piste.ref or "Unnamed Piste",
                     "difficulty": piste.piste_difficulty or "Unknown"
                 }
             }

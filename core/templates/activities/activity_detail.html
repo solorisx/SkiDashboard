@@ -313,7 +313,7 @@
 
             <!-- Key Stats -->
             <div class="col-6 col-md-2 text-center">
-              <div class="fs-3 fw-bold text-info">{{ piste_completeness.distance_skied_today|floatformat:0 }}m</div>
+              <div class="fs-3 fw-bold text-info">{% widthratio piste_completeness.distance_skied_today 1000 1 %}km</div>
               <small class="text-muted">Skied Today</small>
             </div>
 
@@ -323,7 +323,7 @@
             </div>
 
             <div class="col-6 col-md-2 text-center">
-              <div class="fs-3 fw-bold text-warning">{{ piste_completeness.new_pistes_discovered }}</div>
+              <div class="fs-3 fw-bold text-warning">{% widthratio piste_completeness.new_distance_discovered 1000 1 %}km</div>
               <small class="text-muted">New Pistes</small>
             </div>
 
@@ -345,8 +345,8 @@
                    aria-valuemax="100"></div>
             </div>
             <div class="d-flex justify-content-between mt-1">
-              <small class="text-muted">{{ piste_completeness.total_distance_ridden|floatformat:0 }}m ridden</small>
-              <small class="text-muted">{{ piste_completeness.total_distance_available|floatformat:0 }}m total</small>
+              <small class="text-muted">{% widthratio piste_completeness.total_distance_ridden 1000 1 %}km ridden</small>
+              <small class="text-muted">{% widthratio piste_completeness.total_distance_available 1000 1 %}km total</small>
             </div>
           </div>
         </div>
@@ -515,7 +515,7 @@
                       {{ piste_ride.lap.lap_index }}
                     </span>
                   </td>
-                  <td class="fw-medium">{{ piste_ride.piste.name|default:"Unnamed Piste" }}</td>
+                  <td class="fw-medium">{{ piste_ride.piste.name or piste_ride.piste.ref or "Unnamed Piste" }}</td>
                   <td>
                     {% if piste_ride.piste.piste_difficulty %}
                       {% if piste_ride.piste.piste_difficulty == "novice" or piste_ride.piste.piste_difficulty == "easy" %}
@@ -593,7 +593,7 @@
             <div class="col-12 col-md-3">
               <div class="card border-0 bg-info bg-opacity-10 h-100">
                 <div class="card-body text-center p-3">
-                  <div class="fs-4 fw-bold text-info mb-1">{{ piste_completeness.distance_skied_today|floatformat:0 }}m</div>
+                  <div class="fs-4 fw-bold text-info mb-1">{% widthratio piste_completeness.distance_skied_today 1000 1 %}km</div>
                   <div class="text-muted small">Distance Skied Today</div>
                 </div>
               </div>
@@ -623,7 +623,7 @@
             <div class="col-12 col-md-3">
               <div class="card border-0 bg-primary bg-opacity-10 h-100">
                 <div class="card-body text-center p-3">
-                  <div class="fs-4 fw-bold text-primary mb-1">{{ piste_completeness.new_distance_discovered|floatformat:0 }}m</div>
+                  <div class="fs-4 fw-bold text-primary mb-1">{% widthratio piste_completeness.new_distance_discovered 1000 1 %}km</div>
                   <div class="text-muted small">New Distance Discovered</div>
                 </div>
               </div>
@@ -634,7 +634,7 @@
           <div class="mt-4">
             <div class="d-flex justify-content-between mb-2">
               <span class="text-muted small">Ski Area Progress</span>
-              <span class="text-muted small">{{ piste_completeness.total_distance_ridden|floatformat:0 }}m / {{ piste_completeness.total_distance_available|floatformat:0 }}m</span>
+              <span class="text-muted small">{% widthratio piste_completeness.total_distance_ridden 1000 1 %}km / {% widthratio piste_completeness.total_distance_available 1000 1 %}km</span>
             </div>
             <div class="progress" style="height: 10px;">
               <div class="progress-bar bg-success" role="progressbar"

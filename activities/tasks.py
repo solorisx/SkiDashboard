@@ -31,7 +31,7 @@ def run_scheduled_strava_sync(manual=False):
         sync_user_activities_task.delay(user.id)
     return "Triggered per-user sync."
 
-@shared_task(rate_limit='20/m')
+@shared_task(rate_limit='10/m')
 def sync_strava_activity_task(user_id, activity_id, update=False):
     try:
         user = User.objects.get(id=user_id)

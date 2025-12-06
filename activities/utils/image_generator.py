@@ -390,7 +390,7 @@ def create_shareable_image(activity):
             # Right column: Pistes
             if i < len(top_pistes):
                 piste_id, count = top_pistes[i]
-                piste_name = PisteRide.objects.filter(piste_id=piste_id).first().piste.name
+                piste_name = PisteRide.objects.filter(piste_id=piste_id).first().piste.name or PisteRide.objects.filter(piste_id=piste_id).first().piste.ref or f"unnamed_{piste_id}"
                 display_name = piste_name[:18] + "..." if len(piste_name) > 18 else piste_name
                 text = f"{count}× {display_name}"
                 draw.text((right_x, y_offset), text,

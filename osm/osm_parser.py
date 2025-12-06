@@ -271,12 +271,12 @@ def process_ways(handler):
                         way=way_obj,
                         defaults={
                             'lit': 'lit' in tags and tags['lit'] == 'yes',
-                            'name': tags.get('name')[0:255] if 'name' in tags else None,
+                            'name': tags.get('name')[0:255] if 'name' in tags else tags.get('piste:name') if 'piste:name' in tags else None,
                             'oneway': 'oneway' in tags and tags['oneway'] == 'yes',
                             'piste_difficulty': tags.get('piste:difficulty'),
                             'piste_grooming': tags.get('piste:grooming'),
                             'piste_type': tags.get('piste:type'),
-                            'ref': tags.get('ref'),
+                            'ref': tags.get('ref') if 'ref' in tags else tags.get('piste:ref') if 'piste:ref' in tags else None,
                             'verified_on': verification_time,
                         }
                     )

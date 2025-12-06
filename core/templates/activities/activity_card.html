@@ -65,7 +65,7 @@
             </div>
           </div>
           {% if activity.ski_area %}
-          <div class="col-12">
+          <div class="col-6">
             <div class="stats-card bg-secondary bg-opacity-10 rounded-3 p-3 text-center position-relative"
                  id="completeness-{{ activity.id }}"
                  data-activity-id="{{ activity.id }}"
@@ -74,11 +74,11 @@
                 <div class="spinner-border spinner-border-sm text-secondary" role="status">
                   <span class="visually-hidden">Loading...</span>
                 </div>
-                <small class="text-muted fw-medium">Loading lift completeness...</small>
+                <small class="text-muted fw-medium">Loading...</small>
               </div>
             </div>
           </div>
-          <div class="col-12">
+          <div class="col-6">
             <div class="stats-card bg-success bg-opacity-10 rounded-3 p-3 position-relative"
                  id="piste-completeness-{{ activity.id }}"
                  data-activity-id="{{ activity.id }}"
@@ -87,7 +87,7 @@
                 <div class="spinner-border spinner-border-sm text-success" role="status">
                   <span class="visually-hidden">Loading...</span>
                 </div>
-                <small class="text-muted fw-medium">Loading piste completeness...</small>
+                <small class="text-muted fw-medium">Loading...</small>
               </div>
             </div>
           </div>

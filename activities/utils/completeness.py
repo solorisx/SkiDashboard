@@ -556,23 +556,24 @@ def get_available_pistes_in_ski_area(ski_area, user=None):
     # Check cache first
     cache_key = f"available_pistes_{ski_area.id}_{user.id if user else 'anon'}"
     cached_piste_ids = cache.get(cache_key)
-    if cached_piste_ids:
+    if False: #cached_piste_ids:
         logger.debug(f"Using cached available pistes for ski area {ski_area.id}")
         return Piste.objects.filter(id__in=cached_piste_ids)
 
     try:
         pistes = Piste.objects.none()
+        from django.db.models import Q
+        query = Q(piste_type='downhill') & ~Q(piste_difficulty='freeride') & Q(length__gt=100) & ~Q(piste_grooming='backcountry')
 
         # Strategy 1: Direct geometry intersection
         if ski_area.geom:
             pistes_with_geom = Piste.objects.exclude(geom__isnull=True).exists()
             if pistes_with_geom:
-                # Filter for downhill pistes (piste_type='downhill' or NULL)
-                from django.db.models import Q
+                # Filter for downhill pistes (piste_type='downhill' and not piste_difficulty='freeride'
                 pistes = Piste.objects.filter(
                     geom__intersects=ski_area.geom
                 ).filter(
-                    Q(piste_type='downhill') | Q(piste_type__isnull=True)
+                    query
                 ).exclude(geom__isnull=True).distinct()
                 logger.info(f"Using direct geometry intersection for ski area {ski_area.id}")
 
@@ -580,21 +581,19 @@ def get_available_pistes_in_ski_area(ski_area, user=None):
         if not pistes.exists() and ski_area.way:
             boundary_geom = ski_area.way.constructed_geom
             if boundary_geom:
-                from django.db.models import Q
                 pistes = Piste.objects.filter(
                     geom__intersects=boundary_geom
                 ).filter(
-                    Q(piste_type='downhill') | Q(piste_type__isnull=True)
+                    query
                 ).exclude(geom__isnull=True).distinct()
                 logger.info(f"Using constructed geometry for ski area {ski_area.id}")
 
         # Strategy 3: Way relationships fallback
         if not pistes.exists():
-            from django.db.models import Q
             pistes = Piste.objects.filter(
                 way__ski_areas=ski_area
             ).filter(
-                Q(piste_type='downhill') | Q(piste_type__isnull=True)
+                query
             ).exclude(geom__isnull=True).distinct()
             if pistes.exists():
                 logger.info(f"Found {pistes.count()} pistes using way relationships for ski area {ski_area.id}")
@@ -603,18 +602,17 @@ def get_available_pistes_in_ski_area(ski_area, user=None):
         if not pistes.exists():
             duplicate_areas = SkiArea.objects.filter(name=ski_area.name).exclude(id=ski_area.id)
             for dup in duplicate_areas:
-                from django.db.models import Q
                 if dup.geom:
                     pistes = Piste.objects.filter(
                         geom__intersects=dup.geom
-                    ).filter(
-                        Q(piste_type='downhill') | Q(piste_type__isnull=True)
+                                ).filter(
+                                    query
                     ).exclude(geom__isnull=True).distinct()
                 elif dup.way:
                     pistes = Piste.objects.filter(
                         way__ski_areas=dup
                     ).filter(
-                        Q(piste_type='downhill') | Q(piste_type__isnull=True)
+                        query
                     ).exclude(geom__isnull=True).distinct()
                 if pistes.exists():
                     logger.info(f"Found pistes using duplicate ski area {dup.id}")
@@ -622,7 +620,6 @@ def get_available_pistes_in_ski_area(ski_area, user=None):
 
         # Strategy 5: Actual ride data fallback
         if not pistes.exists():
-            from django.db.models import Q
             ridden_piste_ids = PisteRide.objects.filter(
                 lap__activity__ski_area=ski_area
             ).values_list('piste', flat=True).distinct()
@@ -631,7 +628,7 @@ def get_available_pistes_in_ski_area(ski_area, user=None):
                 pistes = Piste.objects.filter(
                     id__in=ridden_piste_ids
                 ).filter(
-                    Q(piste_type='downhill') | Q(piste_type__isnull=True)
+                    query
                 ).exclude(geom__isnull=True)
                 logger.info(f"Found {pistes.count()} pistes using ride data for ski area {ski_area.id}")
 
@@ -740,12 +737,22 @@ def calculate_ski_area_piste_completeness(user, ski_area, force_calc=False, seas
             (total_distance_ridden / total_distance_available) * 100, 1
         )
 
+    # Calculate average distance per piste
+    avg_distance_per_piste = 0
+    pistes_ridden_list = list(ridden_pistes.values('id', 'name', 'length', 'piste_difficulty'))
+    pistes_not_ridden_list = list(not_ridden_pistes.values('id', 'name', 'length', 'piste_difficulty'))
+
+    if pistes_ridden_list:
+        avg_distance_per_piste = round(total_distance_ridden / len(pistes_ridden_list), 1)
+
     result = {
         'total_distance_available': round(total_distance_available, 1),
         'total_distance_ridden': round(total_distance_ridden, 1),
         'completion_percentage': completion_percentage,
-        'pistes_ridden': list(ridden_pistes.values('id', 'name', 'length', 'piste_difficulty')),
-        'pistes_not_ridden': list(not_ridden_pistes.values('id', 'name', 'length', 'piste_difficulty'))
+        'avg_distance_per_piste': avg_distance_per_piste,
+        'total_pistes_available': len(pistes_ridden_list) + len(pistes_not_ridden_list),
+        'pistes_ridden': pistes_ridden_list,
+        'pistes_not_ridden': pistes_not_ridden_list
     }
 
     # Cache indefinitely, clear on data change

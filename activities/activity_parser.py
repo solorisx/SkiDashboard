@@ -1332,7 +1332,7 @@ class ActivityParser:
             for piste in intersecting_pistes:
                 coverage_pct = self._calculate_piste_coverage(piste, buffered_lap_geom)
 
-                piste_name = piste.name or f"unnamed_{piste.id}"
+                piste_name = piste.name or piste.ref or f"unnamed_{piste.id}"
                 logger.debug(f"Lap {lap.lap_index} - Piste {piste.id} '{piste_name}': {coverage_pct:.1f}% coverage")
 
                 if coverage_pct >= 80.0:
@@ -1370,13 +1370,6 @@ class ActivityParser:
             PisteRide.objects.bulk_create(piste_rides_to_create)
             logger.info(f"Created {len(piste_rides_to_create)} PisteRides across {len(laps)} laps for activity {activity_instance.id}")
             logger.info(f"Unique pistes by name: {len(seen_piste_names)}")
-
-            # Clear piste completeness cache
-            from activities.utils.completeness import clear_piste_completeness_cache
-            clear_piste_completeness_cache(
-                user_id=activity_instance.user.id,
-                ski_area_id=activity_instance.ski_area.id if activity_instance.ski_area else None
-            )
         else:
             logger.info(f"No pistes met 80% threshold for activity {activity_instance.id}")
 
