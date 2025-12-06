@@ -74,7 +74,20 @@
                 <div class="spinner-border spinner-border-sm text-secondary" role="status">
                   <span class="visually-hidden">Loading...</span>
                 </div>
-                <small class="text-muted fw-medium">Loading area completeness...</small>
+                <small class="text-muted fw-medium">Loading lift completeness...</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="stats-card bg-success bg-opacity-10 rounded-3 p-3 position-relative"
+                 id="piste-completeness-{{ activity.id }}"
+                 data-activity-id="{{ activity.id }}"
+                 data-ski-area-id="{{ activity.ski_area.id }}">
+              <div class="d-flex align-items-center justify-content-center gap-2">
+                <div class="spinner-border spinner-border-sm text-success" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <small class="text-muted fw-medium">Loading piste completeness...</small>
               </div>
             </div>
           </div>

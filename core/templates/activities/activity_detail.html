@@ -291,6 +291,70 @@
     {% endif %}
   </div>
 
+  <!-- Piste Completeness Summary Card -->
+  {% if piste_completeness and activity.ski_area %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm bg-gradient" style="background: linear-gradient(135deg, rgba(25, 135, 84, 0.05) 0%, rgba(13, 110, 253, 0.05) 100%);">
+        <div class="card-body p-4">
+          <div class="row align-items-center g-3">
+            <!-- Title and Icon -->
+            <div class="col-12 col-md-3">
+              <div class="d-flex align-items-center">
+                <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                  <i class="bi bi-pie-chart fs-2 text-success"></i>
+                </div>
+                <div>
+                  <h5 class="fw-bold mb-0">Piste Completeness</h5>
+                  <small class="text-muted">Distance-based</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Key Stats -->
+            <div class="col-6 col-md-2 text-center">
+              <div class="fs-3 fw-bold text-info">{{ piste_completeness.distance_skied_today|floatformat:0 }}m</div>
+              <small class="text-muted">Skied Today</small>
+            </div>
+
+            <div class="col-6 col-md-2 text-center">
+              <div class="fs-3 fw-bold text-success">{{ piste_completeness.daily_completion_percentage|floatformat:1 }}%</div>
+              <small class="text-muted">Area Completed</small>
+            </div>
+
+            <div class="col-6 col-md-2 text-center">
+              <div class="fs-3 fw-bold text-warning">{{ piste_completeness.new_pistes_discovered }}</div>
+              <small class="text-muted">New Pistes</small>
+            </div>
+
+            <div class="col-6 col-md-3 text-center">
+              <a href="{% url 'ski_area_piste_completeness_detail' activity.ski_area.id %}"
+                 class="btn btn-success w-100">
+                <i class="bi bi-bar-chart me-1"></i>View Full Details
+              </a>
+            </div>
+          </div>
+
+          <!-- Quick Progress Bar -->
+          <div class="mt-3">
+            <div class="progress" style="height: 8px; border-radius: 10px;">
+              <div class="progress-bar bg-success" role="progressbar"
+                   style="width: {{ piste_completeness.daily_completion_percentage }}%"
+                   aria-valuenow="{{ piste_completeness.daily_completion_percentage }}"
+                   aria-valuemin="0"
+                   aria-valuemax="100"></div>
+            </div>
+            <div class="d-flex justify-content-between mt-1">
+              <small class="text-muted">{{ piste_completeness.total_distance_ridden|floatformat:0 }}m ridden</small>
+              <small class="text-muted">{{ piste_completeness.total_distance_available|floatformat:0 }}m total</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Map Section -->
   <div class="row mb-5">
     <div class="col-12">

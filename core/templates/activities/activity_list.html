@@ -641,6 +641,81 @@ document.addEventListener("DOMContentLoaded", function() {
       });
     });
   }
+
+  // Load piste completeness data for all activities
+  const pisteCompletenessCards = document.querySelectorAll('[id^="piste-completeness-"]');
+
+  pisteCompletenessCards.forEach(card => {
+    const activityId = card.dataset.activityId;
+    const skiAreaId = card.dataset.skiAreaId;
+
+    // Note: This loads individually for now. Can be optimized with batch API later.
+    fetch(`/activities/api/activity-piste-completeness/${activityId}/`, {
+      method: 'GET',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      // Update the card with piste completeness data
+      const percentage = Math.round(data.daily_completion_percentage || 0);
+      const distanceSkied = Math.round(data.distance_skied_today || 0);
+      const totalDistance = Math.round(data.total_distance_available || 0);
+      const newPistes = data.new_pistes_discovered || 0;
+
+      let badgeClass = 'secondary';
+      if (percentage >= 75) badgeClass = 'success';
+      else if (percentage >= 50) badgeClass = 'warning';
+      else if (percentage >= 25) badgeClass = 'info';
+
+      let badgeIcon = 'pie-chart';
+      if (percentage >= 75) badgeIcon = 'trophy';
+      else if (percentage >= 50) badgeIcon = 'award';
+
+      card.innerHTML = `
+        <a href="/activities/ski-area-piste-completeness/${skiAreaId}/" class="text-decoration-none">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="text-start">
+              <div class="fs-5 fw-bold text-${badgeClass} mb-0">${percentage}%</div>
+              <small class="text-muted fw-medium">Piste completeness</small>
+            </div>
+            <div class="text-end">
+              <div class="d-flex align-items-center gap-1 mb-1">
+                <i class="bi bi-${badgeIcon} text-${badgeClass}"></i>
+                <small class="text-muted">${distanceSkied}m/${totalDistance}m</small>
+              </div>
+              <div class="mb-1" style="min-height: 20px;">
+                ${newPistes > 0 ? `<div class="badge bg-success text-white small">+${newPistes} new!</div>` : ''}
+              </div>
+              <div class="text-center">
+                <small class="text-primary fw-medium">
+                  <i class="bi bi-arrow-right me-1"></i>View Details
+                </small>
+              </div>
+            </div>
+          </div>
+        </a>
+      `;
+
+      // Add hover effect
+      card.classList.add('hover-piste-completeness');
+    })
+    .catch(error => {
+      console.error(`Error loading piste completeness for activity ${activityId}:`, error);
+      // Show unavailable message
+      card.innerHTML = `
+        <div class="text-center">
+          <small class="text-muted">Piste completeness unavailable</small>
+        </div>
+      `;
+    });
+  });
 });
 </script>
 

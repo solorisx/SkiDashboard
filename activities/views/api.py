@@ -9,7 +9,11 @@ import json
 from cost.models import SeasonPass
 from osm.models import SkiArea
 
-from ..utils.completeness import calculate_activity_completeness, calculate_batch_activity_completeness
+from ..utils.completeness import (
+    calculate_activity_completeness,
+    calculate_batch_activity_completeness,
+    calculate_activity_piste_completeness
+)
 from ..models import Activity
 from ..utils.queries import get_user_activities_base_query
 from ..utils.seasons import get_season_dates
@@ -213,6 +217,34 @@ def activity_completeness_batch_api(request):
     except Exception as e:
         logger.error(f"Error in batch completeness API: {e}")
         return JsonResponse({'error': 'Server error'}, status=500)
+
+
+@login_required
+def activity_piste_completeness_api(request, activity_id):
+    """API endpoint to get piste completeness data for a specific activity."""
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'AJAX requests only'}, status=400)
+
+    try:
+        activity = Activity.objects.get(id=activity_id, user=request.user)
+
+        # Check if activity has a ski area
+        if not activity.ski_area:
+            return JsonResponse({
+                'distance_skied_today': 0,
+                'total_distance_available': 0,
+                'daily_completion_percentage': 0,
+                'new_pistes_discovered': 0,
+                'new_distance_discovered': 0
+            })
+
+        completeness_data = calculate_activity_piste_completeness(activity)
+        return JsonResponse(completeness_data)
+    except Activity.DoesNotExist:
+        return JsonResponse({'error': 'Activity not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error calculating piste completeness for activity {activity_id}: {e}")
+        return JsonResponse({'error': 'Error calculating piste completeness'}, status=500)
 
 
 @login_required

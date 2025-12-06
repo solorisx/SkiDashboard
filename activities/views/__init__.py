@@ -20,6 +20,7 @@ from .activity import (
 from .api import (
     activity_completeness_api,
     activity_completeness_batch_api,
+    activity_piste_completeness_api,
     home_stats as home_stats_data,
     season_stats,
     update_strava_description_api,
@@ -92,6 +93,7 @@ __all__ = [
     # API views
     'activity_completeness_api',
     'activity_completeness_batch_api',
+    'activity_piste_completeness_api',
     'home_stats',
     'season_stats',
     'update_strava_description_api',
