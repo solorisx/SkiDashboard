@@ -556,7 +556,7 @@ def get_available_pistes_in_ski_area(ski_area, user=None):
     # Check cache first
     cache_key = f"available_pistes_{ski_area.id}_{user.id if user else 'anon'}"
     cached_piste_ids = cache.get(cache_key)
-    if False: #cached_piste_ids:
+    if cached_piste_ids:
         logger.debug(f"Using cached available pistes for ski area {ski_area.id}")
         return Piste.objects.filter(id__in=cached_piste_ids)
 
@@ -724,7 +724,7 @@ def calculate_ski_area_piste_completeness(user, ski_area, force_calc=False, seas
     # Get unique pistes ridden
     ridden_piste_ids = user_piste_rides_query.values_list('piste', flat=True).distinct()
     ridden_pistes = available_pistes.filter(id__in=ridden_piste_ids)
-    not_ridden_pistes = available_pistes.exclude(id__in=ridden_piste_ids)
+    not_ridden_pistes = available_pistes.exclude(id__in=ridden_piste_ids).order_by('length')
 
     # Calculate total distance ridden
     total_distance_ridden = sum(

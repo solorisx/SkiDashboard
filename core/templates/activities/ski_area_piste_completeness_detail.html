@@ -83,13 +83,13 @@
               <div class="row g-3">
                 <div class="col-6">
                   <div class="text-center p-3 bg-success bg-opacity-10 rounded-3">
-                    <div class="fs-3 fw-bold text-success">{{ completeness.total_distance_ridden|floatformat:0 }}m</div>
+                    <div class="fs-3 fw-bold text-success">{% widthratio completeness.total_distance_ridden|floatformat:0 1000 1 %}km</div>
                     <small class="text-muted fw-medium">Distance Ridden</small>
                   </div>
                 </div>
                 <div class="col-6">
                   <div class="text-center p-3 bg-primary bg-opacity-10 rounded-3">
-                    <div class="fs-3 fw-bold text-primary">{{ completeness.total_distance_available|floatformat:0 }}m</div>
+                    <div class="fs-3 fw-bold text-primary">{% widthratio completeness.total_distance_available|floatformat:0 1000 1 %}km</div>
                     <small class="text-muted fw-medium">Total Available</small>
                   </div>
                 </div>
@@ -164,6 +164,7 @@
                   <th class="fw-bold">Difficulty</th>
                   <th class="fw-bold">Length</th>
                   <th class="fw-bold">Rides</th>
+                  <th class="fw-bold">Total Distance</th>
                   <th class="fw-bold">Days</th>
                   <th class="fw-bold">First Ride</th>
                   <th class="fw-bold">Last Ride</th>
@@ -185,6 +186,7 @@
                   </td>
                   <td class="text-muted">{{ piste_data.length|floatformat:0 }}m</td>
                   <td><span class="badge bg-success px-2 py-1">{{ piste_data.total_rides }}</span></td>
+                  <td><span class="badge bg-success px-2 py-1">{% widthratio piste_data.total_distance|floatformat:0 1000 1 %}km</span></td>
                   <td class="text-muted">{{ piste_data.unique_days }}</td>
                   <td class="text-muted small">{{ piste_data.first_ride|date:"M d, Y" }}</td>
                   <td class="text-muted small">{{ piste_data.last_ride|date:"M d, Y" }}</td>

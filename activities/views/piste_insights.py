@@ -224,11 +224,12 @@ def ski_area_piste_completeness_detail(request, ski_area_id, season=None):
             'first_ride': piste_data['first_ride'],
             'last_ride': piste_data['last_ride'],
             'unique_days': piste_data['unique_days'],
-            'length': piste.length
+            'length': piste.length,
+            'total_distance': piste.length * piste_data['total_rides'] if piste.length else None
         })
 
     # Sort by total rides descending
-    ridden_pistes_with_stats.sort(key=lambda x: x['total_rides'], reverse=True)
+    ridden_pistes_with_stats.sort(key=lambda x: x['total_distance'], reverse=True)
 
     # Get not ridden pistes
     not_ridden_pistes = available_pistes.exclude(id__in=ridden_piste_ids).order_by('name')

@@ -75,13 +75,13 @@
                 <div class="row g-2 mb-3">
                   <div class="col-4">
                     <div class="stats-mini-card bg-success bg-opacity-10 rounded-2 p-2">
-                      <div class="fw-bold text-success" style="font-size: 0.85rem;">{{ area_data.completeness.total_distance_ridden|floatformat:0 }}m</div>
+                      <div class="fw-bold text-success" style="font-size: 0.85rem;">{% widthratio area_data.completeness.total_distance_ridden|floatformat:0 1000 1 %}km</div>
                       <small class="text-muted fw-medium" style="font-size: 0.65rem;">Ridden</small>
                     </div>
                   </div>
                   <div class="col-4">
                     <div class="stats-mini-card bg-primary bg-opacity-10 rounded-2 p-2">
-                      <div class="fw-bold text-primary" style="font-size: 0.85rem;">{{ area_data.completeness.total_distance_available|floatformat:0 }}m</div>
+                      <div class="fw-bold text-primary" style="font-size: 0.85rem;">{% widthratio area_data.completeness.total_distance_available|floatformat:0 1000 1 %}km</div>
                       <small class="text-muted fw-medium" style="font-size: 0.65rem;">Available</small>
                     </div>
                   </div>
