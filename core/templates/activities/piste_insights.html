@@ -60,7 +60,7 @@
     <div class="col-12 col-md-3">
       <div class="card border-0 shadow-sm h-100 bg-primary bg-opacity-10">
         <div class="card-body text-center p-4">
-          <div class="fs-2 fw-bold text-primary mb-2">{{ season_stats.total_distance_skied|floatformat:0 }}m</div>
+          <div class="fs-2 fw-bold text-primary mb-2">{% widthratio season_stats.total_distance_skied 1000 1 %}km</div>
           <div class="text-muted fw-medium">Total Distance</div>
         </div>
       </div>
@@ -137,13 +137,44 @@
           {% if most_ridden_piste_ever %}
           <div class="card border border-warning border-opacity-25 mb-3">
             <div class="card-body p-3">
-              <h6 class="mb-0 fw-bold text-warning">
-                <i class="bi bi-star me-1"></i>
-                Favorite Piste
-              </h6>
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold text-warning">
+                  <i class="bi bi-star me-1"></i>
+                  Favorite Piste (over 1000m)
+                </h6>
+                <a href="{{ most_ridden_piste_ever.piste.get_osm_url }}" class="btn btn-sm btn-outline-warning" target="_blank" rel="noopener noreferrer">
+                  <i class="bi bi-eye"></i>
+                  OSM Link
+                </a>
+              </div>
               <div class="mt-2">
-                <div class="fs-5 fw-bold">{{ most_ridden_piste_ever.piste__name|default:"Unnamed Piste" }}</div>
+                <div class="fs-5 fw-bold">{{ most_ridden_piste_ever.piste__name|default:"Unnamed Piste" }} ({{ most_ridden_piste_ever.piste.length|floatformat:0 }}m)</div>
                 <div class="text-muted">{{ most_ridden_piste_ever.ride_count }} rides all-{% if selected_season %}season{% else %}time{% endif %}</div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Most Distance on Single Piste -->
+          {% if most_distance_piste_ever %}
+          <div class="card border border-primary border-opacity-25 mb-3">
+            <div class="card-body p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold text-primary">
+                  <i class="bi bi-speedometer2 me-1"></i>
+                  Most Distance on Single Piste
+                </h6>
+                <a href="{{ most_distance_piste_ever.piste.get_osm_url }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">
+                  <i class="bi bi-eye"></i>
+                  OSM Link
+                </a>
+              </div>
+              <div class="mt-2">
+                <div class="fs-5 fw-bold">{{ most_distance_piste_ever.piste__name|default:"Unnamed Piste" }}</div>
+                <div class="text-muted">
+                  {% widthratio most_distance_piste_ever.total_distance 1000 1 %}km total
+                  ({{ most_distance_piste_ever.ride_count }} rides × {% widthratio most_distance_piste_ever.piste.length 1000 1 %}km)
+                </div>
               </div>
             </div>
           </div>
@@ -199,7 +230,7 @@
           </div>
           {% endif %}
 
-          {% if not most_ridden_piste_ever and not best_single_day_activity and not most_unique_pistes_day %}
+          {% if not most_ridden_piste_ever and not most_distance_piste_ever and not best_single_day_activity and not most_unique_pistes_day %}
             <div class="text-center text-muted py-4">
               <i class="bi bi-trophy display-4 mb-3"></i>
               <p>No records available for the selected period.</p>
@@ -253,11 +284,11 @@
                         <!-- Stats -->
                         <div class="row g-2">
                           <div class="col-4">
-                            <div class="fw-bold text-success">{{ area_data.completeness.total_distance_ridden|floatformat:0 }}m</div>
+                            <div class="fw-bold text-success">{% widthratio area_data.completeness.total_distance_ridden 1000 1 %}km</div>
                             <small class="text-muted" style="font-size: 0.75rem;">Ridden</small>
                           </div>
                           <div class="col-4">
-                            <div class="fw-bold text-primary">{{ area_data.completeness.total_distance_available|floatformat:0 }}m</div>
+                            <div class="fw-bold text-primary">{% widthratio area_data.completeness.total_distance_available 1000 1 %}km</div>
                             <small class="text-muted" style="font-size: 0.75rem;">Available</small>
                           </div>
                           <div class="col-4">

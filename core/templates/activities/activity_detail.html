@@ -515,7 +515,7 @@
                       {{ piste_ride.lap.lap_index }}
                     </span>
                   </td>
-                  <td class="fw-medium">{{ piste_ride.piste.name or piste_ride.piste.ref or "Unnamed Piste" }}</td>
+                  <td class="fw-medium">{{ piste_ride.piste.name|default:piste_ride.piste.ref|default:"Unnamed Piste" }}</td>
                   <td>
                     {% if piste_ride.piste.piste_difficulty %}
                       {% if piste_ride.piste.piste_difficulty == "novice" or piste_ride.piste.piste_difficulty == "easy" %}

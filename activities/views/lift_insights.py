@@ -26,8 +26,6 @@ def lift_insights(request, season=None):
     activities = get_user_activities_base_query(request.user).filter(filter_query)
     seasons = get_seasons(user=request.user)
 
-    # Note: lift_stats removed as it's not used in the template
-
     # Recent lift rides with context
     recent_rides = LiftRide.objects.filter(
         lap__activity__user=request.user

@@ -8,7 +8,6 @@ from django.core.cache import cache
 from ..models import PisteRide, Activity
 from ..utils.completeness import (
     calculate_ski_area_piste_completeness,
-    calculate_overall_piste_completeness,
     get_available_pistes_in_ski_area
 )
 from ..utils.queries import get_filter_query, get_user_activities_base_query
@@ -42,14 +41,70 @@ def piste_insights(request, season=None):
             ride.length_meters = None
 
     # Personal records
-    # Most rides on a single piste (season-filtered)
-    most_ridden_piste_ever = PisteRide.objects.filter(
-        lap__activity__user=request.user
+    # Most rides on a single piste (season-filtered, only pistes over 100m)
+    most_ridden_piste_stats = PisteRide.objects.filter(
+        lap__activity__user=request.user,
+        piste__length__gt=1000  # Only pistes over 1000m
     ).filter(filter_query).values(
         'piste__name', 'piste__id'
     ).annotate(
         ride_count=Count('id')
     ).order_by('-ride_count').first()
+
+    # Get the actual Piste object if we found a most ridden piste
+    most_ridden_piste_ever = None
+    if most_ridden_piste_stats:
+        try:
+            piste = Piste.objects.select_related('way').get(id=most_ridden_piste_stats['piste__id'])
+            most_ridden_piste_ever = {
+                'piste': piste,
+                'piste__name': most_ridden_piste_stats['piste__name'],
+                'ride_count': most_ridden_piste_stats['ride_count']
+            }
+        except Piste.DoesNotExist:
+            logger.warning(f"Piste {most_ridden_piste_stats['piste__id']} not found")
+
+    # Most ridden piste by total distance (ride_count * piste_length, only pistes over 100m)
+    # Calculate total distance and get the Piste object
+    most_distance_piste_ever = None
+    # Get all pistes with length over 100m and calculate total distance
+    pistes_by_distance = PisteRide.objects.filter(
+        lap__activity__user=request.user,
+        piste__length__gt=1000  # Only pistes over 1000m
+    ).filter(filter_query).values(
+        'piste__id', 'piste__name', 'piste__length'
+    ).annotate(
+        ride_count=Count('id')
+    )
+
+    if pistes_by_distance.exists():
+        # Calculate total distance for each piste
+        pistes_with_total_distance = []
+        for piste_stat in pistes_by_distance:
+            total_distance = piste_stat['piste__length'] * piste_stat['ride_count']
+            pistes_with_total_distance.append({
+                'piste__id': piste_stat['piste__id'],
+                'piste__name': piste_stat['piste__name'],
+                'piste__length': piste_stat['piste__length'],
+                'ride_count': piste_stat['ride_count'],
+                'total_distance': total_distance
+            })
+
+        # Sort by total distance and get the top one
+        if pistes_with_total_distance:
+            pistes_with_total_distance.sort(key=lambda x: x['total_distance'], reverse=True)
+            top_piste = pistes_with_total_distance[0]
+
+            try:
+                piste = Piste.objects.select_related('way').get(id=top_piste['piste__id'])
+                most_distance_piste_ever = {
+                    'piste': piste,
+                    'piste__name': top_piste['piste__name'],
+                    'ride_count': top_piste['ride_count'],
+                    'total_distance': top_piste['total_distance']
+                }
+            except Piste.DoesNotExist:
+                logger.warning(f"Piste {top_piste['piste__id']} not found")
 
     # Most piste rides in one day
     # Calculate piste rides per activity
@@ -79,7 +134,22 @@ def piste_insights(request, season=None):
     most_unique_pistes_day = activities_with_unique_pistes[0] if activities_with_unique_pistes else None
 
     # Overall completeness statistics (season-filtered)
-    overall_completeness = calculate_overall_piste_completeness(request.user)
+    # Get ski areas from filtered activities for season-specific completeness
+    season_ski_areas = SkiArea.objects.filter(
+        activity__in=activities
+    ).distinct()
+
+    # Calculate overall completeness based on season-filtered ski areas
+    if season_ski_areas.exists():
+        overall_completeness = {
+            'total_ski_areas': season_ski_areas.count(),
+            'overall_percentage': 0  # We'll calculate this if needed
+        }
+    else:
+        overall_completeness = {
+            'total_ski_areas': 0,
+            'overall_percentage': 0
+        }
 
     # Top ski areas by piste completeness
     ski_area_completeness = []
@@ -136,14 +206,14 @@ def piste_insights(request, season=None):
     ).filter(filter_query).values('piste').distinct().count()
 
     # Calculate total distance skied
-    total_distance_skied = 0
-    piste_rides_with_length = PisteRide.objects.filter(
-        lap__activity__user=request.user
-    ).filter(filter_query).select_related('piste')
-
-    for ride in piste_rides_with_length:
-        if ride.piste.length and not ride.piste.is_area():
-            total_distance_skied += ride.piste.length
+    # Only sum length for pistes that have length (non-area pistes)
+    # We rely on the fact that area pistes should have length=None
+    total_distance_skied = PisteRide.objects.filter(
+        lap__activity__user=request.user,
+        piste__length__isnull=False
+    ).filter(filter_query).aggregate(
+        total=Sum('piste__length')
+    )['total'] or 0
 
     season_stats = {
         'total_activities': activities.count(),
@@ -155,6 +225,7 @@ def piste_insights(request, season=None):
     context = {
         'recent_rides': recent_rides,
         'most_ridden_piste_ever': most_ridden_piste_ever,
+        'most_distance_piste_ever': most_distance_piste_ever,
         'best_single_day_activity': best_single_day_activity,
         'most_unique_pistes_day': most_unique_pistes_day,
         'overall_completeness': overall_completeness,
@@ -232,7 +303,7 @@ def ski_area_piste_completeness_detail(request, ski_area_id, season=None):
     ridden_pistes_with_stats.sort(key=lambda x: x['total_distance'], reverse=True)
 
     # Get not ridden pistes
-    not_ridden_pistes = available_pistes.exclude(id__in=ridden_piste_ids).order_by('name')
+    not_ridden_pistes = available_pistes.exclude(id__in=ridden_piste_ids).order_by('-length', 'name')
 
     # Get recent activities in this ski area
     recent_activities_query = Activity.objects.filter(
@@ -265,6 +336,9 @@ def ski_area_piste_completeness_detail(request, ski_area_id, season=None):
 @login_required
 def ski_area_piste_completeness_all(request, season=None):
     """Show piste completeness for all ski areas."""
+
+    logger.debug(f"Calculating piste completeness for all ski areas for user {request.user.id} and season {season}")
+
     # Get season filter
     seasons = get_seasons(user=request.user)
 
