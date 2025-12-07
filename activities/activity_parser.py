@@ -854,14 +854,17 @@ class ActivityParser:
 
         for i, lap_data_item in enumerate(lap_data):
             lap_instance, created = Lap.objects.update_or_create(lap_index=i+1, activity=activity, defaults=lap_data_item)
-            lap_instance.geom = LineString([
-                (
-                    activity_streams["latlng"].data[i][1],
-                    activity_streams["latlng"].data[i][0]
-                )
-                for i in range(lap_instance.start_index_stream, lap_instance.end_index_stream - 5)
-            ], srid=4326)
-            lap_instance.save()
+            try:
+                lap_instance.geom = LineString([
+                    (
+                        activity_streams["latlng"].data[i][1],
+                        activity_streams["latlng"].data[i][0]
+                    )
+                    for i in range(lap_instance.start_index_stream, lap_instance.end_index_stream - 5)
+                ], srid=4326)
+                lap_instance.save()
+            except Exception as e:
+                logger.error(f"Error setting geometry for lap {lap_instance.lap_index} of activity {activity.id}: {e}")
 
         self.profiler.end_operation('split_activity')
 
@@ -1147,14 +1150,17 @@ class ActivityParser:
             lap_instance, created = Lap.objects.update_or_create(
                 lap_index=lap.lap_index, activity=activity_instance, defaults=lap_data
             )
-            lap_instance.geom = LineString([
-                (
-                    activity_streams["latlng"].data[i][1],
-                    activity_streams["latlng"].data[i][0]
-                )
-                for i in range(lap.start_index, lap.end_index - 5)
-            ], srid=4326)
-            lap_instance.save()
+            try:
+                lap_instance.geom = LineString([
+                    (
+                        activity_streams["latlng"].data[i][1],
+                        activity_streams["latlng"].data[i][0]
+                    )
+                    for i in range(lap.start_index, lap.end_index - 5)
+                ], srid=4326)
+                lap_instance.save()
+            except Exception as e:
+                logger.error(f"Error setting geometry for lap {lap_instance.lap_index} of activity {activity_instance.id}: {e}")
             logger.info(f'{"Created" if created else "Updated"} Lap: {lap_instance.lap_index}')
 
         # Handle lap splitting for activities with insufficient auto-pause data
@@ -1322,7 +1328,11 @@ class ActivityParser:
             # Find intersecting pistes for this lap
             intersecting_pistes = Piste.objects.filter(
                 geom__intersects=buffered_lap_geom,
-                geom__isnull=False
+                geom__isnull=False,
+            ).exclude(
+                piste_difficulty='freeride'
+            ).exclude(
+                piste_grooming='backcountry'
             ).select_related('way')
 
             logger.debug(f"Lap {lap.lap_index}: Found {intersecting_pistes.count()} intersecting pistes")
