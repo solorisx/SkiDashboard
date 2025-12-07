@@ -232,7 +232,7 @@ def create_shareable_image(activity):
     y_offset += 80
 
     # --- MINI MAP SECTION ---
-    map_size = 600
+    map_size = 500  # Reduced from 600 to 500
     map_img = generate_activity_map(activity, size=(map_size, map_size))
     map_x = (IMAGE_WIDTH - map_size) // 2
     map_y = y_offset
@@ -246,7 +246,7 @@ def create_shareable_image(activity):
     )
 
     img.paste(map_img, (map_x, map_y))
-    y_offset += map_size + 60
+    y_offset += map_size + 50  # Reduced spacing from 60 to 50
 
     # --- STATISTICS SECTION ---
     # Calculate stats
@@ -255,18 +255,32 @@ def create_shareable_image(activity):
     num_lifts = activity.num_lift_rides if activity.num_lift_rides else 0
     duration = format_duration(activity.total_elapsed_time)
 
-    # Create stats grid (2x2)
+    # Calculate completeness stats
+    from activities.utils.completeness import calculate_activity_completeness, calculate_activity_piste_completeness
+
+    lift_completeness = calculate_activity_completeness(activity)
+    piste_completeness = calculate_activity_piste_completeness(activity)
+
+    lifts_used = lift_completeness.get('lifts_used_today', 0)
+    total_lifts = lift_completeness.get('total_lifts_available', 0)
+
+    distance_skied_km = int(round(piste_completeness.get('distance_skied_today', 0) / 1000))
+    total_distance_km = int(round(piste_completeness.get('total_distance_available', 0) / 1000))
+    
+    # Create stats grid (3x2)
     stats = [
         ("Distance", f"{distance_km} km", COLOR_ACCENT),
         ("Descent", f"{descent_m} m", COLOR_SUCCESS),
         ("Lifts", f"{num_lifts}", COLOR_WARNING),
         ("Duration", duration, "#17a2b8"),  # Info color
+        ("Lifts", f"{lifts_used}/{total_lifts}", "#6f42c1"),  # Purple
+        ("Pistes", f"{distance_skied_km}/{total_distance_km}km", "#d63384"),  # Pink
     ]
 
     # Grid layout
     grid_padding = 40
     card_width = (IMAGE_WIDTH - grid_padding * 3) // 2
-    card_height = 180
+    card_height = 170
 
     for idx, (label, value, color) in enumerate(stats):
         row = idx // 2
@@ -281,16 +295,20 @@ def create_shareable_image(activity):
             radius=15, fill=hex_to_rgb(COLOR_CARD_BG)
         )
 
+        # Use smaller font for completeness stats (last 2 rows) which have more text
+        # value_font = font_heading if idx >= 4 else font_stat_value
+        value_font = font_stat_value
+
         # Draw value
         draw.text((card_x + card_width // 2, card_y + 60),
-                 value, fill=hex_to_rgb(color), anchor="mt", font=font_stat_value)
+                 value, fill=hex_to_rgb(color), anchor="mt", font=value_font)
 
         # Draw label
         draw.text((card_x + card_width // 2, card_y + 140),
                  label, fill=hex_to_rgb(COLOR_TEXT_SECONDARY),
                  anchor="mt", font=font_stat_label)
 
-    y_offset += 2 * (card_height + 20) + 60
+    y_offset += 3 * (card_height + 20) + 40  # Reduced from 60 to 40
 
     # --- TOP LIFTS & PISTES SECTION (TWO COLUMNS) ---
     from collections import Counter
