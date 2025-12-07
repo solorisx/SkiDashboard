@@ -67,6 +67,14 @@ def parse_strava_activities_task(user_id, all=False, update=False):
         if activity.type == 'AlpineSki':
             try:
                 activity_id = activity.id
+                if update and Activity.objects.filter(user=user, strava_id=activity_id).exists():
+                    activity_obj = Activity.objects.get(user=user, strava_id=activity_id)
+                    if activity_obj.manually_modified:
+                        if all:
+                            logger.info(f"Skipping update of manually modified activity {activity_id} for user {user}")
+                            continue
+                        else:
+                            logger.info(f"Updating manually modified activity {activity_id} for user {user} due to per activity sync")
                 sync_strava_activity_task.delay(user.id, activity_id, update)
             except Exception as e:
                 logger.error(f"Failed to queue task for Strava activity {activity_id}: {e}", exc_info=True, stack_info=True)
