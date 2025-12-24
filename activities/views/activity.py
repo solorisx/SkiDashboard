@@ -9,10 +9,12 @@ from django.core.serializers import serialize
 from django.contrib.gis.geos import LineString, Point
 from django.db.models import F, Q, Exists, OuterRef, Case, When, IntegerField
 from django.db.models.functions import Round
+from django.contrib.gis.db.models.functions import AsGeoJSON, Centroid
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from itertools import groupby
 from operator import attrgetter
+from silk.profiling.profiler import silk_profile
 
 from activities.models import LiftRide, Badge, PisteRide
 from cost.forms import CostForm
@@ -33,6 +35,7 @@ def get_unique_lift_rides(activity):
 
 
 @login_required
+@silk_profile(name='activity_list')
 def activity_list(request):
     """Show all activities with pagination, cost management, filtering and grouping."""
     logger.debug(f"Request method: {request.method}")
@@ -81,7 +84,7 @@ def activity_list(request):
     activities = activities.annotate(
         total_distance_km=Round(F("total_distance")/1000, 2),
         has_season_pass=Exists(season_pass_subquery),
-    ).prefetch_related('ski_area')
+    )
 
     # Get available ski areas and seasons for the filter dropdowns
     available_ski_areas = SkiArea.objects.filter(
@@ -125,6 +128,31 @@ def activity_list(request):
 
         grouped_activities = page_obj.object_list
 
+        # Get all activity IDs on this page across all groups
+        activity_ids = []
+        for group in grouped_activities:
+            activity_ids.extend([act.id for act in group['activities']])
+
+        # Add geometry annotations only for activities on this page (much faster!)
+        # Need to fetch with all the same annotations to preserve existing data
+        if activity_ids:
+            paginated_activities = get_user_activities_base_query(request.user).filter(
+                id__in=activity_ids
+            ).annotate(
+                total_distance_km=Round(F("total_distance")/1000, 2),
+                has_season_pass=Exists(season_pass_subquery),
+                geom_geojson=AsGeoJSON('geom'),
+                geom_centroid=Centroid('geom'),
+            )
+
+            # Create a dict for fast lookup and replace activities in groups
+            activity_dict = {act.id: act for act in paginated_activities}
+            for group in grouped_activities:
+                group['activities'] = [
+                    activity_dict.get(act.id, act)
+                    for act in group['activities']
+                ]
+
         context = {
             'grouped_activities': grouped_activities,
             'is_grouped': True,
@@ -141,6 +169,22 @@ def activity_list(request):
         paginator = Paginator(activities, 12)  # Show 12 activities per page (works as 1×12, 2×6, 3×4 rows)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
+
+        # Add geometry annotations only for activities on this page (much faster!)
+        # Need to fetch with all the same annotations to preserve existing data
+        activity_ids = [activity.id for activity in page_obj]
+        paginated_activities = get_user_activities_base_query(request.user).filter(
+            id__in=activity_ids
+        ).annotate(
+            total_distance_km=Round(F("total_distance")/1000, 2),
+            has_season_pass=Exists(season_pass_subquery),
+            geom_geojson=AsGeoJSON('geom'),
+            geom_centroid=Centroid('geom'),
+        )
+
+        # Replace page_obj items with fully annotated versions, preserving order
+        activity_dict = {act.id: act for act in paginated_activities}
+        page_obj.object_list = [activity_dict[aid] for aid in activity_ids if aid in activity_dict]
 
         context = {
             'page_obj': page_obj,

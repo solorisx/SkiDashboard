@@ -7,7 +7,14 @@ def get_seasons(user):
     """Get available seasons for a user based on their activities."""
     from activities.models import Activity
 
-    activities = Activity.objects.filter(user=user)
+    # Only fetch start_time and user profile data - avoid loading geometry fields
+    activities = (
+        Activity.objects
+        .filter(user=user)
+        .select_related('user', 'user__userprofile')
+        .only('start_time', 'user__userprofile__season_start_month',
+              'user__userprofile__season_start_day')
+    )
     seasons = get_seasons_from_activities(activities)
     seasons = [f"{a}-{b}" for (a, b) in seasons]
     seasons.sort(reverse=True)

@@ -60,7 +60,7 @@
           </div>
           <div class="col-6">
             <div class="stats-card bg-warning bg-opacity-10 rounded-3 p-3 text-center">
-              <div class="fs-4 fw-bold text-warning mb-1">{{ activity.badges.all|length }}</div>
+              <div class="fs-4 fw-bold text-warning mb-1">{{ activity.badge_count }}</div>
               <small class="text-muted fw-medium">Badges</small>
             </div>
           </div>
@@ -100,7 +100,7 @@
         </div>
 
         <!-- Badges -->
-        {% if activity.badges.all %}
+        {% if activity.badge_count > 0 %}
         <div class="mb-4">
           <div class="d-flex flex-wrap gap-2">
             {% for badge in activity.badges.all %}

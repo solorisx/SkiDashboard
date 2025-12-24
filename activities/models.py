@@ -47,6 +47,13 @@ class Activity(models.Model):
     cost = MoneyField(max_digits=10, decimal_places=2, default_currency='CHF', null=True)
     value = MoneyField(max_digits=10, decimal_places=2, default_currency='CHF', null=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', '-timestamp'], name='activity_user_timestamp_idx'),
+            models.Index(fields=['ski_area', '-timestamp'], name='activity_skiarea_timestamp_idx'),
+            models.Index(fields=['user', 'ski_area'], name='activity_user_skiarea_idx'),
+        ]
+
     def __str__(self):
         return f"{self.name}"
 

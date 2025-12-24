@@ -320,7 +320,7 @@ document.addEventListener("DOMContentLoaded", function() {
   {% if is_grouped %}
     {% for group in grouped_activities %}
       {% for activity in group.activities %}
-        {% if activity.geom and activity.geom.geojson %}
+        {% if activity.geom_geojson %}
         (function() {
           var map = L.map('map{{ activity.id }}', {
             zoomControl: false,
@@ -331,13 +331,13 @@ document.addEventListener("DOMContentLoaded", function() {
             dragging: false,
             boxZoom: false,
             keyboard: false
-          }).setView([{{ activity.geom.centroid.y|unlocalize }}, {{ activity.geom.centroid.x|unlocalize }}], 13);
+          }).setView([{{ activity.geom_centroid.y|unlocalize }}, {{ activity.geom_centroid.x|unlocalize }}], 13);
 
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: false
           }).addTo(map);
 
-          var track = {{ activity.geom.geojson|safe }};
+          var track = {{ activity.geom_geojson|safe }};
           if (track && track.coordinates && track.coordinates.length > 0) {
             var trackLayer = L.geoJSON(track, {
               style: {
@@ -370,7 +370,7 @@ document.addEventListener("DOMContentLoaded", function() {
     {% endfor %}
   {% else %}
     {% for activity in page_obj %}
-      {% if activity.geom and activity.geom.geojson %}
+      {% if activity.geom_geojson %}
       (function() {
         var map = L.map('map{{ forloop.counter }}', {
           zoomControl: false,
@@ -381,13 +381,13 @@ document.addEventListener("DOMContentLoaded", function() {
           dragging: false,
           boxZoom: false,
           keyboard: false
-        }).setView([{{ activity.geom.centroid.y|unlocalize }}, {{ activity.geom.centroid.x|unlocalize }}], 13);
+        }).setView([{{ activity.geom_centroid.y|unlocalize }}, {{ activity.geom_centroid.x|unlocalize }}], 13);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: false
         }).addTo(map);
 
-        var track = {{ activity.geom.geojson|safe }};
+        var track = {{ activity.geom_geojson|safe }};
         if (track && track.coordinates && track.coordinates.length > 0) {
           var trackLayer = L.geoJSON(track, {
             style: {
@@ -523,30 +523,30 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
+  // Get CSRF token (shared by both batch API calls)
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  const csrfToken = getCookie('csrftoken');
+
   // Load completeness data for all activities in batch
   const completenessCards = document.querySelectorAll('[id^="completeness-"]');
 
   if (completenessCards.length > 0) {
     // Collect all activity IDs
     const activityIds = Array.from(completenessCards).map(card => card.dataset.activityId);
-
-    // Get CSRF token
-    function getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
-        }
-      }
-      return cookieValue;
-    }
-
-    const csrfToken = getCookie('csrftoken');
 
     // Make single batch API request
     fetch('/activities/api/activity-completeness-batch/', {
@@ -642,19 +642,24 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  // Load piste completeness data for all activities
+  // Load piste completeness data for all activities in batch
   const pisteCompletenessCards = document.querySelectorAll('[id^="piste-completeness-"]');
 
-  pisteCompletenessCards.forEach(card => {
-    const activityId = card.dataset.activityId;
-    const skiAreaId = card.dataset.skiAreaId;
+  if (pisteCompletenessCards.length > 0) {
+    // Collect all activity IDs
+    const pisteActivityIds = Array.from(pisteCompletenessCards).map(card => card.dataset.activityId);
 
-    // Note: This loads individually for now. Can be optimized with batch API later.
-    fetch(`/activities/api/activity-piste-completeness/${activityId}/`, {
-      method: 'GET',
+    // Make single batch API request
+    fetch('/activities/api/activity-piste-completeness-batch/', {
+      method: 'POST',
       headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      }
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({
+        activity_ids: pisteActivityIds
+      })
     })
     .then(response => {
       if (!response.ok) {
@@ -662,60 +667,81 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       return response.json();
     })
-    .then(data => {
-      // Update the card with piste completeness data
-      const percentage = Math.round(data.daily_completion_percentage || 0);
-      const distanceSkiedKm = ((data.distance_skied_today || 0) / 1000).toFixed(1);
-      const totalDistanceKm = ((data.total_distance_available || 0) / 1000).toFixed(1);
-      const newPistes = ((data.new_distance_discovered || 0) / 1000).toFixed(1);
+    .then(responseData => {
+      // Extract results from the API response
+      const batchData = responseData.results || {};
 
-      let badgeClass = 'secondary';
-      if (percentage >= 75) badgeClass = 'success';
-      else if (percentage >= 50) badgeClass = 'warning';
-      else if (percentage >= 25) badgeClass = 'info';
+      // Process each card with its corresponding data
+      pisteCompletenessCards.forEach(card => {
+        const activityId = card.dataset.activityId;
+        const skiAreaId = card.dataset.skiAreaId;
+        const data = batchData[activityId];
 
-      let badgeIcon = 'pie-chart';
-      if (percentage >= 75) badgeIcon = 'trophy';
-      else if (percentage >= 50) badgeIcon = 'award';
+        if (data) {
+          // Update the card with piste completeness data
+          const percentage = Math.round(data.daily_completion_percentage || 0);
+          const distanceSkiedKm = ((data.distance_skied_today || 0) / 1000).toFixed(1);
+          const totalDistanceKm = ((data.total_distance_available || 0) / 1000).toFixed(1);
+          const newPistes = ((data.new_distance_discovered || 0) / 1000).toFixed(1);
 
-      card.innerHTML = `
-        <a href="/activities/ski-area-piste-completeness/${skiAreaId}/" class="text-decoration-none">
-          <div class="d-flex align-items-center justify-content-between">
-            <div class="text-start">
-              <div class="fs-5 fw-bold text-${badgeClass} mb-0">${percentage}%</div>
-              <small class="text-muted fw-medium">Piste completeness</small>
+          let badgeClass = 'secondary';
+          if (percentage >= 75) badgeClass = 'success';
+          else if (percentage >= 50) badgeClass = 'warning';
+          else if (percentage >= 25) badgeClass = 'info';
+
+          let badgeIcon = 'pie-chart';
+          if (percentage >= 75) badgeIcon = 'trophy';
+          else if (percentage >= 50) badgeIcon = 'award';
+
+          card.innerHTML = `
+            <a href="/activities/ski-area-piste-completeness/${skiAreaId}/" class="text-decoration-none">
+              <div class="d-flex align-items-center justify-content-between">
+                <div class="text-start">
+                  <div class="fs-5 fw-bold text-${badgeClass} mb-0">${percentage}%</div>
+                  <small class="text-muted fw-medium">Piste completeness</small>
+                </div>
+                <div class="text-end">
+                  <div class="d-flex align-items-center gap-1 mb-1">
+                    <i class="bi bi-${badgeIcon} text-${badgeClass}"></i>
+                    <small class="text-muted">${distanceSkiedKm}km/${totalDistanceKm}km</small>
+                  </div>
+                  <div class="mb-1" style="min-height: 20px;">
+                    ${newPistes > 0 ? `<div class="badge bg-success text-white small">+${newPistes}km new!</div>` : ''}
+                  </div>
+                  <div class="text-center">
+                    <small class="text-primary fw-medium">
+                      <i class="bi bi-arrow-right me-1"></i>View Details
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </a>
+          `;
+
+          // Add hover effect
+          card.classList.add('hover-piste-completeness');
+        } else {
+          // Handle missing data
+          card.innerHTML = `
+            <div class="text-center">
+              <small class="text-muted">Piste completeness unavailable</small>
             </div>
-            <div class="text-end">
-              <div class="d-flex align-items-center gap-1 mb-1">
-                <i class="bi bi-${badgeIcon} text-${badgeClass}"></i>
-                <small class="text-muted">${distanceSkiedKm}km/${totalDistanceKm}km</small>
-              </div>
-              <div class="mb-1" style="min-height: 20px;">
-                ${newPistes > 0 ? `<div class="badge bg-success text-white small">+${newPistes}km new!</div>` : ''}
-              </div>
-              <div class="text-center">
-                <small class="text-primary fw-medium">
-                  <i class="bi bi-arrow-right me-1"></i>View Details
-                </small>
-              </div>
-            </div>
-          </div>
-        </a>
-      `;
-
-      // Add hover effect
-      card.classList.add('hover-piste-completeness');
+          `;
+        }
+      });
     })
     .catch(error => {
-      console.error(`Error loading piste completeness for activity ${activityId}:`, error);
-      // Show unavailable message
-      card.innerHTML = `
-        <div class="text-center">
-          <small class="text-muted">Piste completeness unavailable</small>
-        </div>
-      `;
+      console.error('Error loading batch piste completeness:', error);
+      // Fallback for all cards
+      pisteCompletenessCards.forEach(card => {
+        card.innerHTML = `
+          <div class="text-center">
+            <small class="text-muted">Piste completeness unavailable</small>
+          </div>
+        `;
+      });
     });
-  });
+  }
 });
 </script>
 

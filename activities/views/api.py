@@ -12,7 +12,8 @@ from osm.models import SkiArea
 from ..utils.completeness import (
     calculate_activity_completeness,
     calculate_batch_activity_completeness,
-    calculate_activity_piste_completeness
+    calculate_activity_piste_completeness,
+    calculate_batch_activity_piste_completeness
 )
 from ..models import Activity
 from ..utils.queries import get_user_activities_base_query
@@ -245,6 +246,43 @@ def activity_piste_completeness_api(request, activity_id):
     except Exception as e:
         logger.error(f"Error calculating piste completeness for activity {activity_id}: {e}")
         return JsonResponse({'error': 'Error calculating piste completeness'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def activity_piste_completeness_batch_api(request):
+    """Batch API endpoint to get piste completeness data for multiple activities."""
+    if not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'AJAX requests only'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+        activity_ids = data.get('activity_ids', [])
+
+        if not activity_ids:
+            return JsonResponse({'error': 'No activity IDs provided'}, status=400)
+
+        if len(activity_ids) > 100:  # Reasonable limit
+            return JsonResponse({'error': 'Too many activity IDs (max 100)'}, status=400)
+
+        # Get activities for user with related data
+        activities = Activity.objects.filter(
+            id__in=activity_ids,
+            user=request.user
+        ).select_related('ski_area').prefetch_related(
+            'laps__pisteride_set'
+        )
+
+        # Calculate piste completeness for batch of activities efficiently
+        results = calculate_batch_activity_piste_completeness(list(activities), request.user)
+
+        return JsonResponse({'results': results})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        logger.error(f"Error in batch piste completeness API: {e}")
+        return JsonResponse({'error': 'Server error'}, status=500)
 
 
 @login_required

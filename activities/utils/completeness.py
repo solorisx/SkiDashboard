@@ -830,6 +830,25 @@ def calculate_activity_piste_completeness(activity):
     }
 
 
+def calculate_batch_activity_piste_completeness(activities, user):
+    """
+    Calculate piste completeness for multiple activities by calling the individual function.
+
+    Args:
+        activities: List of Activity objects
+        user: User object
+
+    Returns:
+        dict: Mapping of activity_id to piste completeness data
+    """
+    results = {}
+    for activity in activities:
+        completeness = calculate_activity_piste_completeness(activity)
+        results[str(activity.id)] = completeness
+
+    return results
+
+
 def calculate_overall_piste_completeness(user):
     """
     Calculate overall piste completeness across all visited ski areas for a user.

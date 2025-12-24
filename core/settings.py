@@ -105,6 +105,8 @@ SILKY_INTERCEPT_FUNC = lambda request: not request.path.startswith('/accounts/')
 
 SILKY_AUTHENTICATION = True  # User must login
 SILKY_AUTHORISATION = True  # User must have permissions
+SILKY_PYTHON_PROFILER = True  # Enable Python profiling
+SILKY_PYTHON_PROFILER_BINARY = True  # Use cProfile for better performance
 
 SOCIALACCOUNT_STORE_TOKENS = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
