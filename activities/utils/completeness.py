@@ -317,6 +317,14 @@ def calculate_activity_completeness(activity):
             'new_lifts_discovered': 0
         }
 
+    # Check cache first - data only changes if activity is reprocessed or manually modified
+    cache_key = f"activity_completeness_{activity.id}"
+    cached_result = cache.get(cache_key)
+
+    if cached_result is not None:
+        logger.debug(f"Using cached completeness for activity {activity.id}")
+        return cached_result
+
     # Get lifts used in this activity
     activity_lifts = LiftRide.objects.filter(
         lap__activity=activity
@@ -340,12 +348,18 @@ def calculate_activity_completeness(activity):
 
     new_lifts = set(activity_lifts) - set(previous_lifts)
 
-    return {
+    result = {
         'lifts_used_today': len(activity_lifts),
         'total_lifts_available': total_available,
         'daily_completion_percentage': daily_percentage,
         'new_lifts_discovered': len(new_lifts)
     }
+
+    # Cache indefinitely - only changes if activity is reprocessed or manually modified
+    cache.set(cache_key, result, None)
+    logger.debug(f"Cached completeness for activity {activity.id}")
+
+    return result
 
 
 def calculate_batch_activity_completeness(activities, user):
@@ -760,6 +774,33 @@ def calculate_ski_area_piste_completeness(user, ski_area, force_calc=False, seas
     return result
 
 
+def get_ski_area_total_distance_cached(ski_area, user):
+    """
+    Get total available piste distance for a ski area with caching.
+
+    Args:
+        ski_area: SkiArea object
+        user: User object
+
+    Returns:
+        float: total_distance_available
+    """
+    cache_key = f"available_pistes_distance_{ski_area.id}_{user.id}"
+    cached_result = cache.get(cache_key)
+
+    if cached_result is not None:
+        logger.debug(f"Using cached available pistes distance for ski area {ski_area.id}")
+        return cached_result
+
+    available_pistes = get_available_pistes_in_ski_area(ski_area, user=user)
+    total_distance_available = sum(p.length for p in available_pistes if p.length)
+
+    # Cache for 1 hour
+    cache.set(cache_key, total_distance_available, 3600)
+
+    return total_distance_available
+
+
 def calculate_activity_piste_completeness(activity):
     """
     Calculate piste completeness for a single activity.
@@ -785,6 +826,14 @@ def calculate_activity_piste_completeness(activity):
             'new_distance_discovered': 0
         }
 
+    # Check cache first - data only changes if activity is reprocessed or manually modified
+    cache_key = f"activity_piste_completeness_{activity.id}"
+    cached_result = cache.get(cache_key)
+
+    if cached_result is not None:
+        logger.debug(f"Using cached piste completeness for activity {activity.id}")
+        return cached_result
+
     # Get pistes ridden in this activity
     activity_piste_rides = PisteRide.objects.filter(
         lap__activity=activity
@@ -798,9 +847,10 @@ def calculate_activity_piste_completeness(activity):
         p.length for p in activity_pistes if p.length and not p.is_area()
     )
 
-    # Get all available pistes in ski area
-    available_pistes = get_available_pistes_in_ski_area(activity.ski_area, user=activity.user)
-    total_distance_available = sum(p.length for p in available_pistes if p.length)
+    # Get total available piste distance for ski area (cached)
+    total_distance_available = get_ski_area_total_distance_cached(
+        activity.ski_area, activity.user
+    )
 
     # Calculate daily completion percentage
     daily_percentage = 0
@@ -821,13 +871,19 @@ def calculate_activity_piste_completeness(activity):
         p.length for p in new_pistes if p.length and not p.is_area()
     )
 
-    return {
+    result = {
         'distance_skied_today': round(distance_skied_today, 1),
         'total_distance_available': round(total_distance_available, 1),
         'daily_completion_percentage': daily_percentage,
         'new_pistes_discovered': len(new_piste_ids),
         'new_distance_discovered': round(new_distance_discovered, 1)
     }
+
+    # Cache indefinitely - only changes if activity is reprocessed or manually modified
+    cache.set(cache_key, result, None)
+    logger.debug(f"Cached piste completeness for activity {activity.id}")
+
+    return result
 
 
 def calculate_batch_activity_piste_completeness(activities, user):
