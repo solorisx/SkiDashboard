@@ -505,11 +505,12 @@
                   <th class="fw-bold">Length</th>
                   <th class="fw-bold">Time</th>
                   <th class="fw-bold">OSM</th>
+                  <th class="fw-bold" style="width: 60px;">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="pisteRidesBody">
                 {% for piste_ride in piste_rides %}
-                <tr class="table-row-hover">
+                <tr class="table-row-hover piste-ride-row" data-piste-id="{{ piste_ride.id }}">
                   <td>
                     <span class="badge bg-primary-subtle text-primary px-2 py-1">
                       {{ piste_ride.lap.lap_index }}
@@ -563,10 +564,15 @@
                       <i class="bi bi-box-arrow-up-right text-primary"></i>
                     </a>
                   </td>
+                  <td>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deletePisteRide({{ piste_ride.id }})" title="Delete">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
                 </tr>
                 {% empty %}
-                <tr>
-                  <td colspan="6" class="text-center py-4 text-muted">
+                <tr id="noPisteRidesRow">
+                  <td colspan="7" class="text-center py-4 text-muted">
                     <i class="bi bi-info-circle me-2"></i>No piste rides recorded
                   </td>
                 </tr>
@@ -1248,6 +1254,33 @@ async function updateStravaDescription(activityId) {
   } catch (err) {
     console.error('Network error:', err);
     showErrorToast('Network error while updating Strava description.');
+  }
+}
+
+// ---- DELETE PISTE RIDE: 204 No Content ----
+async function deletePisteRide(pisteRideId) {
+  if (!confirm('Are you sure you want to delete this piste ride?')) return;
+
+  try {
+    const res = await fetch(`/api/piste-ride/${pisteRideId}/`, {
+      method: 'DELETE',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    });
+
+    if (res.status === 204) {
+      document.querySelector(`[data-piste-id="${pisteRideId}"]`)?.remove();
+      showSuccessToast('Piste ride deleted successfully!');
+      return;
+    }
+
+    // Try to read error details if not 204
+    const payload = await parseJSONSafe(res);
+    const msg = payload?.error || payload?.detail || 'Failed to delete piste ride.';
+    console.error('Delete failed:', msg);
+    showErrorToast(msg);
+  } catch (err) {
+    console.error('Network error:', err);
+    showErrorToast('Network error while deleting piste ride.');
   }
 }
 

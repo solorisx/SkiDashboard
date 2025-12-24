@@ -6,7 +6,7 @@ from django.db.models import Count, Avg, Min, Max, F, Sum, Q
 from django.db.models.functions import Round
 from django.db import models
 from django.http import HttpResponse
-from activities.models import Activity, LiftRide, Lap
+from activities.models import Activity, LiftRide, Lap, PisteRide
 from osm.models import SkiArea, Aerialway, SkiAreaNetwork
 from cost.models import SeasonPass
 
@@ -306,7 +306,25 @@ def lift_ride_api(request, lift_ride_id=None):
 
         else:
             return HttpResponse(status=400)
-        
+
+
+@require_http_methods(["DELETE"])
+@login_required
+def piste_ride_api(request, piste_ride_id):
+    """API endpoint to delete a piste ride by ID."""
+    piste_ride = PisteRide.objects.filter(id=piste_ride_id, lap__activity__user=request.user).first()
+    if not piste_ride:
+        return JsonResponse({"error": "Piste ride not found or does not belong to user."}, status=404)
+
+    if request.method == "DELETE":
+        # Mark activity as manually modified
+        activity = piste_ride.lap.activity
+        activity.manually_modified = True
+        activity.save(update_fields=['manually_modified'])
+        piste_ride.delete()
+        return HttpResponse(status=204)
+
+
 class SeasonPassAPI(LoginRequiredMixin, View):
     """
     API endpoint to get, create, update, or delete a season pass.

@@ -41,6 +41,7 @@ urlpatterns = [
     path("api/season-stats/", views.season_stats_api, name="season_stats_api"),
     path("api/lift-ride/", views.lift_ride_api, name="lift_ride_api"),
     path("api/lift-ride/<int:lift_ride_id>/", views.lift_ride_api, name="lift_ride_api"),
+    path("api/piste-ride/<int:piste_ride_id>/", views.piste_ride_api, name="piste_ride_api"),
     path("api/season-pass/", views.SeasonPassAPI.as_view(), name="season_pass_api"),
     path("api/season-pass/<int:season_pass_id>/", views.SeasonPassAPI.as_view(), name="season_pass_api"),
 ]
