@@ -1385,6 +1385,36 @@ class ActivityParser:
 
         self.profiler.end_operation('process_piste_rides')
 
+    def _calculate_completeness(self, activity_instance: Activity) -> None:
+        """Calculate and update completeness scores for activity, ski area, and pistes."""
+
+        self.profiler.start_operation('calculate_completeness')
+
+        self.profiler.start_operation('calculate_activity_completeness')
+        completeness.calculate_activity_completeness(activity_instance)
+        self.profiler.end_operation('calculate_activity_completeness')
+
+        self.profiler.start_operation('calculate_activity_piste_completeness')
+        completeness.calculate_activity_piste_completeness(activity_instance)
+        self.profiler.end_operation('calculate_activity_piste_completeness')
+
+        self.profiler.start_operation('calculate_ski_area_completeness')
+        completeness.calculate_ski_area_completeness(user=activity_instance.user, ski_area=activity_instance.ski_area, force_calc=True)
+        self.profiler.end_operation('calculate_ski_area_completeness')
+        
+        self.profiler.start_operation('calculate_ski_area_piste_completeness')
+        completeness.calculate_ski_area_piste_completeness(user=activity_instance.user, ski_area=activity_instance.ski_area, force_calc=True)
+        self.profiler.end_operation('calculate_ski_area_piste_completeness')
+
+        from .utils.seasons import get_season_for_activity
+        self.profiler.start_operation('calculate_ski_area_completeness')
+        season_tuple = get_season_for_activity(activity_instance)
+        season = f"{season_tuple[0]}-{season_tuple[1]}"
+        completeness.calculate_ski_area_completeness(user=activity_instance.user, ski_area=activity_instance.ski_area, season=season, force_calc=True)
+        self.profiler.end_operation('calculate_ski_area_completeness')
+
+        self.profiler.end_operation('calculate_completeness')
+    
     def generate_strava_description(self, activity_instance: Activity, existing_description: str = "") -> str:
         """
         Generate a description for the Strava activity with lift ride information.
@@ -1657,14 +1687,7 @@ Manage your preferences: {context['settings_url']}
         activity_instance.processed_on = timezone.now()
         activity_instance.save()
 
-        self.profiler.start_operation('calculate_ski_area_completeness')
-        completeness.calculate_ski_area_completeness(user=activity_instance.user, ski_area=activity_instance.ski_area, force_calc=True)
-        self.profiler.end_operation('calculate_ski_area_completeness')
-        from .utils.seasons import get_seasons
-        for season in get_seasons(activity_instance.user):
-            self.profiler.start_operation('calculate_ski_area_completeness')
-            completeness.calculate_ski_area_completeness(user=activity_instance.user, ski_area=activity_instance.ski_area, season=season, force_calc=True)
-            self.profiler.end_operation('calculate_ski_area_completeness')
+        self._calculate_completeness(activity_instance)
 
         # Assign badges
         assign_badges(activity_instance)
