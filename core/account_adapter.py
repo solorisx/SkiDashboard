@@ -91,7 +91,7 @@ class AsyncEmailAccountAdapter(DefaultAccountAdapter):
 
     def get_from_email(self):
         """Get the sender email address."""
-        return getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@skidashboard.app')
+        return getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@slopelog.com')
 
     def confirm_email(self, request, email_address):
         """

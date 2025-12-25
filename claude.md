@@ -1,8 +1,8 @@
-# SkiDashboard - Claude Development Guide
+# SlopeLog - Claude Development Guide
 
 ## Project Overview
 
-SkiDashboard is a sophisticated Django GIS web application that tracks ski activities, analyzes GPS tracks to detect lift rides and piste runs, and provides comprehensive statistics and insights. The application integrates with Strava for activity syncing and uses OpenStreetMap data for ski infrastructure mapping.
+SlopeLog is a sophisticated Django GIS web application that tracks ski activities, analyzes GPS tracks to detect lift rides and piste runs, and provides comprehensive statistics and insights. The application integrates with Strava for activity syncing and uses OpenStreetMap data for ski infrastructure mapping.
 
 **Key Technologies:**
 - Django 5.2.6 with GeoDjango

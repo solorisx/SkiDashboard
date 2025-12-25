@@ -63,7 +63,7 @@ def get_country_code(osm_id, osm_type):
         # Fallback to reverse geocoding using Nominatim
         logger.debug(f"Fetching country code from Nominatim API for node {osm_id}")
         url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={node.lat}&lon={node.lon}"
-        response = requests.get(url, headers={"User-Agent": "SkiDashboard/1.0"})
+        response = requests.get(url, headers={"User-Agent": "SlopeLog/1.0"})
 
         if response.ok:
             data = response.json()

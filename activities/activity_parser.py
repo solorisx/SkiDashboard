@@ -1420,7 +1420,7 @@ class ActivityParser:
         Generate a description for the Strava activity with lift ride information.
         Uses a regex-matchable pattern to identify and replace our generated content while preserving user content.
 
-        Pattern: 🎿 3x Tiefenbachbahn, 2x Schwarze Schneid, 1x Mutkogl - tracked by SkiDashboard 🎿
+        Pattern: 🎿 3x Tiefenbachbahn, 2x Schwarze Schneid, 1x Mutkogl - tracked by SlopeLog.com 🎿
         """
         self.profiler.start_operation('generate_strava_description')
 
@@ -1448,11 +1448,11 @@ class ActivityParser:
         lifts_string = ", ".join(lift_parts)
 
         # Create the marked content
-        marked_content = f"🎿 {lifts_string} - tracked by SkiDashboard 🎿"
+        marked_content = f"🎿 {lifts_string} - tracked by SlopeLog.com 🎿"
 
-        # Remove any existing SkiDashboard content from the description using regex
+        # Remove any existing SlopeLog content from the description using regex
         import re
-        pattern = r'🎿.*?- tracked by SkiDashboard 🎿'
+        pattern = r'🎿.*?- tracked by SlopeLog.com 🎿'
         cleaned_description = re.sub(pattern, '', existing_description, flags=re.DOTALL).strip()
 
         # Combine: user content + our content
@@ -1579,7 +1579,7 @@ class ActivityParser:
                 if allowed_hosts and allowed_hosts[0]:
                     site_url = f"https://{allowed_hosts[0]}"
                 else:
-                    site_url = "https://skidashboard.com"  # fallback
+                    site_url = "https://www.slopelog.com"  # fallback
 
             context = {
                 'activity': activity_instance,

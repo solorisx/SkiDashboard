@@ -426,7 +426,7 @@ def create_shareable_image(activity):
         y_offset += 20
 
     # --- BRANDING SECTION ---
-    branding_text = "SkiDashboard.com"
+    branding_text = "SlopeLog.com"
     draw.text((IMAGE_WIDTH // 2, IMAGE_HEIGHT - 80), branding_text,
              fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_branding)
 
