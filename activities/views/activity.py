@@ -14,7 +14,17 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from itertools import groupby
 from operator import attrgetter
-from silk.profiling.profiler import silk_profile
+import os
+
+# Conditionally import silk_profile only if Silk is enabled
+if os.getenv("ENABLE_SILK", "false").lower() == "true":
+    from silk.profiling.profiler import silk_profile
+else:
+    # No-op decorator when Silk is disabled
+    def silk_profile(name=None):
+        def decorator(func):
+            return func
+        return decorator
 
 from activities.models import LiftRide, Badge, PisteRide
 from cost.forms import CostForm

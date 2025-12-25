@@ -98,14 +98,14 @@ MIDDLEWARE = [
 if os.getenv("ENABLE_SILK", "false").lower() == "true":
     MIDDLEWARE.append('silk.middleware.SilkyMiddleware')
 
+    # Silk configuration (only set when Silk is enabled)
+    SILKY_INTERCEPT_FUNC = lambda request: not request.path.startswith('/accounts/')
+    SILKY_AUTHENTICATION = True  # User must login
+    SILKY_AUTHORISATION = True  # User must have permissions
+    SILKY_PYTHON_PROFILER = True  # Enable Python profiling
+    SILKY_PYTHON_PROFILER_BINARY = True  # Use cProfile for better performance
+
 ROOT_URLCONF = 'core.urls'
-
-SILKY_INTERCEPT_FUNC = lambda request: not request.path.startswith('/accounts/')
-
-SILKY_AUTHENTICATION = True  # User must login
-SILKY_AUTHORISATION = True  # User must have permissions
-SILKY_PYTHON_PROFILER = True  # Enable Python profiling
-SILKY_PYTHON_PROFILER_BINARY = True  # Use cProfile for better performance
 
 SOCIALACCOUNT_STORE_TOKENS = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
