@@ -93,11 +93,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    'silk.middleware.SilkyMiddleware',
 ]
 
-if os.getenv("ENABLE_SILK", "false").lower() != "true":
-    MIDDLEWARE.remove('silk.middleware.SilkyMiddleware')
+if os.getenv("ENABLE_SILK", "false").lower() == "true":
+    MIDDLEWARE.append('silk.middleware.SilkyMiddleware')
 
 ROOT_URLCONF = 'core.urls'
 
