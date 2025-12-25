@@ -36,7 +36,7 @@ class AsyncEmailAccountAdapter(DefaultAccountAdapter):
                         self.domain = self._get_default_domain()
                 else:
                     self.domain = self._get_default_domain()
-                self.name = 'Ski Dashboard'
+                self.name = 'SlopeLog'
 
             def _get_default_domain(self):
                 allowed_hosts = getattr(settings, 'ALLOWED_HOSTS', [])

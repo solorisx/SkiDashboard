@@ -1,6 +1,6 @@
 Hi {{ user.email }}!
 
-Welcome to Ski Dashboard! 🎿
+Welcome to SlopeLog! 🎿
 
 Your email has been verified and your account is now fully active. You're all set to start tracking your skiing adventures!
 
@@ -17,7 +17,7 @@ http{% if request.is_secure %}s{% endif %}://{{ current_site.domain }}/
 If you have any questions or need help, feel free to reach out.
 
 Happy skiing!
-The Ski Dashboard Team
+SlopeLog
 
 ---
 {{ current_site.domain }}

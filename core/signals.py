@@ -35,11 +35,11 @@ def notify_admin_new_user(request, user, **kwargs):
             signup_method = 'Social Account (Strava)'
         
         # Email subject
-        subject = f'New Ski Dashboard User: {user_id}'
+        subject = f'New SlopeLog User: {user_id}'
         
         # Email content
         message = f"""
-A new user has joined Ski Dashboard!
+A new user has joined SlopeLog!
 User ID: {user_id}
 User Profile ID: {user_profile_id}
 Date Joined: {date_joined}
