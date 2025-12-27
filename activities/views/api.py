@@ -50,7 +50,7 @@ def season_stats(request):
     # Get most popular ski area
     skiarea = (
         activities.values("ski_area")
-        .annotate(count=Count("ski_area"))
+        .annotate(count=Count("id", distinct=True))
         .order_by("-count")
         .first()
     )
@@ -101,10 +101,10 @@ def home_stats(request):
         timestamp__gte=season_start, 
         timestamp__lte=season_end
     )
-    
+
     skiarea = (
         activities.values("ski_area")
-        .annotate(count=Count("ski_area"))
+        .annotate(count=Count("id", distinct=True))
         .order_by("-count")
         .first()
     )

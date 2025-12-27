@@ -1599,7 +1599,7 @@ class ActivityParser:
                 'lifts_used_today': completeness_data.get('lifts_used_today', 0) if completeness_data else 0,
                 'total_lifts_available': completeness_data.get('total_lifts_available', 0) if completeness_data else 0,
                 'new_lifts_discovered': completeness_data.get('new_lifts_discovered', 0) if completeness_data else 0,
-                'activity_url': f"{site_url}/activities/activity/{activity_instance.id}/",
+                'activity_url': f"{site_url}/activities/{activity_instance.id}/",
                 'settings_url': f"{site_url}/account/profile/",
             }
 
