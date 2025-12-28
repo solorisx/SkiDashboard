@@ -140,17 +140,7 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # Email Configuration
-if os.getenv('MAILGUN_API_KEY'):
-    # Use Mailgun HTTP API (more reliable than SMTP)
-    EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
-    ANYMAIL = {
-        "MAILGUN_API_KEY": os.getenv('MAILGUN_API_KEY'),
-        "MAILGUN_SENDER_DOMAIN": os.getenv('MAILGUN_SENDER_DOMAIN'),
-        "MAILGUN_API_URL": os.getenv('MAILGUN_API_URL', 'https://api.mailgun.net/v3'),
-    }
-    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@slopelog.com')
-elif os.getenv('SMTP_HOST'):
-    # Fallback to SMTP
+if os.getenv('SMTP_HOST'):
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     EMAIL_HOST = os.getenv('SMTP_HOST')
     EMAIL_PORT = int(os.getenv('SMTP_PORT', 587))
@@ -158,9 +148,18 @@ elif os.getenv('SMTP_HOST'):
     EMAIL_USE_SSL = os.getenv('SMTP_USE_SSL', 'False').lower() == 'true'
     EMAIL_HOST_USER = os.getenv('SMTP_USER')
     EMAIL_HOST_PASSWORD = os.getenv('SMTP_PASSWORD')
-    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@slopelog.com')
+    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', os.getenv('SMTP_USER', 'noreply@slopelog.com'))
     # Set timeout to prevent worker blocking if SMTP connection hangs
     EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', 10))
+elif os.getenv('MAILGUN_API_KEY'):
+    # Fallback to Mailgun HTTP API
+    EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+    ANYMAIL = {
+        "MAILGUN_API_KEY": os.getenv('MAILGUN_API_KEY'),
+        "MAILGUN_SENDER_DOMAIN": os.getenv('MAILGUN_SENDER_DOMAIN'),
+        "MAILGUN_API_URL": os.getenv('MAILGUN_API_URL', 'https://api.mailgun.net/v3'),
+    }
+    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@slopelog.com')
 else:
     # Fallback to file-based backend for development
     EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
