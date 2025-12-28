@@ -140,6 +140,9 @@ def profile_management(request):
     except UserProfile.DoesNotExist:
         profile = UserProfile.objects.create(user=request.user)
 
+    # Check if this is first-time profile setup
+    is_first_time = not profile.profile_confirmed
+
     if request.method == 'POST':
         logger.debug("Received profile update POST data: %s", request.POST)
 
@@ -149,6 +152,14 @@ def profile_management(request):
         form = UserProfileForm(request.POST, instance=profile)
         if form.is_valid():
             updated_profile = form.save()
+
+            # Mark profile as confirmed on first save
+            if is_first_time:
+                updated_profile.profile_confirmed = True
+                updated_profile.save()
+                messages.success(request, 'Welcome! Your profile has been set up successfully.')
+            else:
+                messages.success(request, 'Profile settings updated successfully.')
 
             # Check if opt_in_strava_write changed
             strava_write_changed = original_strava_write != updated_profile.opt_in_strava_write
@@ -170,17 +181,25 @@ def profile_management(request):
                     )
                     return redirect('strava-connection')
 
-            messages.success(request, 'Profile settings updated successfully.')
-            return redirect('profile_management')
+            # Redirect to home after successful save
+            return redirect('home')
         else:
             logger.warning("UserProfileForm is not valid: %s", form.errors)
             messages.error(request, 'Please correct the errors below.')
     else:
         form = UserProfileForm(instance=profile)
 
+    # Check if user has Strava connected
+    has_strava = SocialAccount.objects.filter(
+        user=request.user,
+        provider="strava"
+    ).exists()
+
     return render(request, 'account/profile.html', {
         'form': form,
-        'profile': profile
+        'profile': profile,
+        'is_first_time': is_first_time,
+        'has_strava': has_strava,
     })
 
 

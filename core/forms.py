@@ -21,6 +21,19 @@ class UserDeleteForm(forms.Form):
 
 
 class UserProfileForm(forms.ModelForm):
+    # User account fields (not part of UserProfile model)
+    username = forms.CharField(
+        max_length=150,
+        required=True,
+        help_text="Your display name",
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    email = forms.EmailField(
+        required=False,
+        disabled=True,
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'readonly': 'readonly'})
+    )
+
     excluded_lift_types = forms.MultipleChoiceField(
         required=False,
         widget=forms.CheckboxSelectMultiple,
@@ -61,6 +74,24 @@ class UserProfileForm(forms.ModelForm):
         if self.instance and self.instance.pk:
             self.fields['excluded_lift_types'].initial = self.instance.excluded_lift_types or []
 
+            # Set initial values for username and email from User model
+            if self.instance.user:
+                self.fields['username'].initial = self.instance.user.username
+                self.fields['email'].initial = self.instance.user.email
+
+    def clean_username(self):
+        """Validate that username is unique (excluding current user)."""
+        from django.contrib.auth.models import User
+        username = self.cleaned_data.get('username')
+
+        if username:
+            # Check if username already exists for a different user
+            user_id = self.instance.user.id if self.instance and self.instance.pk else None
+            if User.objects.filter(username=username).exclude(id=user_id).exists():
+                raise forms.ValidationError("This username is already taken. Please choose another one.")
+
+        return username
+
     def clean_opt_in_strava_write(self):
         """Validate that user has Strava connected before enabling write access."""
         opt_in_strava_write = self.cleaned_data.get('opt_in_strava_write')
@@ -86,9 +117,18 @@ class UserProfileForm(forms.ModelForm):
     def save(self, commit=True):
         logger.debug("Saving UserProfileForm with cleaned_data: %s", self.cleaned_data)
         instance = super().save(commit=False)
+
+        # Update username on User model if changed
+        new_username = self.cleaned_data.get('username')
+        if new_username and instance.user.username != new_username:
+            instance.user.username = new_username
+            instance.user.save()
+            logger.info(f"Updated username to: {new_username}")
+
         # Convert excluded_lift_types to list for JSONField
         instance.excluded_lift_types = self.cleaned_data.get('excluded_lift_types', [])
         logger.debug("commit=%s, excluded_lift_types=%s", commit, instance.excluded_lift_types)
+
         if commit:
             instance.save()
         return instance

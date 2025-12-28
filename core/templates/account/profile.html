@@ -6,6 +6,13 @@
 {% block content %}
 <div class="container mt-5" style="max-width: 900px;">
   <div class="p-4 bg-white rounded shadow-sm">
+    {% if is_first_time %}
+    <div class="alert alert-info" role="alert">
+      <h4 class="alert-heading"><i class="bi bi-info-circle me-2"></i>{% trans "Welcome to SlopeLog!" %}</h4>
+      <p>{% trans "Please review and confirm your profile settings below. You can change these anytime from your profile page." %}</p>
+    </div>
+    {% endif %}
+
     <h1 class="fw-bold mb-2">{% trans "Profile Settings" %} ⚙️</h1>
     <p class="text-muted mb-4">
       {% trans "Customize your ski tracking preferences and season settings." %}
@@ -14,11 +21,45 @@
     <form method="post">
       {% csrf_token %}
 
-      <!-- General Settings -->
-      <!-- not active yet -->
-      
+      <!-- Account Information -->
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">{% trans "Account Information" %}</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-muted mb-3">
+            {% trans "Your basic account information and display name." %}
+          </p>
 
- 
+          <div class="mb-3">
+            <label for="{{ form.username.id_for_label }}" class="form-label fw-bold">
+              {% trans "Username" %} <span class="text-danger">*</span>
+            </label>
+            {{ form.username }}
+            {% if form.username.help_text %}
+              <div class="form-text">{{ form.username.help_text }}</div>
+            {% endif %}
+            {% if form.username.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.username.errors %}
+                  {{ error }}
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.email.id_for_label }}" class="form-label fw-bold">
+              {% trans "Email Address" %}
+            </label>
+            {{ form.email }}
+            <div class="form-text">
+              {% trans "Your email address is used for login and notifications. To change it, go to " %}
+              <a href="{% url 'account_email' %}">{% trans "Email Settings" %}</a>.
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Season Settings -->
       <div class="card mb-4">
@@ -123,14 +164,47 @@
 
       <!-- Strava Integration -->
       <div class="card mb-4">
-        <div class="card-header bg-light">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h5 class="mb-0">{% trans "Strava Integration" %}</h5>
+          {% if has_strava %}
+          <span class="badge bg-success">
+            <i class="bi bi-check-circle me-1"></i>{% trans "Connected" %}
+          </span>
+          {% else %}
+          <span class="badge bg-secondary">
+            <i class="bi bi-x-circle me-1"></i>{% trans "Not Connected" %}
+          </span>
+          {% endif %}
         </div>
         <div class="card-body">
+          {% if not has_strava %}
+          <div class="alert alert-warning" role="alert">
+            <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>{% trans "Strava Not Connected" %}</h6>
+            <p class="mb-2">{% trans "Connect your Strava account to automatically import your ski activities." %}</p>
+            <a href="{% url 'strava-connection' %}" class="btn btn-primary btn-sm">
+              <i class="bi bi-link-45deg me-1"></i>{% trans "Connect to Strava" %}
+            </a>
+          </div>
+          {% else %}
           <p class="text-muted mb-3">
             {% trans "Configure how this app interacts with your Strava account." %}
           </p>
 
+          <!-- Read Access (always enabled when connected) -->
+          <div class="mb-3 d-flex align-items-start">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" checked disabled id="strava_read_access">
+              <label class="form-check-label" for="strava_read_access">
+                <strong>{% trans "Allow Read Access to Strava" %}</strong>
+                <div class="text-muted small">
+                  {% trans "Allows the app to read your activities and profile information. This is always enabled when connected." %}
+                </div>
+              </label>
+            </div>
+            <i class="bi bi-check-circle-fill text-success ms-2" style="font-size: 1.25rem;"></i>
+          </div>
+
+          <!-- Write Access (optional) -->
           <div class="form-check mb-3">
             {{ form.opt_in_strava_write }}
             <label class="form-check-label" for="{{ form.opt_in_strava_write.id_for_label }}">
@@ -150,16 +224,31 @@
             <i class="bi bi-info-circle me-2"></i>
             {% trans "Note: Changing write access requires re-connecting your Strava account. You will be redirected to re-authenticate after saving." %}
           </div>
+
+          <div class="mt-3">
+            <a href="{% url 'strava-connection' %}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-gear me-1"></i>{% trans "Manage Strava Connection" %}
+            </a>
+          </div>
+          {% endif %}
         </div>
       </div>
 
       <!-- Form Actions -->
       <div class="d-flex justify-content-between">
+        {% if not is_first_time %}
         <a href="{% url 'home' %}" class="btn btn-secondary">
           {% trans "Cancel" %}
         </a>
-        <button type="submit" class="btn btn-primary">
-          {% trans "Save Settings" %}
+        {% else %}
+        <span></span>
+        {% endif %}
+        <button type="submit" class="btn btn-primary btn-lg">
+          {% if is_first_time %}
+            {% trans "Confirm & Continue" %} <i class="bi bi-arrow-right"></i>
+          {% else %}
+            {% trans "Save Settings" %}
+          {% endif %}
         </button>
       </div>
     </form>

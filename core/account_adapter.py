@@ -28,8 +28,12 @@ class AsyncEmailAccountAdapter(DefaultAccountAdapter):
         # Create a simple site object for email context
         class SimpleSite:
             def __init__(self):
-                # Get domain from request or fall back to ALLOWED_HOSTS
-                if request:
+                import os
+                # Priority: ALLAUTH_SITE_DOMAIN env var > request host > ALLOWED_HOSTS
+                allauth_domain = os.getenv('ALLAUTH_SITE_DOMAIN')
+                if allauth_domain:
+                    self.domain = allauth_domain
+                elif request:
                     try:
                         self.domain = request.get_host()
                     except Exception:

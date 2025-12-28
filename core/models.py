@@ -26,6 +26,9 @@ class UserProfile(models.Model):
     opt_in_summary_email = models.BooleanField(default=False, help_text="Receive summary of new activities by email")
     opt_in_strava_write = models.BooleanField(default=False, help_text="Allow app to update Strava activity descriptions with the ridden lifts")
 
+    # Profile completion tracking
+    profile_confirmed = models.BooleanField(default=False, help_text="User has confirmed their initial profile settings")
+
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 

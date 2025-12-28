@@ -93,6 +93,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    'core.middleware.ProfileConfirmationMiddleware',  # Redirect to profile if not confirmed
 ]
 
 if os.getenv("ENABLE_SILK", "false").lower() == "true":
