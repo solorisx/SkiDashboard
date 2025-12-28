@@ -194,7 +194,16 @@
           <!-- Title and Device Attribution Section -->
           <div class="header-title-section">
             <div>
-              <h1 class="activity-title text-dark">{{ activity.name }}</h1>
+              <div class="d-flex align-items-center gap-2">
+                <h1 class="activity-title text-dark mb-0" id="activityTitle">{{ activity.name }}</h1>
+                <button class="btn btn-sm btn-link text-muted p-0"
+                        id="editTitleBtn"
+                        onclick="editActivityTitle()"
+                        title="Edit activity name"
+                        style="font-size: 1rem; line-height: 1;">
+                  <i class="bi bi-pencil"></i>
+                </button>
+              </div>
               {% if activity.device_name %}
               <div class="device-attribution">
                 <i class="bi bi-watch me-1"></i>{{ activity.device_name }}
@@ -1282,6 +1291,123 @@ async function deletePisteRide(pisteRideId) {
     console.error('Network error:', err);
     showErrorToast('Network error while deleting piste ride.');
   }
+}
+
+// ---- EDIT ACTIVITY TITLE ----
+function editActivityTitle() {
+  const titleElement = document.getElementById('activityTitle');
+  const editBtn = document.getElementById('editTitleBtn');
+  const currentTitle = titleElement.textContent.trim();
+
+  // Create input element
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentTitle;
+  input.className = 'form-control form-control-sm';
+  input.style.fontSize = titleElement.style.fontSize || '1.5rem';
+  input.style.fontWeight = '700';
+  input.maxLength = 100;
+
+  // Create save and cancel buttons
+  const btnContainer = document.createElement('div');
+  btnContainer.className = 'd-flex gap-1';
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn btn-sm btn-success';
+  saveBtn.innerHTML = '<i class="bi bi-check"></i>';
+  saveBtn.title = 'Save';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-sm btn-secondary';
+  cancelBtn.innerHTML = '<i class="bi bi-x"></i>';
+  cancelBtn.title = 'Cancel';
+
+  btnContainer.appendChild(saveBtn);
+  btnContainer.appendChild(cancelBtn);
+
+  // Replace title with input
+  const container = titleElement.parentElement;
+  container.innerHTML = '';
+  container.appendChild(input);
+  container.appendChild(btnContainer);
+  input.focus();
+  input.select();
+
+  // Cancel function
+  const cancelEdit = () => {
+    container.innerHTML = '';
+    const h1 = document.createElement('h1');
+    h1.className = 'activity-title text-dark mb-0';
+    h1.id = 'activityTitle';
+    h1.textContent = currentTitle;
+    container.appendChild(h1);
+    container.appendChild(editBtn);
+  };
+
+  // Save function
+  const saveEdit = async () => {
+    const newTitle = input.value.trim();
+
+    if (!newTitle) {
+      showErrorToast('Activity name cannot be empty');
+      input.focus();
+      return;
+    }
+
+    if (newTitle === currentTitle) {
+      cancelEdit();
+      return;
+    }
+
+    try {
+      const res = await fetch(`/activities/api/activity/{{ activity.id }}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ name: newTitle })
+      });
+
+      const payload = await parseJSONSafe(res);
+
+      if (res.ok && payload.success) {
+        // Update the title
+        container.innerHTML = '';
+        const h1 = document.createElement('h1');
+        h1.className = 'activity-title text-dark mb-0';
+        h1.id = 'activityTitle';
+        h1.textContent = payload.name;
+        container.appendChild(h1);
+        container.appendChild(editBtn);
+
+        // Also update the page title
+        document.title = `${payload.name} - Activity Details`;
+
+        showSuccessToast('Activity name updated successfully!');
+      } else {
+        const msg = payload?.error || 'Failed to update activity name';
+        showErrorToast(msg);
+      }
+    } catch (err) {
+      console.error('Network error:', err);
+      showErrorToast('Network error while updating activity name.');
+    }
+  };
+
+  // Event listeners
+  saveBtn.onclick = saveEdit;
+  cancelBtn.onclick = cancelEdit;
+
+  input.onkeydown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEdit();
+    }
+  };
 }
 
 </script>

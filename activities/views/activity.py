@@ -483,7 +483,60 @@ def segment_map(request, activity_id):
     })
 
 class ActivityAPI(LoginRequiredMixin, View):
-    """API endpoint to delete activity."""
+    """API endpoint to delete and update activity."""
+
+    def patch(self, request, activity_id):
+        """Handle PATCH requests to update an activity."""
+        import json
+        try:
+            activity = get_object_or_404(Activity, id=activity_id, user=request.user)
+            data = json.loads(request.body)
+
+            # Update activity name if provided
+            if 'name' in data:
+                new_name = data['name'].strip()
+                if not new_name:
+                    return JsonResponse({
+                        "success": False,
+                        "error": "Activity name cannot be empty"
+                    }, status=400)
+                if len(new_name) > 100:
+                    return JsonResponse({
+                        "success": False,
+                        "error": "Activity name cannot exceed 100 characters"
+                    }, status=400)
+
+                old_name = activity.name
+                activity.name = new_name
+                activity.manually_modified = True
+                activity.save()
+
+                logging.getLogger(__name__).info(
+                    f"Activity name updated from '{old_name}' to '{new_name}' (ID: {activity_id}) by user {request.user}"
+                )
+
+                return JsonResponse({
+                    "success": True,
+                    "name": activity.name,
+                    "message": "Activity name updated successfully"
+                })
+
+            return JsonResponse({
+                "success": False,
+                "error": "No valid fields to update"
+            }, status=400)
+
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "success": False,
+                "error": "Invalid JSON"
+            }, status=400)
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Error updating activity {activity_id}: {e}")
+            return JsonResponse({
+                "success": False,
+                "error": "Server error"
+            }, status=500)
 
     def delete(self, request, activity_id):
         """Handle DELETE requests to delete an activity."""
