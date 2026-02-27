@@ -70,6 +70,13 @@ from .piste_insights import (
     reload_ski_area_piste_completeness,
 )
 
+from .trips import (
+    trip_list,
+    trip_detail,
+    rename_trip,
+    recluster_trips,
+)
+
 # For backward compatibility, we also need to ensure the home_stats view 
 # returns a proper HttpResponse for template rendering
 from django.shortcuts import render
@@ -133,4 +140,10 @@ __all__ = [
     'ski_area_piste_completeness_detail',
     'ski_area_piste_completeness_all',
     'reload_ski_area_piste_completeness',
+
+    # Trip views
+    'trip_list',
+    'trip_detail',
+    'rename_trip',
+    'recluster_trips',
 ]

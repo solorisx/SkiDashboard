@@ -23,6 +23,7 @@ import os
 urlpatterns = [
     path('', views.landing, name="landing"),
     path('activities/', include('activities.urls')),
+    path('trips/', include('activities.trips_urls')),
     path('init_networks/', views.initialize_ski_area_networks, name="init_networks"),
     path('admin/', admin.site.urls),
     path('home/', views.home, name="home"),
