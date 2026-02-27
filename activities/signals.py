@@ -8,6 +8,15 @@ from .models import Activity, LiftRide, PisteRide
 logger = logging.getLogger(__name__)
 
 
+def _recluster_trips_for_user(user):
+    """Trigger trip re-clustering for a user, silently ignoring any errors."""
+    try:
+        from .trips import cluster_activities_into_trips
+        cluster_activities_into_trips(user)
+    except Exception:
+        logger.exception("Failed to re-cluster trips for user %s", user)
+
+
 def invalidate_activity_completeness_cache(activity_id):
     """
     Helper function to invalidate all completeness caches for an activity.
@@ -32,6 +41,11 @@ def invalidate_activity_cache_on_save(sender, instance, **kwargs):
     This ensures cached data is refreshed when activities are reprocessed or manually modified.
     """
     invalidate_activity_completeness_cache(instance.id)
+    # Re-cluster trips whenever an activity is saved (skip if only trip FK changed
+    # to avoid an infinite loop)
+    update_fields = kwargs.get('update_fields')
+    if update_fields is None or 'trip' not in update_fields:
+        _recluster_trips_for_user(instance.user)
 
 
 @receiver(post_delete, sender=Activity)
@@ -40,6 +54,7 @@ def invalidate_activity_cache_on_delete(sender, instance, **kwargs):
     Invalidate activity completeness caches when an activity is deleted.
     """
     invalidate_activity_completeness_cache(instance.id)
+    _recluster_trips_for_user(instance.user)
 
 
 @receiver(post_save, sender=LiftRide)

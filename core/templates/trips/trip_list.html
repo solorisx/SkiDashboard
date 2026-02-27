@@ -1,0 +1,252 @@
+{% extends '../base/base.html' %}
+{% load custom_filters %}
+{% load l10n %}
+
+{% block pagetitle %}Trips{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-5">
+
+  <!-- Header -->
+  <div class="row mb-5">
+    <div class="col-12">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+          <h1 class="display-6 fw-bold text-dark mb-2">My Trips</h1>
+          <p class="text-muted fs-5 mb-0">Your skiing adventures, automatically grouped by trip</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-primary fs-6 px-3 py-2">{{ trips|length }} Trip{{ trips|length|pluralize }}</span>
+          <button class="btn btn-outline-secondary btn-sm" id="reclusterBtn" title="Re-cluster activities into trips">
+            <i class="bi bi-arrow-repeat me-1"></i>Re-cluster
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if trips %}
+    <div class="row g-4">
+      {% for trip in trips %}
+      <div class="col-12 col-lg-6 col-xl-4">
+        <div class="card h-100 border-0 shadow-sm hover-shadow-lg transition-all">
+          <div class="card-body p-4 d-flex flex-column">
+
+            <!-- Trip name + rename button -->
+            <div class="d-flex align-items-start justify-content-between mb-3">
+              <div class="flex-grow-1 me-2">
+                <h5 class="card-title fw-bold text-dark mb-1 trip-name-display" data-trip-id="{{ trip.id }}">
+                  {{ trip.name }}
+                </h5>
+                <small class="text-muted">
+                  <i class="bi bi-calendar me-1"></i>
+                  {{ trip.start_date|date:"M j" }}
+                  {% if trip.start_date != trip.end_date %}
+                    &ndash; {{ trip.end_date|date:"M j, Y" }}
+                  {% else %}
+                    , {{ trip.start_date|date:"Y" }}
+                  {% endif %}
+                  &middot; {{ trip.duration_days }} day{{ trip.duration_days|pluralize }}
+                </small>
+              </div>
+              <button class="btn btn-link btn-sm text-muted p-0 rename-trip-btn flex-shrink-0"
+                      data-trip-id="{{ trip.id }}"
+                      data-trip-name="{{ trip.name }}"
+                      title="Rename trip">
+                <i class="bi bi-pencil"></i>
+              </button>
+            </div>
+
+            <!-- Ski areas -->
+            {% if trip.ski_areas %}
+            <div class="mb-3 d-flex flex-wrap gap-1">
+              {% for ski_area in trip.ski_areas %}
+                <span class="badge bg-light text-primary border border-primary-subtle">
+                  <i class="bi bi-snow me-1"></i>{{ ski_area.name }}
+                </span>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Stats grid -->
+            <div class="row g-2 mb-4 flex-grow-1">
+              <div class="col-6">
+                <div class="stats-card bg-primary bg-opacity-10 rounded-3 p-3 text-center">
+                  <div class="fs-5 fw-bold text-primary mb-0">{{ trip.activity_count }}</div>
+                  <small class="text-muted fw-medium">Activities</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="stats-card bg-info bg-opacity-10 rounded-3 p-3 text-center">
+                  <div class="fs-5 fw-bold text-info mb-0">{{ trip.total_lift_rides }}</div>
+                  <small class="text-muted fw-medium">Lift Rides</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="stats-card bg-success bg-opacity-10 rounded-3 p-3 text-center">
+                  <div class="fs-5 fw-bold text-success mb-0">{{ trip.total_distance_km }}</div>
+                  <small class="text-muted fw-medium">Distance (km)</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="stats-card bg-warning bg-opacity-10 rounded-3 p-3 text-center">
+                  <div class="fs-5 fw-bold text-warning mb-0">{{ trip.total_descent|round_to:0 }}</div>
+                  <small class="text-muted fw-medium">Descent (m)</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action button -->
+            <div class="d-grid mt-auto">
+              <a href="{% url 'trip_detail' trip.id %}"
+                 class="btn btn-primary btn-lg fw-medium d-flex align-items-center justify-content-center gap-2">
+                <i class="bi bi-eye"></i>View Trip
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <!-- Empty state -->
+    <div class="row">
+      <div class="col-12">
+        <div class="text-center py-5">
+          <div class="mb-4">
+            <i class="bi bi-map display-1 text-muted"></i>
+          </div>
+          <h3 class="text-muted mb-3">No trips yet</h3>
+          <p class="text-muted mb-4">Trips are automatically created by grouping your activities. Sync some activities from Strava first, then come back!</p>
+          <button class="btn btn-primary" id="reclusterBtnEmpty">
+            <i class="bi bi-arrow-repeat me-1"></i>Cluster activities into trips
+          </button>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+
+<!-- Rename modal -->
+<div class="modal fade" id="renameTripModal" tabindex="-1" aria-labelledby="renameTripModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="renameTripModalLabel">Rename Trip</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="tripNameInput" class="form-label fw-medium">Trip name</label>
+          <input type="text" class="form-control" id="tripNameInput" maxlength="200" placeholder="Enter trip name…">
+          <div class="invalid-feedback" id="tripNameError"></div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary fw-medium" id="saveTripNameBtn">
+          <i class="bi bi-check2 me-1"></i>Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  function getCsrf() {
+    const cookies = document.cookie.split(';');
+    for (const c of cookies) {
+      const [k, v] = c.trim().split('=');
+      if (k === 'csrftoken') return decodeURIComponent(v);
+    }
+    return '';
+  }
+
+  // --- Rename trip ---
+  let activeTripId = null;
+
+  document.querySelectorAll('.rename-trip-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      activeTripId = this.dataset.tripId;
+      document.getElementById('tripNameInput').value = this.dataset.tripName;
+      document.getElementById('tripNameInput').classList.remove('is-invalid');
+      new bootstrap.Modal(document.getElementById('renameTripModal')).show();
+    });
+  });
+
+  document.getElementById('saveTripNameBtn').addEventListener('click', function () {
+    const input = document.getElementById('tripNameInput');
+    const name = input.value.trim();
+    if (!name) {
+      input.classList.add('is-invalid');
+      document.getElementById('tripNameError').textContent = 'Name cannot be empty.';
+      return;
+    }
+
+    fetch(`/trips/${activeTripId}/rename/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrf(),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({ name }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        input.classList.add('is-invalid');
+        document.getElementById('tripNameError').textContent = data.error;
+        return;
+      }
+      // Update the display name in the card
+      document.querySelectorAll(`.trip-name-display[data-trip-id="${activeTripId}"]`).forEach(el => {
+        el.textContent = data.name;
+      });
+      // Update the rename button's data attribute
+      document.querySelectorAll(`.rename-trip-btn[data-trip-id="${activeTripId}"]`).forEach(el => {
+        el.dataset.tripName = data.name;
+      });
+      bootstrap.Modal.getInstance(document.getElementById('renameTripModal')).hide();
+    })
+    .catch(() => {
+      input.classList.add('is-invalid');
+      document.getElementById('tripNameError').textContent = 'An error occurred. Please try again.';
+    });
+  });
+
+  // Allow Enter key to save
+  document.getElementById('tripNameInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('saveTripNameBtn').click();
+  });
+
+  // --- Re-cluster ---
+  function doRecluster(btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Clustering…';
+    fetch('/trips/recluster/', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCsrf(),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    })
+    .then(r => r.json())
+    .then(() => { window.location.reload(); })
+    .catch(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Re-cluster';
+    });
+  }
+
+  const reclusterBtn = document.getElementById('reclusterBtn');
+  if (reclusterBtn) reclusterBtn.addEventListener('click', () => doRecluster(reclusterBtn));
+
+  const reclusterBtnEmpty = document.getElementById('reclusterBtnEmpty');
+  if (reclusterBtnEmpty) reclusterBtnEmpty.addEventListener('click', () => doRecluster(reclusterBtnEmpty));
+});
+</script>
+{% endblock %}

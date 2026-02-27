@@ -7,6 +7,34 @@ from osm.models import Aerialway, Piste, SkiArea, SkiAreaBoundary, PisteSegment
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
+class Trip(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=200)
+    auto_name = models.CharField(max_length=200, blank=True)
+    name_modified = models.BooleanField(default=False, help_text="True if user has manually changed the name")
+    start_date = models.DateField()
+    end_date = models.DateField()
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-start_date']
+        indexes = [
+            models.Index(fields=['user', '-start_date'], name='trip_user_start_date_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.name}"
+
+    @property
+    def duration_days(self):
+        return (self.end_date - self.start_date).days + 1
+
+    @property
+    def num_activities(self):
+        return self.activities.count()
+
+
 class Activity(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
@@ -43,6 +71,7 @@ class Activity(models.Model):
     manually_modified = models.BooleanField(default=False, help_text="True if user has manually added/edited lift rides")
 
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
+    trip = models.ForeignKey('Trip', on_delete=models.SET_NULL, null=True, blank=True, related_name='activities')
 
     cost = MoneyField(max_digits=10, decimal_places=2, default_currency='CHF', null=True)
     value = MoneyField(max_digits=10, decimal_places=2, default_currency='CHF', null=True)

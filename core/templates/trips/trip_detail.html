@@ -1,0 +1,228 @@
+{% extends '../base/base.html' %}
+{% load custom_filters %}
+{% load l10n %}
+
+{% block pagetitle %}{{ trip.name }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-5">
+
+  <!-- Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'trip_list' %}" class="text-decoration-none">Trips</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ trip.name }}</li>
+        </ol>
+      </nav>
+
+      <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <h1 class="display-6 fw-bold text-dark mb-0" id="tripNameHeading">{{ trip.name }}</h1>
+            <button class="btn btn-link text-muted p-0 ms-1" id="renameTripBtn" title="Rename trip">
+              <i class="bi bi-pencil fs-5"></i>
+            </button>
+          </div>
+          <p class="text-muted fs-5 mb-0">
+            <i class="bi bi-calendar me-1"></i>
+            {{ trip.start_date|date:"M j" }}
+            {% if trip.start_date != trip.end_date %}
+              &ndash; {{ trip.end_date|date:"M j, Y" }}
+            {% else %}
+              , {{ trip.start_date|date:"Y" }}
+            {% endif %}
+            &middot; {{ trip.duration_days }} day{{ trip.duration_days|pluralize }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ski areas -->
+  {% if ski_areas %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex flex-wrap gap-2">
+        {% for ski_area in ski_areas %}
+          <a href="{% url 'ski_area_completeness_detail' ski_area.id %}"
+             class="badge bg-light text-primary border border-primary-subtle text-decoration-none fs-6 px-3 py-2">
+            <i class="bi bi-snow me-1"></i>{{ ski_area.name }}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Summary stats -->
+  <div class="row g-3 mb-5">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-3">
+        <div class="fs-3 fw-bold text-primary mb-1">{{ activity_count }}</div>
+        <small class="text-muted fw-medium">Activities</small>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-3">
+        <div class="fs-3 fw-bold text-warning mb-1">{{ total_descent|round_to:0 }}</div>
+        <small class="text-muted fw-medium">Total Descent (m)</small>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-3">
+        <div class="fs-3 fw-bold text-success mb-1">{{ total_distance_km }}</div>
+        <small class="text-muted fw-medium">Distance (km)</small>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center p-3">
+        <div class="fs-3 fw-bold text-info mb-1">{{ total_lift_rides }}</div>
+        <small class="text-muted fw-medium">Lift Rides</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activities -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <h2 class="h4 fw-bold text-dark mb-0">Activities</h2>
+    </div>
+  </div>
+
+  {% if activities %}
+  <div class="row g-4">
+    {% for activity in activities %}
+      {% include 'activities/activity_card.html' with is_grouped=False %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-5">
+    <i class="bi bi-snow display-1 text-muted mb-3 d-block"></i>
+    <h3 class="text-muted">No activities in this trip</h3>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Rename modal -->
+<div class="modal fade" id="renameTripModal" tabindex="-1" aria-labelledby="renameTripModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="renameTripModalLabel">Rename Trip</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="tripNameInput" class="form-label fw-medium">Trip name</label>
+          <input type="text" class="form-control" id="tripNameInput" maxlength="200" value="{{ trip.name }}">
+          <div class="invalid-feedback" id="tripNameError"></div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary fw-medium" id="saveTripNameBtn">
+          <i class="bi bi-check2 me-1"></i>Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Map scripts -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  function getCsrf() {
+    const cookies = document.cookie.split(';');
+    for (const c of cookies) {
+      const [k, v] = c.trim().split('=');
+      if (k === 'csrftoken') return decodeURIComponent(v);
+    }
+    return '';
+  }
+
+  // Initialize mini maps
+  {% for activity in activities %}
+    {% if activity.geom_geojson %}
+    (function () {
+      var map = L.map('map{{ forloop.counter }}', {
+        zoomControl: false, attributionControl: false,
+        scrollWheelZoom: false, doubleClickZoom: false,
+        touchZoom: false, dragging: false, boxZoom: false, keyboard: false
+      }).setView([{{ activity.geom_centroid.y|unlocalize }}, {{ activity.geom_centroid.x|unlocalize }}], 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+      var track = {{ activity.geom_geojson|safe }};
+      if (track && track.coordinates && track.coordinates.length > 0) {
+        var layer = L.geoJSON(track, {
+          style: { color: '#0d6efd', weight: 4, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }
+        }).addTo(map);
+        map.fitBounds(layer.getBounds(), { padding: [10, 10] });
+      }
+    })();
+    {% else %}
+    (function () {
+      var el = document.getElementById('map{{ forloop.counter }}');
+      if (el) {
+        el.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 bg-light text-muted"><div class="text-center"><i class="bi bi-geo-alt display-4 mb-2"></i><br><small>No map data</small></div></div>';
+      }
+    })();
+    {% endif %}
+  {% endfor %}
+
+  // --- Rename trip ---
+  document.getElementById('renameTripBtn').addEventListener('click', function () {
+    document.getElementById('tripNameInput').value = document.getElementById('tripNameHeading').textContent.trim();
+    document.getElementById('tripNameInput').classList.remove('is-invalid');
+    new bootstrap.Modal(document.getElementById('renameTripModal')).show();
+  });
+
+  document.getElementById('saveTripNameBtn').addEventListener('click', function () {
+    const input = document.getElementById('tripNameInput');
+    const name = input.value.trim();
+    if (!name) {
+      input.classList.add('is-invalid');
+      document.getElementById('tripNameError').textContent = 'Name cannot be empty.';
+      return;
+    }
+
+    fetch(`/trips/{{ trip.id }}/rename/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrf(),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({ name }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        input.classList.add('is-invalid');
+        document.getElementById('tripNameError').textContent = data.error;
+        return;
+      }
+      document.getElementById('tripNameHeading').textContent = data.name;
+      document.title = data.name;
+      bootstrap.Modal.getInstance(document.getElementById('renameTripModal')).hide();
+    })
+    .catch(() => {
+      input.classList.add('is-invalid');
+      document.getElementById('tripNameError').textContent = 'An error occurred. Please try again.';
+    });
+  });
+
+  document.getElementById('tripNameInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('saveTripNameBtn').click();
+  });
+});
+</script>
+{% endblock %}
