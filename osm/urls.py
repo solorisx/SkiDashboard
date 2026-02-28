@@ -10,6 +10,7 @@ urlpatterns = [
     path('admin/assign_network/', views.assign_skiarea_network, name='assign_network'),
     path('admin/update_segments/', views.update_segments, name='update_segments'),
     path('admin/update_piste_geometry/', views.update_piste_geometry, name='update_piste_geometry'),
+    path('admin/create_aerialway_stations/', views.create_aerialway_stations, name='create_aerialway_stations'),
     path('admin/upload_skiarea_networks/', views.SkiAreaNetworkUploadView.as_view(), name='skiarea_network_upload'),
     path('skiarea-autocomplete/', SkiAreaAutocomplete.as_view(), name='skiarea-autocomplete'),
     path('map/<int:osm_id>/', views.map, name='map'),

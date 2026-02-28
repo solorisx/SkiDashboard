@@ -6,7 +6,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.serializers import serialize
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
@@ -34,7 +34,7 @@ from .models import (
 )
 from .osm_interface import load_osm_data
 from .osm_segments import update_piste_segments
-from .tasks import parse_osm_file_task, update_piste_geometry_task
+from .tasks import parse_osm_file_task, update_piste_geometry_task, create_aerialway_stations_task
 
 
 logger = logging.getLogger('core')
@@ -49,6 +49,18 @@ def sync_osm(request):
     form5 = PisteGeometryUpdateForm()
 
     # Get database counts
+    aerialways_by_type = (
+        Aerialway.objects
+        .values('aerialway')
+        .annotate(count=Count('id'))
+        .order_by('-count', 'aerialway')
+    )
+    pistes_by_type = (
+        Piste.objects
+        .values('piste_type')
+        .annotate(count=Count('id'))
+        .order_by('-count', 'piste_type')
+    )
     db_stats = {
         'ski_areas': SkiArea.objects.count(),
         'ski_area_networks': SkiAreaNetwork.objects.count(),
@@ -56,7 +68,10 @@ def sync_osm(request):
         'ways': Way.objects.count(),
         'pistes': Piste.objects.count(),
         'pistes_without_geom': Piste.objects.filter(geom__isnull=True).count(),
+        'pistes_by_type': pistes_by_type,
         'aerialways': Aerialway.objects.count(),
+        'aerialways_without_stations': Aerialway.objects.filter(station_nodes__isnull=True).distinct().count(),
+        'aerialways_by_type': aerialways_by_type,
         'stations': Station.objects.count(),
         'nodes': Node.objects.count(),
     }
@@ -224,6 +239,24 @@ def update_piste_geometry(request):
                 messages.error(request, f"Error initiating geometry update: {e}")
         else:
             messages.error(request, f"Form validation error: {form.errors}")
+        return redirect("sync_osm")
+    return redirect("sync_osm")
+
+
+@staff_member_required
+def create_aerialway_stations(request):
+    """Create endpoint stations for aerialways that have no station nodes."""
+    if request.method == "POST":
+        aerialway_count = Aerialway.objects.filter(station_nodes__isnull=True).distinct().count()
+        try:
+            create_aerialway_stations_task.delay()
+            messages.success(
+                request,
+                f"Initiated station creation for {aerialway_count} aerialways without stations. "
+                f"Task is running in the background."
+            )
+        except Exception as e:
+            messages.error(request, f"Error initiating station creation: {e}")
         return redirect("sync_osm")
     return redirect("sync_osm")
 
