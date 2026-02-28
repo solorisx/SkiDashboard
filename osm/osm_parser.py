@@ -113,6 +113,89 @@ def fetch_nodes_in_batches(node_ids, batch_size=1000):
         nodes_dict.update({node.osm_id: node for node in nodes})
     return nodes_dict
 
+def create_stations_from_way_endpoints(aerialway, way_obj, verification_time=None):
+    """
+    Create station nodes for an aerialway using its first and last way nodes.
+
+    Used when OSM data does not include explicit station nodes (aerialway=station)
+    for an aerial way. The first and last nodes of the way are used as the
+    bottom and top station locations. Elevation tags are used to determine which
+    end is the bottom (lower) and which is the top (higher); when elevation is
+    unavailable the first node in sequence is treated as the bottom station.
+
+    Args:
+        aerialway: The Aerialway model instance to associate stations with.
+        way_obj: The Way model instance.
+        verification_time: Optional datetime for the verified_on field.
+
+    Returns:
+        list: The two Station objects [bottom_station, top_station], or an empty
+              list when the way has fewer than two nodes.
+    """
+    if verification_time is None:
+        verification_time = timezone.now()
+
+    ordered_nodes = way_obj.nodes.order_by('waynode__sequence')
+    if ordered_nodes.count() < 2:
+        logger.warning(
+            f"Way {way_obj.osm_id} has fewer than 2 nodes, cannot create endpoint stations"
+        )
+        return []
+
+    first_node = ordered_nodes.first()
+    last_node = ordered_nodes.last()
+
+    first_ele = ele_to_float(first_node.tags.get('ele'))
+    last_ele = ele_to_float(last_node.tags.get('ele'))
+
+    # Determine bottom/top by elevation when available; fall back to way order.
+    if first_ele is not None and last_ele is not None:
+        if first_ele <= last_ele:
+            bottom_node, top_node = first_node, last_node
+            bottom_ele, top_ele = first_ele, last_ele
+        else:
+            bottom_node, top_node = last_node, first_node
+            bottom_ele, top_ele = last_ele, first_ele
+    else:
+        bottom_node, top_node = first_node, last_node
+        bottom_ele = first_ele
+        top_ele = last_ele
+
+    aerialway_name = aerialway.name or f"Aerialway {way_obj.osm_id}"
+
+    bottom_station, _ = Station.objects.update_or_create(
+        node=bottom_node,
+        defaults={
+            'name': bottom_node.tags.get('name') or f"{aerialway_name} Bottom",
+            'altitude': bottom_ele,
+            'station': 'bottom',
+            'verified_on': verification_time,
+        }
+    )
+
+    top_station, _ = Station.objects.update_or_create(
+        node=top_node,
+        defaults={
+            'name': top_node.tags.get('name') or f"{aerialway_name} Top",
+            'altitude': top_ele,
+            'station': 'top',
+            'verified_on': verification_time,
+        }
+    )
+
+    stations = [bottom_station, top_station]
+    aerialway.station_nodes.set(stations)
+    aerialway.bottom_station = bottom_station
+    aerialway.top_station = top_station
+    aerialway.save()
+
+    logger.info(
+        f"Created endpoint stations for aerialway {way_obj.osm_id}: "
+        f"bottom node={bottom_node.osm_id}, top node={top_node.osm_id}"
+    )
+    return stations
+
+
 def process_ways(handler):
 
     chunk_size = 1000
@@ -254,11 +337,17 @@ def process_ways(handler):
                             }
                         )
                         stations.append(station)
-                        
+
                     aerialway.station_nodes.set(stations)
                     aerialway.bottom_station = aerialway.station_nodes.filter(station='bottom').first()
                     aerialway.top_station = aerialway.station_nodes.filter(station='top').first()
                     aerialway.save()
+
+                    # If no station nodes found in OSM data, create stations from way endpoints
+                    if not stations:
+                        create_stations_from_way_endpoints(aerialway, way_obj, verification_time)
+                        logger.info(f"Created endpoint stations for aerialway without station nodes: {way['osm_id']}")
+
                     logger.debug(f"Processed aerialway for way: {way['osm_id']}")
 
                 # Handle Piste

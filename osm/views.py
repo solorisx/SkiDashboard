@@ -34,7 +34,7 @@ from .models import (
 )
 from .osm_interface import load_osm_data
 from .osm_segments import update_piste_segments
-from .tasks import parse_osm_file_task, update_piste_geometry_task
+from .tasks import parse_osm_file_task, update_piste_geometry_task, create_aerialway_stations_task
 
 
 logger = logging.getLogger('core')
@@ -57,6 +57,7 @@ def sync_osm(request):
         'pistes': Piste.objects.count(),
         'pistes_without_geom': Piste.objects.filter(geom__isnull=True).count(),
         'aerialways': Aerialway.objects.count(),
+        'aerialways_without_stations': Aerialway.objects.filter(station_nodes__isnull=True).distinct().count(),
         'stations': Station.objects.count(),
         'nodes': Node.objects.count(),
     }
@@ -224,6 +225,24 @@ def update_piste_geometry(request):
                 messages.error(request, f"Error initiating geometry update: {e}")
         else:
             messages.error(request, f"Form validation error: {form.errors}")
+        return redirect("sync_osm")
+    return redirect("sync_osm")
+
+
+@staff_member_required
+def create_aerialway_stations(request):
+    """Create endpoint stations for aerialways that have no station nodes."""
+    if request.method == "POST":
+        aerialway_count = Aerialway.objects.filter(station_nodes__isnull=True).distinct().count()
+        try:
+            create_aerialway_stations_task.delay()
+            messages.success(
+                request,
+                f"Initiated station creation for {aerialway_count} aerialways without stations. "
+                f"Task is running in the background."
+            )
+        except Exception as e:
+            messages.error(request, f"Error initiating station creation: {e}")
         return redirect("sync_osm")
     return redirect("sync_osm")
 

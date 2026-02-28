@@ -2,8 +2,8 @@ from celery import shared_task
 import logging
 
 from osm.osm_downloader import load_osm
-from .osm_parser import parse_osm_file
-from .models import Piste
+from .osm_parser import parse_osm_file, create_stations_from_way_endpoints
+from .models import Aerialway, Piste
 import os
 
 logger = logging.getLogger(__name__)
@@ -70,4 +70,52 @@ def update_piste_geometry_task(ski_area_id=None):
     }
 
     logger.info(f"Piste geometry update completed: {summary}")
+    return summary
+
+
+@shared_task
+def create_aerialway_stations_task():
+    """
+    Create endpoint stations for every aerialway that currently has no station nodes.
+
+    For each qualifying aerialway the first and last nodes of its associated way
+    are promoted to Station objects (bottom and top respectively) using
+    create_stations_from_way_endpoints().
+
+    Returns:
+        dict: Summary containing 'total', 'created', and 'failed' counts.
+    """
+    from django.utils import timezone
+
+    logger.info("Starting create_aerialway_stations_task")
+
+    aerialways = (
+        Aerialway.objects
+        .filter(station_nodes__isnull=True)
+        .select_related('way')
+        .distinct()
+    )
+    total = aerialways.count()
+    logger.info(f"Found {total} aerialways without station nodes")
+
+    created_count = 0
+    failed_count = 0
+    verification_time = timezone.now()
+
+    for aerialway in aerialways:
+        try:
+            stations = create_stations_from_way_endpoints(
+                aerialway, aerialway.way, verification_time
+            )
+            if stations:
+                created_count += 1
+        except Exception as e:
+            failed_count += 1
+            logger.error(
+                f"Failed to create stations for aerialway {aerialway.id} "
+                f"(way {aerialway.way_id}): {e}"
+            )
+
+    summary = {'total': total, 'created': created_count, 'failed': failed_count}
+    logger.info(f"create_aerialway_stations_task completed: {summary}")
     return summary

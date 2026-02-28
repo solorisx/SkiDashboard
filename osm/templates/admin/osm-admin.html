@@ -43,6 +43,12 @@
             <td style="padding: 5px;">{{ db_stats.aerialways|default:0 }}</td>
         </tr>
         <tr>
+            <td style="padding: 5px; font-weight: bold;">Aerialways without stations:</td>
+            <td style="padding: 5px; {% if db_stats.aerialways_without_stations > 0 %}color: #d32f2f; font-weight: bold;{% endif %}">
+                {{ db_stats.aerialways_without_stations|default:0 }}
+            </td>
+        </tr>
+        <tr>
             <td style="padding: 5px; font-weight: bold;">Stations:</td>
             <td style="padding: 5px;">{{ db_stats.stations|default:0 }}</td>
         </tr>
@@ -94,6 +100,22 @@
     {% csrf_token %}
     {{ form5.as_p }}
     <button type="submit" class="button" style="background-color: #28a745; color: white;">Generate Geometry (Async)</button>
+</form>
+
+
+<h2>Create stations for aerialways without stations</h2>
+<div style="background: #fff3cd; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ffc107;">
+    <strong>&#9888;&#65039; Note:</strong> This creates bottom and top station nodes from the first and last
+    nodes of each aerial way that has no existing station associations.
+    {% if db_stats.aerialways_without_stations > 0 %}
+    <br><strong style="color: #d32f2f;">{{ db_stats.aerialways_without_stations }} aerialway(s) currently have no stations.</strong>
+    {% else %}
+    <br><strong style="color: #2e7d32;">All aerialways have stations!</strong>
+    {% endif %}
+</div>
+<form action="{% url 'create_aerialway_stations' %}" method="post" class="form">
+    {% csrf_token %}
+    <button type="submit" class="button" style="background-color: #1976d2; color: white;">Create Aerialway Stations (Async)</button>
 </form>
 
 {% endblock %}
