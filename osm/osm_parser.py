@@ -132,6 +132,12 @@ def create_stations_from_way_endpoints(aerialway, way_obj, verification_time=Non
         list: The two Station objects [bottom_station, top_station], or an empty
               list when the way has fewer than two nodes.
     """
+    
+    from osm.models import LiftFilterConfig
+    if aerialway.aerialway in LiftFilterConfig.GLOBAL_EXCLUDED_LIFT_TYPES:
+        logger.info(f"Aerialway {way_obj.osm_id} has type '{aerialway.aerialway}' which is excluded from station creation")
+        return []
+    
     if verification_time is None:
         verification_time = timezone.now()
 
@@ -144,6 +150,12 @@ def create_stations_from_way_endpoints(aerialway, way_obj, verification_time=Non
 
     first_node = ordered_nodes.first()
     last_node = ordered_nodes.last()
+
+    if first_node == last_node:
+        logger.warning(
+            f"Way {way_obj.osm_id} has the same start and end node, cannot create distinct bottom and top stations"
+        )
+        return []
 
     first_ele = ele_to_float(first_node.tags.get('ele'))
     last_ele = ele_to_float(last_node.tags.get('ele'))
