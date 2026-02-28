@@ -6,7 +6,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.serializers import serialize
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import HttpResponseNotFound
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.decorators import method_decorator
@@ -49,6 +49,18 @@ def sync_osm(request):
     form5 = PisteGeometryUpdateForm()
 
     # Get database counts
+    aerialways_by_type = (
+        Aerialway.objects
+        .values('aerialway')
+        .annotate(count=Count('id'))
+        .order_by('-count', 'aerialway')
+    )
+    pistes_by_type = (
+        Piste.objects
+        .values('piste_type')
+        .annotate(count=Count('id'))
+        .order_by('-count', 'piste_type')
+    )
     db_stats = {
         'ski_areas': SkiArea.objects.count(),
         'ski_area_networks': SkiAreaNetwork.objects.count(),
@@ -56,8 +68,10 @@ def sync_osm(request):
         'ways': Way.objects.count(),
         'pistes': Piste.objects.count(),
         'pistes_without_geom': Piste.objects.filter(geom__isnull=True).count(),
+        'pistes_by_type': pistes_by_type,
         'aerialways': Aerialway.objects.count(),
         'aerialways_without_stations': Aerialway.objects.filter(station_nodes__isnull=True).distinct().count(),
+        'aerialways_by_type': aerialways_by_type,
         'stations': Station.objects.count(),
         'nodes': Node.objects.count(),
     }
