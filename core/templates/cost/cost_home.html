@@ -80,6 +80,10 @@
                     <span class="metric-label">Activities</span>
                   </div>
                   <div class="metric-item">
+                    <span class="metric-value">{{ p.cost_per_day|default:"—" }}</span>
+                    <span class="metric-label">Avg Cost / Day</span>
+                  </div>
+                  <div class="metric-item">
                     <span class="metric-value">{{ p.valid_from|date:"SHORT_DATE_FORMAT" }}</span>
                     <span class="metric-label">Valid From</span>
                   </div>
