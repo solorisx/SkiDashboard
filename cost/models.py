@@ -102,6 +102,13 @@ class SeasonPass(models.Model):
     def count_valid_activities(self, date_from: datetime = make_aware(datetime.min), date_until: datetime = make_aware(datetime.max)):
         return self.get_valid_activities(date_from, date_until).count()
 
+    @property
+    def cost_per_day(self):
+        count = self.count_valid_activities()
+        if count > 0:
+            return round(self.price / count, 2)
+        return None
+
     def __str__(self):
         return f'{self.user} - {self.skiarea}{self.skiarea_network} - {self.valid_from} - {self.valid_until}'
     
