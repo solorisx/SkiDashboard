@@ -253,6 +253,38 @@
       </div>
     </form>
 
+    <!-- Membership Status (read-only) -->
+    <div class="card mb-4 mt-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-star-fill text-warning me-2"></i>{% trans "Membership" %}</h5>
+        </div>
+        <div class="card-body">
+            {% if user_is_premium %}
+            <div class="d-flex align-items-center">
+                <span class="badge bg-warning text-dark fs-6 me-3">Premium</span>
+                <div>
+                    {% if request.user.userprofile.premium_expires_at %}
+                        Valid until <strong>{{ request.user.userprofile.premium_expires_at|date:"F j, Y" }}</strong>
+                    {% endif %}
+                    {% if request.user.userprofile.premium_payment_source %}
+                        &nbsp;·&nbsp; <span class="text-muted small">via {{ request.user.userprofile.premium_payment_source|title }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="badge bg-secondary me-2">Free</span>
+                    <span class="text-muted small">Limited to current season and {{ settings.FREE_TIER_MAX_SYNC_DAYS|default:"365" }} days of sync history</span>
+                </div>
+                <a href="{% url 'premium_info' %}" class="btn btn-warning btn-sm">
+                    <i class="bi bi-star me-1"></i>Upgrade to Premium
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
     <hr class="my-4">
     <div class="text-center">
       <p class="small text-muted mb-2">{% trans "Other account settings:" %}</p>

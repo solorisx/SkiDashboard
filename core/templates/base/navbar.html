@@ -152,6 +152,12 @@
                                 <i class="bi bi-speedometer2 me-2 text-info"></i>Activity Profiling
                             </a>
                         </li>
+                        <li><hr class="dropdown-divider my-2"></li>
+                        <li>
+                            <a class="dropdown-item dropdown-item-modern" href="{% url 'membership_admin' %}">
+                                <i class="bi bi-star me-2 text-warning"></i>Membership
+                            </a>
+                        </li>
                     </ul>
                 </li>
                 {% endif %}
@@ -194,6 +200,14 @@
                                 <i class="bi bi-envelope me-2 text-primary"></i>Manage Email
                             </a>
                         </li>
+                        {% if not user_is_premium %}
+                        <li><hr class="dropdown-divider my-2"></li>
+                        <li>
+                            <a class="dropdown-item dropdown-item-modern fw-semibold" href="{% url 'premium_info' %}">
+                                <i class="bi bi-star-fill me-2 text-warning"></i>Go Premium
+                            </a>
+                        </li>
+                        {% endif %}
                         <li><hr class="dropdown-divider my-2"></li>
                         <li>
                             <a class="dropdown-item dropdown-item-modern text-danger" href="{% url 'account_delete' %}">

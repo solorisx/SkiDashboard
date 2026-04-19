@@ -39,6 +39,14 @@
         {% endif %}
       </div>
     </div>
+    {% if not user_is_premium %}
+    <div class="container-fluid px-4 mt-2">
+        <div class="alert alert-info d-flex align-items-center py-2 mb-0" role="alert">
+            <i class="bi bi-star-fill me-2 text-warning"></i>
+            <small><a href="{% url 'premium_info' %}" class="alert-link">Upgrade to Premium</a> to access all past seasons and unlimited sync history.</small>
+        </div>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Enhanced Overall Statistics Cards -->
