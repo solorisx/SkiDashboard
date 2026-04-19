@@ -8,18 +8,20 @@ from django.shortcuts import render
 from ..models import ActivityBadge
 from ..utils.queries import get_filter_query, get_user_activities_base_query
 from ..utils.seasons import get_seasons
+from core.premium import filter_seasons_for_user, premium_season_required
 
 logger = logging.getLogger(__name__)
 
 
 @login_required
+@premium_season_required
 def activity_insights(request, season=None):
     """Show comprehensive insights dashboard for user's activities."""
 
     # Get season filter
     filter_query = get_filter_query(request, season)
     activities = get_user_activities_base_query(request.user).filter(filter_query)
-    seasons = get_seasons(user=request.user)
+    seasons = filter_seasons_for_user(get_seasons(user=request.user), request.user)
 
     # Most recent activities (top 5)
     recent_activities = activities.annotate(

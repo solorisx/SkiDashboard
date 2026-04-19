@@ -14,6 +14,7 @@ from osm.models import Aerialway, SkiArea
 from ..models import Activity
 from ..utils.queries import get_filter_query, get_user_activities_base_query
 from ..utils.seasons import get_seasons
+from core.premium import filter_seasons_for_user, premium_season_required
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +119,7 @@ def lift_ride_list(request, year=None):
 
 
 @login_required
+@premium_season_required
 def lift_ride_list_season(request, season=None):
     """Show lift ride statistics by season."""
     rides = LiftRide.objects.filter(lap__activity__user=request.user)
@@ -228,7 +230,7 @@ def activity_list_skiarea_detail(request, skiarea_id, season=None):
                 logger.debug(f"Lift: {lift_ride.aerialway}")
         logger.debug(f"Activity: {activity}, {activity.num_distinct_lift_rides}")
 
-    seasons = get_seasons(request.user)
+    seasons = filter_seasons_for_user(get_seasons(request.user), request.user)
     
     # Calculate total statistics for the ski area
     total_activities = activities.aggregate(
