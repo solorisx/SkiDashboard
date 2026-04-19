@@ -1,4 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+import hashlib
+import hmac
 import json
 import logging
 from django.shortcuts import render, get_object_or_404, redirect
@@ -416,3 +418,121 @@ class SeasonPassAPI(LoginRequiredMixin, View):
             return JsonResponse({"error": "Season pass not found or does not belong to user."}, status=404)
         season_pass.delete()
         return HttpResponse(status=204)
+
+
+# ---------------------------------------------------------------------------
+# Premium / Paywall views
+# ---------------------------------------------------------------------------
+
+@login_required
+def premium_info(request):
+    """Public-facing premium info page."""
+    profile = request.user.userprofile
+    context = {
+        'is_premium': profile.is_premium_active(),
+        'premium_expires_at': profile.premium_expires_at,
+        'premium_payment_source': profile.premium_payment_source,
+    }
+    return render(request, 'premium/premium_info.html', context)
+
+
+@csrf_exempt
+def buymeacoffee_webhook(request):
+    """Handle BuyMeACoffee payment webhooks to grant premium."""
+    from django.conf import settings as django_settings
+    from django.contrib.auth.models import User
+    from core.premium import grant_premium
+
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+
+    secret = getattr(django_settings, 'BUYMEACOFFEE_WEBHOOK_SECRET', '')
+    if secret:
+        sig = request.headers.get('X-Signature-SHA256', '')
+        expected = hmac.new(secret.encode(), request.body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            logger.warning("BuyMeACoffee webhook signature mismatch")
+            return HttpResponse(status=403)
+
+    try:
+        payload = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return HttpResponse(status=400)
+
+    email = payload.get('supporter_email') or payload.get('payer_email', '')
+    try:
+        amount = float(payload.get('amount', 0))
+    except (TypeError, ValueError):
+        amount = 0.0
+
+    if not email:
+        return HttpResponse("OK")
+
+    threshold = getattr(django_settings, 'BUYMEACOFFEE_PREMIUM_THRESHOLD_USD', 20)
+    if amount < threshold:
+        logger.info(f"BMC webhook: amount {amount} below threshold {threshold} for {email}")
+        return HttpResponse("OK")
+
+    try:
+        user = User.objects.get(email__iexact=email)
+    except User.DoesNotExist:
+        logger.info(f"BMC webhook: no user found for email {email}")
+        return HttpResponse("OK")
+
+    grant_premium(user, source='buymeacoffee')
+    return HttpResponse("OK")
+
+
+@staff_member_required
+def membership_admin(request):
+    """Admin view: membership stats and grant/revoke controls."""
+    from django.contrib.auth.models import User
+    from django.utils import timezone
+    from core.premium import grant_premium, revoke_premium
+
+    now = timezone.now()
+    soon = now + timedelta(days=30)
+    ago = now - timedelta(days=30)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        user_id = request.POST.get('user_id')
+        try:
+            target = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            messages.error(request, "User not found.")
+            return redirect('membership_admin')
+
+        if action == 'grant':
+            grant_premium(target, source='manual', granted_by=request.user)
+            messages.success(request, f"Premium granted to {target.email} for 1 year.")
+        elif action == 'revoke':
+            revoke_premium(target)
+            messages.success(request, f"Premium revoked for {target.email}.")
+        else:
+            messages.error(request, "Unknown action.")
+        return redirect('membership_admin')
+
+    all_users = User.objects.select_related('userprofile').order_by('email')
+
+    total_users = all_users.count()
+    active_premium = UserProfile.objects.filter(is_premium=True, premium_expires_at__gt=now).count()
+    expiring_soon = UserProfile.objects.filter(
+        is_premium=True, premium_expires_at__range=(now, soon)
+    ).select_related('user').order_by('premium_expires_at')
+    recently_expired = UserProfile.objects.filter(
+        is_premium=True, premium_expires_at__range=(ago, now)
+    ).select_related('user').order_by('-premium_expires_at')
+    premium_users = UserProfile.objects.filter(
+        is_premium=True
+    ).select_related('user', 'premium_granted_by').order_by('premium_expires_at')
+
+    context = {
+        'total_users': total_users,
+        'active_premium': active_premium,
+        'expiring_soon': expiring_soon,
+        'recently_expired': recently_expired,
+        'premium_users': premium_users,
+        'all_users': all_users,
+    }
+    return render(request, 'admin/membership.html', context)
