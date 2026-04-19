@@ -40,7 +40,7 @@ urlpatterns = [
     path("terms/", views.terms_of_service, name="terms_of_service"),
     path("premium/", views.premium_info, name="premium_info"),
     path("webhooks/buymeacoffee/", views.buymeacoffee_webhook, name="buymeacoffee_webhook"),
-    path("admin/membership/", views.membership_admin, name="membership_admin"),
+    path("manage/membership/", views.membership_admin, name="membership_admin"),
 
     path("api/season-stats/", views.season_stats_api, name="season_stats_api"),
     path("api/lift-ride/", views.lift_ride_api, name="lift_ride_api"),
