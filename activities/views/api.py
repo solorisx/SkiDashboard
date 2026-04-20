@@ -177,12 +177,20 @@ def home_stats(request):
     for sp in season_passes:
         activities_for_pass = sp.get_valid_activities(season_start, season_end)
         if activities_for_pass:
+            act_count = activities_for_pass.count()
+            cost_per_day = None
+            if act_count > 0:
+                try:
+                    cost_per_day = {
+                        'amount': round(float(sp.price.amount) / act_count, 2),
+                        'currency': str(sp.price.currency),
+                    }
+                except Exception:
+                    pass
             season_pass_stats[sp] = {
                 'name': sp.skiarea.name if sp.skiarea else str(sp.skiarea_network),
-                'activities': activities_for_pass.count(),
-                'total_savings': activities_for_pass.aggregate(
-                    total_savings=Sum('value')
-                )['total_savings']
+                'activities': act_count,
+                'cost_per_day': cost_per_day,
             }
 
     # Unique ski areas this season

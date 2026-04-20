@@ -330,7 +330,7 @@ document.addEventListener("DOMContentLoaded", function() {
             keyboard: false
           }).setView([{{ activity.geom_centroid.y|unlocalize }}, {{ activity.geom_centroid.x|unlocalize }}], 13);
 
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: false
           }).addTo(map);
 
@@ -380,7 +380,7 @@ document.addEventListener("DOMContentLoaded", function() {
           keyboard: false
         }).setView([{{ activity.geom_centroid.y|unlocalize }}, {{ activity.geom_centroid.x|unlocalize }}], 13);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
           attribution: false
         }).addTo(map);
 

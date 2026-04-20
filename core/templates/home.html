@@ -280,8 +280,10 @@
                         <div style="font-weight:600;font-size:.875rem;color:var(--sl-text-primary);">{{ sp_data.name }}</div>
                         <div style="font-size:.78rem;color:var(--sl-text-muted);">{{ sp_data.activities }} activit{{ sp_data.activities|pluralize:"y,ies" }}</div>
                     </div>
-                    {% if sp_data.total_savings %}
-                    <div style="font-weight:700;color:var(--sl-pine);font-size:.9rem;">+{{ sp_data.total_savings }}</div>
+                    {% if sp_data.cost_per_day %}
+                    <div style="font-weight:700;color:var(--sl-slope);font-size:.9rem;">
+                        {{ sp_data.cost_per_day.amount }}<small style="font-size:.7rem;font-weight:500;margin-left:2px;">{{ sp_data.cost_per_day.currency }}</small>/day
+                    </div>
                     {% endif %}
                 </div>
                 {% endfor %}
