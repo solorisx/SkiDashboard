@@ -1,3 +1,4 @@
+import json
 import logging
 
 from django.contrib.auth.decorators import login_required
@@ -95,13 +96,27 @@ def trip_detail(request, trip_id):
         activity_count=Count('id'),
     )
 
-    # Unique ski areas
+    # Unique ski areas + day-by-day stats (one pass over the queryset)
     ski_areas = []
     seen = set()
-    for act in activities:
+    daily_stats = []
+    for i, act in enumerate(activities):
         if act.ski_area and act.ski_area.id not in seen:
             seen.add(act.ski_area.id)
             ski_areas.append(act.ski_area)
+        daily_stats.append({
+            'day': i + 1,
+            'label': act.timestamp.strftime('%-d %b') if act.timestamp else f'Day {i + 1}',
+            'id': act.id,
+            'descent': round(act.total_descent) if act.total_descent else 0,
+            'lifts': act.num_lift_rides or 0,
+            'distance_km': float(act.total_distance_km) if act.total_distance_km else 0,
+        })
+
+    best_day_index = (
+        max(range(len(daily_stats)), key=lambda i: daily_stats[i]['descent'])
+        if daily_stats else None
+    )
 
     return render(request, 'trips/trip_detail.html', {
         'trip': trip,
@@ -111,6 +126,8 @@ def trip_detail(request, trip_id):
         'total_distance_km': round((stats.get('total_distance') or 0) / 1000, 1),
         'total_lift_rides': stats.get('total_lift_rides') or 0,
         'activity_count': stats.get('activity_count') or 0,
+        'daily_stats_json': json.dumps(daily_stats),
+        'best_day_index': best_day_index,
     })
 
 
@@ -118,8 +135,6 @@ def trip_detail(request, trip_id):
 @require_http_methods(['POST'])
 def rename_trip(request, trip_id):
     """Rename a trip (JSON API endpoint)."""
-    import json
-
     trip = get_object_or_404(Trip, pk=trip_id, user=request.user)
 
     try:

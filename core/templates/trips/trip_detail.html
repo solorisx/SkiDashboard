@@ -25,8 +25,12 @@
       <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
         <div>
           <div class="d-flex align-items-center gap-2 mb-1">
-            <h1 class="display-6 fw-bold text-dark mb-0" id="tripNameHeading">{{ trip.name }}</h1>
-            <button class="btn btn-link text-muted p-0 ms-1" id="renameTripBtn" title="Rename trip">
+            <h1 class="display-6 fw-bold mb-0 trip-name-heading"
+                data-trip-id="{{ trip.id }}"
+                style="cursor: text;"
+                title="Click to rename">{{ trip.name }}</h1>
+            <button class="btn btn-link text-muted p-0 ms-1 rename-trigger"
+                    data-trip-id="{{ trip.id }}" title="Rename trip">
               <i class="bi bi-pencil fs-5"></i>
             </button>
           </div>
@@ -62,11 +66,11 @@
   {% endif %}
 
   <!-- Summary stats -->
-  <div class="row g-3 mb-5">
+  <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
       <div class="card border-0 shadow-sm text-center p-3">
         <div class="fs-3 fw-bold text-primary mb-1">{{ activity_count }}</div>
-        <small class="text-muted fw-medium">Activities</small>
+        <small class="text-muted fw-medium">Ski Days</small>
       </div>
     </div>
     <div class="col-6 col-md-3">
@@ -88,6 +92,126 @@
       </div>
     </div>
   </div>
+
+  {% if activity_count > 1 %}
+  <!-- Daily chart + best day callout -->
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 pb-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <h5 class="fw-bold mb-0">
+            <i class="bi bi-bar-chart me-2 text-primary"></i>
+            Daily Breakdown
+          </h5>
+          <div class="btn-group btn-group-sm" id="dailyChartToggle">
+            <button class="btn btn-warning" data-metric="descent" onclick="switchDailyMetric('descent')">Descent</button>
+            <button class="btn btn-outline-warning" data-metric="lifts" onclick="switchDailyMetric('lifts')">Lifts</button>
+            <button class="btn btn-outline-warning" data-metric="distance_km" onclick="switchDailyMetric('distance_km')">Distance</button>
+          </div>
+        </div>
+        <div class="card-body" style="min-height: 240px;">
+          <canvas id="dailyChart" style="max-height: 220px;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    {% if best_day_index is not None %}
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 shadow-sm h-100 bg-warning bg-opacity-10">
+        <div class="card-body p-4 d-flex flex-column justify-content-center">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-trophy-fill text-warning fs-3"></i>
+            <h5 class="fw-bold mb-0">Best Day</h5>
+          </div>
+          {% for activity in activities %}{% if forloop.counter0 == best_day_index %}
+          <div class="fw-bold fs-5 mb-1">{{ activity.name }}</div>
+          {% load tz %}{% timezone activity.timezone %}
+          <div class="text-muted small mb-3">{{ activity.start_time|date:"DATE_FORMAT" }}</div>
+          {% endtimezone %}
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <div class="card bg-white bg-opacity-75 border-0">
+                <div class="card-body text-center p-2">
+                  <div class="fw-bold text-warning">{{ activity.total_descent|round_to:0 }}m</div>
+                  <small class="text-muted">descent</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="card bg-white bg-opacity-75 border-0">
+                <div class="card-body text-center p-2">
+                  <div class="fw-bold text-info">{{ activity.num_lift_rides }}</div>
+                  <small class="text-muted">lifts</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          <a href="{% url 'activity_detail' activity.id %}" class="btn btn-outline-warning btn-sm">
+            <i class="bi bi-eye me-1"></i>View Activity
+          </a>
+          {% endif %}{% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Day-by-day table -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 pb-0">
+          <h5 class="fw-bold mb-0">
+            <i class="bi bi-table me-2 text-success"></i>
+            Day-by-Day Stats
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-4">Day</th>
+                  <th>Activity</th>
+                  <th class="text-end">Descent</th>
+                  <th class="text-end">Distance</th>
+                  <th class="text-end">Lifts</th>
+                  <th class="pe-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for activity in activities %}
+                <tr {% if forloop.counter0 == best_day_index %}class="table-warning"{% endif %}>
+                  <td class="ps-4 fw-medium">
+                    Day {{ forloop.counter }}
+                    {% if forloop.counter0 == best_day_index %}
+                    <i class="bi bi-trophy-fill text-warning ms-1" title="Best day"></i>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="fw-medium">{{ activity.name }}</div>
+                    {% load tz %}{% timezone activity.timezone %}
+                    <small class="text-muted">{{ activity.start_time|date:"DATE_FORMAT" }}</small>
+                    {% endtimezone %}
+                  </td>
+                  <td class="text-end fw-bold text-warning">{{ activity.total_descent|round_to:0 }}m</td>
+                  <td class="text-end text-muted">{{ activity.total_distance_km }}&thinsp;km</td>
+                  <td class="text-end text-info">{{ activity.num_lift_rides }}</td>
+                  <td class="text-end pe-3">
+                    <a href="{% url 'activity_detail' activity.id %}" class="btn btn-sm btn-outline-primary">
+                      <i class="bi bi-eye"></i>
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Activities -->
   <div class="row mb-3">
@@ -111,44 +235,111 @@
 
 </div>
 
-<!-- Rename modal -->
-<div class="modal fade" id="renameTripModal" tabindex="-1" aria-labelledby="renameTripModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content border-0 shadow">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-bold" id="renameTripModalLabel">Rename Trip</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label for="tripNameInput" class="form-label fw-medium">Trip name</label>
-          <input type="text" class="form-control" id="tripNameInput" maxlength="200" value="{{ trip.name }}">
-          <div class="invalid-feedback" id="tripNameError"></div>
-        </div>
-      </div>
-      <div class="modal-footer border-0 pt-0">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary fw-medium" id="saveTripNameBtn">
-          <i class="bi bi-check2 me-1"></i>Save
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Map scripts -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  // ── CSRF helper ────────────────────────────────────────────────────────
   function getCsrf() {
-    const cookies = document.cookie.split(';');
-    for (const c of cookies) {
-      const [k, v] = c.trim().split('=');
-      if (k === 'csrftoken') return decodeURIComponent(v);
-    }
-    return '';
+    const c = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+    return c ? decodeURIComponent(c.split('=')[1]) : '';
   }
 
-  // Initialize mini maps
+  // ── Inline rename ──────────────────────────────────────────────────────
+  function startInlineRename(tripId, headingEl) {
+    if (headingEl.querySelector('input')) return;
+    const original = headingEl.textContent.trim();
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = original;
+    input.className = 'form-control fw-bold display-6 p-0 border-0 border-bottom rounded-0 shadow-none';
+    input.style.cssText = 'font-size: inherit; background: transparent; outline: none; min-width: 240px;';
+    headingEl.textContent = '';
+    headingEl.appendChild(input);
+    input.focus();
+    input.select();
+
+    let done = false;
+    async function commit() {
+      if (done) return;
+      done = true;
+      const name = input.value.trim();
+      if (!name || name === original) { headingEl.textContent = original; return; }
+      try {
+        const resp = await fetch(`/trips/${tripId}/rename/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+          body: JSON.stringify({ name }),
+        });
+        const data = await resp.json();
+        const saved = data.error ? original : data.name;
+        headingEl.textContent = saved;
+        document.title = saved;
+        document.querySelector('.breadcrumb-item.active').textContent = saved;
+      } catch { headingEl.textContent = original; }
+    }
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { done = true; headingEl.textContent = original; }
+    });
+  }
+
+  const heading = document.querySelector('.trip-name-heading');
+  if (heading) {
+    heading.addEventListener('click', () => startInlineRename(heading.dataset.tripId, heading));
+    document.querySelectorAll('.rename-trigger').forEach(btn => {
+      btn.addEventListener('click', () => startInlineRename(btn.dataset.tripId, heading));
+    });
+  }
+
+  // ── Daily chart ────────────────────────────────────────────────────────
+  const dailyData = {{ daily_stats_json|safe }};
+  const bestIdx = {{ best_day_index|default:"null" }};
+  let dailyChart = null;
+  const dailyMetrics = {
+    descent:     { label: 'Descent (m)',  color: idx => idx === bestIdx ? '#ffc107' : 'rgba(255,193,7,0.65)' },
+    lifts:       { label: 'Lift Rides',   color: idx => idx === bestIdx ? '#0dcaf0' : 'rgba(13,202,240,0.65)' },
+    distance_km: { label: 'Distance (km)',color: idx => idx === bestIdx ? '#198754' : 'rgba(25,135,84,0.65)'  },
+  };
+
+  function buildDailyChart(metric) {
+    const canvas = document.getElementById('dailyChart');
+    if (!canvas || !dailyData.length) return;
+    const { label, color } = dailyMetrics[metric];
+    if (dailyChart) dailyChart.destroy();
+    dailyChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: dailyData.map(d => `Day ${d.day}\n${d.label}`),
+        datasets: [{
+          label,
+          data: dailyData.map(d => d[metric]),
+          backgroundColor: dailyData.map((_, i) => color(i)),
+          borderRadius: 5,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  function switchDailyMetric(metric) {
+    document.querySelectorAll('#dailyChartToggle .btn').forEach(btn => {
+      btn.classList.toggle('btn-warning', btn.dataset.metric === metric);
+      btn.classList.toggle('btn-outline-warning', btn.dataset.metric !== metric);
+    });
+    buildDailyChart(metric);
+  }
+
+  if (document.getElementById('dailyChart')) buildDailyChart('descent');
+
+  // ── Mini Leaflet maps ──────────────────────────────────────────────────
   {% for activity in activities %}
     {% if activity.geom_geojson %}
     (function () {
@@ -157,9 +348,7 @@ document.addEventListener('DOMContentLoaded', function () {
         scrollWheelZoom: false, doubleClickZoom: false,
         touchZoom: false, dragging: false, boxZoom: false, keyboard: false
       }).setView([{{ activity.geom_centroid.y|unlocalize }}, {{ activity.geom_centroid.x|unlocalize }}], 13);
-
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
       var track = {{ activity.geom_geojson|safe }};
       if (track && track.coordinates && track.coordinates.length > 0) {
         var layer = L.geoJSON(track, {
@@ -177,52 +366,6 @@ document.addEventListener('DOMContentLoaded', function () {
     })();
     {% endif %}
   {% endfor %}
-
-  // --- Rename trip ---
-  document.getElementById('renameTripBtn').addEventListener('click', function () {
-    document.getElementById('tripNameInput').value = document.getElementById('tripNameHeading').textContent.trim();
-    document.getElementById('tripNameInput').classList.remove('is-invalid');
-    new bootstrap.Modal(document.getElementById('renameTripModal')).show();
-  });
-
-  document.getElementById('saveTripNameBtn').addEventListener('click', function () {
-    const input = document.getElementById('tripNameInput');
-    const name = input.value.trim();
-    if (!name) {
-      input.classList.add('is-invalid');
-      document.getElementById('tripNameError').textContent = 'Name cannot be empty.';
-      return;
-    }
-
-    fetch(`/trips/{{ trip.id }}/rename/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCsrf(),
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-      body: JSON.stringify({ name }),
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) {
-        input.classList.add('is-invalid');
-        document.getElementById('tripNameError').textContent = data.error;
-        return;
-      }
-      document.getElementById('tripNameHeading').textContent = data.name;
-      document.title = data.name;
-      bootstrap.Modal.getInstance(document.getElementById('renameTripModal')).hide();
-    })
-    .catch(() => {
-      input.classList.add('is-invalid');
-      document.getElementById('tripNameError').textContent = 'An error occurred. Please try again.';
-    });
-  });
-
-  document.getElementById('tripNameInput').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') document.getElementById('saveTripNameBtn').click();
-  });
 });
 </script>
 {% endblock %}
