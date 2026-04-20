@@ -57,14 +57,6 @@
 .chart-card-title { font-size: 0.9rem; font-weight: 700; color: var(--sl-text-primary); }
 .chart-card-body { padding: 1rem 1.25rem; }
 
-.season-toggle-group { display: inline-flex; background: var(--sl-bg-subtle); border-radius: 8px; padding: 3px; }
-.season-btn {
-    background: transparent; border: none; border-radius: 6px;
-    padding: 0.35rem 1rem; font-size: 0.8rem; font-weight: 600;
-    color: var(--sl-text-muted); cursor: pointer; transition: all 0.15s ease;
-}
-.season-btn.active { background: var(--sl-bg-card); color: var(--sl-slope); box-shadow: var(--sl-shadow-sm); }
-
 .highlight-card {
     background: var(--sl-bg-card);
     border: 1px solid var(--sl-border);
@@ -100,25 +92,14 @@
 <div class="container-fluid px-3 px-md-4 py-4">
 
     <!-- Page header -->
-    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
-        <div>
-            <h1 style="font-size:1.5rem;font-weight:800;color:var(--sl-text-primary);margin:0;">
-                Welcome back, {{ user.get_full_name|default:user.username }}
-            </h1>
-            <p style="font-size:0.875rem;color:var(--sl-text-muted);margin:.2rem 0 0;">
-                {{ season }} season
-                {% if total_stats.total_num_activities %}&mdash; {{ total_stats.total_num_activities }} day{{ total_stats.total_num_activities|pluralize }} on snow{% endif %}
-            </p>
-        </div>
-        <!-- Season toggle -->
-        <div class="season-toggle-group" id="seasonToggle">
-            <button class="season-btn active" data-season="current" onclick="switchDashboardSeason('current')">
-                Current
-            </button>
-            <button class="season-btn" data-season="previous" onclick="switchDashboardSeason('previous')">
-                Previous
-            </button>
-        </div>
+    <div class="mb-4">
+        <h1 style="font-size:1.5rem;font-weight:800;color:var(--sl-text-primary);margin:0;">
+            Welcome back, {{ user.get_full_name|default:user.username }}
+        </h1>
+        <p style="font-size:0.875rem;color:var(--sl-text-muted);margin:.2rem 0 0;">
+            {{ season }} season
+            {% if total_stats.total_num_activities %}&mdash; {{ total_stats.total_num_activities }} day{{ total_stats.total_num_activities|pluralize }} on snow{% endif %}
+        </p>
     </div>
 
     {% if total_stats.total_num_activities %}
@@ -191,17 +172,15 @@
                 <span class="kpi-delta flat">this season</span>
             </div>
         </div>
-        <!-- Season pass savings -->
-        {% if season_passes %}
+        <!-- Avg cost per day -->
+        {% if avg_cost_per_day %}
         <div class="col-6 col-md-4 col-xl-2">
             <div class="kpi-card">
-                <div class="kpi-label"><i class="bi bi-ticket-perforated me-1" style="color:var(--sl-pine)"></i>Pass Savings</div>
-                {% for sp, sp_data in season_passes.items %}
-                <div class="kpi-value" style="font-size:1.4rem;">
-                    {% if sp_data.total_savings %}{{ sp_data.total_savings }}{% else %}—{% endif %}
+                <div class="kpi-label"><i class="bi bi-ticket-perforated me-1" style="color:var(--sl-pine)"></i>Cost / Day</div>
+                <div class="kpi-value" id="kpiCostPerDay">
+                    {{ avg_cost_per_day.amount }}<small style="font-size:1rem;font-weight:600;color:var(--sl-text-muted);"> {{ avg_cost_per_day.currency }}</small>
                 </div>
-                {% endfor %}
-                <span class="kpi-delta up"><i class="bi bi-arrow-up"></i> saved vs day passes</span>
+                <span class="kpi-delta flat">avg · season pass</span>
             </div>
         </div>
         {% endif %}
@@ -486,32 +465,5 @@ const areaBreakdown     = {{ area_breakdown|safe }};
     });
 })();
 
-// ── Season toggle (AJAX) ────────────────────────────
-let currentDashboardSeason = 'current';
-
-function switchDashboardSeason(season) {
-    if (currentDashboardSeason === season) return;
-    currentDashboardSeason = season;
-
-    document.querySelectorAll('.season-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.season === season);
-    });
-
-    fetch(`/api/season-stats/?season=${season}`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.total_stats) {
-            const s = data.total_stats;
-            const el = id => document.getElementById(id);
-            if (el('kpiDescent'))  el('kpiDescent').childNodes[0].textContent = (s.total_descent || 0).toLocaleString();
-            if (el('kpiDistance')) el('kpiDistance').childNodes[0].textContent = s.total_distance_km || 0;
-            if (el('kpiLifts'))    el('kpiLifts').textContent = s.total_num_lift_rides || 0;
-            if (el('kpiDays'))     el('kpiDays').textContent  = s.total_num_activities || 0;
-        }
-    })
-    .catch(() => {});
-}
 </script>
 {% endblock %}

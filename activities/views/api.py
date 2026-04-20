@@ -188,6 +188,23 @@ def home_stats(request):
     # Unique ski areas this season
     unique_areas = activities.exclude(ski_area__isnull=True).values('ski_area').distinct().count()
 
+    # Average cost per ski day across active season passes
+    avg_cost_per_day = None
+    if season_pass_stats:
+        total_amount = 0.0
+        total_acts = 0
+        currency = None
+        for sp, sp_data in season_pass_stats.items():
+            if sp_data['activities'] > 0:
+                total_amount += float(sp.price.amount)
+                currency = str(sp.price.currency)
+                total_acts += sp_data['activities']
+        if total_acts > 0:
+            avg_cost_per_day = {
+                'amount': round(total_amount / total_acts, 2),
+                'currency': currency,
+            }
+
     return {
         "season": f"{season_start.year}-{season_end.year}",
         "prev_season": f"{prev_start.year}-{prev_end.year}",
@@ -200,6 +217,7 @@ def home_stats(request):
         "weekly_prior": weekly_prior,
         "area_breakdown": area_breakdown,
         "season_passes": season_pass_stats,
+        "avg_cost_per_day": avg_cost_per_day,
     }
 
 

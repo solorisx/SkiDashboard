@@ -51,6 +51,10 @@
   fill: none;
   stroke-linecap: round;
   transition: stroke-dashoffset 1s ease;
+  /* Start fully hidden so there's no flash of a full circle before JS runs.
+     283 ≈ 2 × π × 45 (the radius used in all ring SVGs). */
+  stroke-dasharray: 283;
+  stroke-dashoffset: 283;
 }
 
 /* ==========================================================================
