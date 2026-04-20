@@ -6,7 +6,6 @@
 {% block extra_head %}
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/components/badges.css' %}">
-<link rel="stylesheet" href="{% static 'css/components/progress-circles.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -54,8 +53,8 @@
         <div class="card-body text-center p-4">
           <div class="progress-ring progress-ring-sm progress-ring-primary stat-ring mb-3" data-percentage="{{ overall_stats.total_activities|floatformat:0 }}">
             <svg viewBox="0 0 100 100">
-              <circle class="progress-ring__track" cx="50" cy="50" r="45"></circle>
-              <circle class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
+              <circle fill="none" class="progress-ring__track" cx="50" cy="50" r="45"></circle>
+              <circle fill="none" class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
             </svg>
             <div class="progress-ring__icon">
               <i class="bi bi-snow text-primary"></i>
@@ -71,8 +70,8 @@
         <div class="card-body text-center p-4">
           <div class="progress-ring progress-ring-sm progress-ring-success stat-ring mb-3" data-percentage="{{ overall_stats.total_distance_km|floatformat:0 }}" data-max="1000">
             <svg viewBox="0 0 100 100">
-              <circle class="progress-ring__track" cx="50" cy="50" r="45"></circle>
-              <circle class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
+              <circle fill="none" class="progress-ring__track" cx="50" cy="50" r="45"></circle>
+              <circle fill="none" class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
             </svg>
             <div class="progress-ring__icon">
               <i class="bi bi-speedometer text-success"></i>
@@ -88,8 +87,8 @@
         <div class="card-body text-center p-4">
           <div class="progress-ring progress-ring-sm progress-ring-info stat-ring mb-3" data-percentage="{{ overall_stats.total_lift_rides|floatformat:0 }}" data-max="500">
             <svg viewBox="0 0 100 100">
-              <circle class="progress-ring__track" cx="50" cy="50" r="45"></circle>
-              <circle class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
+              <circle fill="none" class="progress-ring__track" cx="50" cy="50" r="45"></circle>
+              <circle fill="none" class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
             </svg>
             <div class="progress-ring__icon">
               <i class="bi bi-cable-car text-info"></i>
@@ -105,8 +104,8 @@
         <div class="card-body text-center p-4">
           <div class="progress-ring progress-ring-sm progress-ring-warning stat-ring mb-3" data-percentage="{{ total_badges_count|floatformat:0 }}" data-max="50">
             <svg viewBox="0 0 100 100">
-              <circle class="progress-ring__track" cx="50" cy="50" r="45"></circle>
-              <circle class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
+              <circle fill="none" class="progress-ring__track" cx="50" cy="50" r="45"></circle>
+              <circle fill="none" class="progress-ring__bar" cx="50" cy="50" r="45"></circle>
             </svg>
             <div class="progress-ring__icon">
               <i class="bi bi-award text-warning"></i>
@@ -129,9 +128,9 @@
             Monthly Breakdown
           </h5>
           <div class="btn-group btn-group-sm" id="monthlyChartToggle">
-            <button class="btn btn-primary" data-metric="count" onclick="switchMonthlyMetric('count')">Days</button>
-            <button class="btn btn-outline-primary" data-metric="descent" onclick="switchMonthlyMetric('descent')">Descent</button>
-            <button class="btn btn-outline-primary" data-metric="lifts" onclick="switchMonthlyMetric('lifts')">Lifts</button>
+            <button class="btn btn-primary" data-metric="count">Days</button>
+            <button class="btn btn-outline-primary" data-metric="descent">Descent</button>
+            <button class="btn btn-outline-primary" data-metric="lifts">Lifts</button>
           </div>
         </div>
         <div class="card-body" style="min-height: 260px;">
@@ -756,15 +755,19 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  function switchMonthlyMetric(metric) {
+  if (document.getElementById('monthlyChart')) {
+    buildMonthlyChart('count');
     document.querySelectorAll('#monthlyChartToggle .btn').forEach(btn => {
-      btn.classList.toggle('btn-primary', btn.dataset.metric === metric);
-      btn.classList.toggle('btn-outline-primary', btn.dataset.metric !== metric);
+      btn.addEventListener('click', function () {
+        const metric = this.dataset.metric;
+        document.querySelectorAll('#monthlyChartToggle .btn').forEach(b => {
+          b.classList.toggle('btn-primary', b.dataset.metric === metric);
+          b.classList.toggle('btn-outline-primary', b.dataset.metric !== metric);
+        });
+        buildMonthlyChart(metric);
+      });
     });
-    buildMonthlyChart(metric);
   }
-
-  if (document.getElementById('monthlyChart')) buildMonthlyChart('count');
 
   // ── Calendar heatmap ──────────────────────────────────────────────────
   const calendarData = {{ calendar_data|safe }};
