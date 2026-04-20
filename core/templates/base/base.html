@@ -38,14 +38,6 @@
         {% include 'base/messages.html' %}
 
         <main>
-            <h1 class="bd-title" id="content">{% block pagetitle %}{% endblock %}</h1>
-            {% block content %}{% endblock %}
-        </main>
-
-        {% include './footer.html' %}
-    </div>
-</div>
-
 {% else %}
 <!-- ── Public layout: top navbar ───────────────────── -->
 <header>
@@ -55,8 +47,18 @@
 {% include 'base/messages.html' %}
 
 <main>
-    <h1 class="bd-title" id="content">{% block pagetitle2 %}{% endblock %}</h1>
-    {% block content2 %}{% block content %}{% endblock %}{% endblock %}
+{% endif %}
+
+<h1 class="bd-title visually-hidden" id="content">{% block pagetitle %}{% endblock %}</h1>
+{% block content %}{% endblock %}
+
+{% if user.is_authenticated %}
+        </main>
+
+        {% include './footer.html' %}
+    </div><!-- /.main-area -->
+</div><!-- /.app-layout -->
+{% else %}
 </main>
 
 {% include './footer.html' %}
@@ -94,11 +96,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.innerWidth >= 992 && localStorage.getItem('sidebarCollapsed') === '1') {
         sidebar.classList.add('collapsed');
     }
-    // Close sidebar on Escape
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') closeSidebar();
     });
-    // Close on nav link click (mobile)
     sidebar.querySelectorAll('.sl-nav-item').forEach(link => {
         link.addEventListener('click', function() {
             if (window.innerWidth < 992) closeSidebar();
