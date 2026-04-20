@@ -349,11 +349,23 @@ def piste_ride_api(request, piste_ride_id):
 class SeasonPassAPI(LoginRequiredMixin, View):
     """
     API endpoint to get, create, update, or delete a season pass.
+    Requires an active Premium subscription.
     """
+    def _check_premium(self, request):
+        try:
+            if not request.user.userprofile.is_premium_active():
+                return JsonResponse({"error": "Season pass tracking requires a Premium membership."}, status=403)
+        except Exception:
+            return JsonResponse({"error": "Season pass tracking requires a Premium membership."}, status=403)
+        return None
+
     def get(self, request, season_pass_id=None):
         raise NotImplementedError("GET method not implemented in SeasonPassAPI.")
 
     def post(self, request):
+        err = self._check_premium(request)
+        if err:
+            return err
         data = json.loads(request.body)
         logger.debug("Received season pass data: %s", data)
         if (data.get("skiarea") or data.get("skiarea_network")) and data.get("valid_from") and data.get("valid_until") and data.get("price_0") and data.get("price_1"):
@@ -383,6 +395,9 @@ class SeasonPassAPI(LoginRequiredMixin, View):
             return HttpResponse(status=400)
 
     def patch(self, request, season_pass_id):
+        err = self._check_premium(request)
+        if err:
+            return err
         data = json.loads(request.body)
         logger.debug("Received season pass update data: %s", data)
         season_pass = SeasonPass.objects.filter(id=season_pass_id, user=request.user).first()
@@ -413,6 +428,9 @@ class SeasonPassAPI(LoginRequiredMixin, View):
         return HttpResponse(status=204)
     
     def delete(self, request, season_pass_id):
+        err = self._check_premium(request)
+        if err:
+            return err
         season_pass = SeasonPass.objects.filter(id=season_pass_id, user=request.user).first()
         if not season_pass:
             return JsonResponse({"error": "Season pass not found or does not belong to user."}, status=404)
@@ -427,11 +445,23 @@ class SeasonPassAPI(LoginRequiredMixin, View):
 @login_required
 def premium_info(request):
     """Public-facing premium info page."""
+    from core.models import PremiumConfig
     profile = request.user.userprofile
+    config = PremiumConfig.get_config()
+    monthly = config.monthly_price_usd
+    yearly = config.yearly_price_usd
+    if monthly > 0:
+        savings_pct = round((1 - yearly / (monthly * 12)) * 100)
+    else:
+        savings_pct = 0
     context = {
         'is_premium': profile.is_premium_active(),
+        'premium_plan': profile.premium_plan,
         'premium_expires_at': profile.premium_expires_at,
         'premium_payment_source': profile.premium_payment_source,
+        'monthly_price_usd': monthly,
+        'yearly_price_usd': yearly,
+        'yearly_savings_pct': max(savings_pct, 0),
     }
     return render(request, 'premium/premium_info.html', context)
 
@@ -468,9 +498,17 @@ def buymeacoffee_webhook(request):
     if not email:
         return HttpResponse("OK")
 
-    threshold = getattr(django_settings, 'BUYMEACOFFEE_PREMIUM_THRESHOLD_USD', 20)
-    if amount < threshold:
-        logger.info(f"BMC webhook: amount {amount} below threshold {threshold} for {email}")
+    from core.models import PremiumConfig
+    config = PremiumConfig.get_config()
+    yearly_threshold = float(config.yearly_threshold_usd)
+    monthly_threshold = float(config.monthly_threshold_usd)
+
+    if amount >= yearly_threshold:
+        plan = 'yearly'
+    elif amount >= monthly_threshold:
+        plan = 'monthly'
+    else:
+        logger.info(f"BMC webhook: amount {amount} below monthly threshold {monthly_threshold} for {email}")
         return HttpResponse("OK")
 
     try:
@@ -479,16 +517,18 @@ def buymeacoffee_webhook(request):
         logger.info(f"BMC webhook: no user found for email {email}")
         return HttpResponse("OK")
 
-    grant_premium(user, source='buymeacoffee')
+    grant_premium(user, source='buymeacoffee', plan=plan)
     return HttpResponse("OK")
 
 
 @staff_member_required
 def membership_admin(request):
-    """Admin view: membership stats and grant/revoke controls."""
+    """Admin view: membership stats, grant/revoke controls, and pricing config."""
+    from decimal import Decimal, InvalidOperation
     from django.contrib.auth.models import User
     from django.utils import timezone
     from core.premium import grant_premium, revoke_premium
+    from core.models import PremiumConfig
 
     now = timezone.now()
     soon = now + timedelta(days=30)
@@ -496,6 +536,20 @@ def membership_admin(request):
 
     if request.method == 'POST':
         action = request.POST.get('action')
+
+        if action == 'update_config':
+            config = PremiumConfig.get_config()
+            try:
+                config.monthly_price_usd = Decimal(request.POST['monthly_price_usd'])
+                config.yearly_price_usd = Decimal(request.POST['yearly_price_usd'])
+                config.monthly_threshold_usd = Decimal(request.POST['monthly_threshold_usd'])
+                config.yearly_threshold_usd = Decimal(request.POST['yearly_threshold_usd'])
+                config.save()
+                messages.success(request, "Pricing configuration updated.")
+            except (KeyError, InvalidOperation) as e:
+                messages.error(request, f"Invalid pricing values: {e}")
+            return redirect('membership_admin')
+
         user_id = request.POST.get('user_id')
         try:
             target = User.objects.get(id=user_id)
@@ -504,8 +558,10 @@ def membership_admin(request):
             return redirect('membership_admin')
 
         if action == 'grant':
-            grant_premium(target, source='manual', granted_by=request.user)
-            messages.success(request, f"Premium granted to {target.email} for 1 year.")
+            plan = request.POST.get('plan', 'yearly')
+            grant_premium(target, source='manual', plan=plan, granted_by=request.user)
+            plan_label = 'monthly (30 days)' if plan == 'monthly' else 'yearly (365 days)'
+            messages.success(request, f"Premium granted to {target.email} — {plan_label}.")
         elif action == 'revoke':
             revoke_premium(target)
             messages.success(request, f"Premium revoked for {target.email}.")
@@ -534,5 +590,6 @@ def membership_admin(request):
         'recently_expired': recently_expired,
         'premium_users': premium_users,
         'all_users': all_users,
+        'premium_config': PremiumConfig.get_config(),
     }
     return render(request, 'admin/membership.html', context)

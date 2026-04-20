@@ -8,6 +8,7 @@ import logging
 from django.http import HttpResponseRedirect
 from osm.models import SkiArea, SkiAreaNetwork
 from django.db.models.functions import Round
+from core.premium import premium_required
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ def cost_detail_network(request, season=None):
 
 
 @login_required
+@premium_required
 def cost_home(request):
 
     logger.debug(request)
@@ -79,6 +81,7 @@ def cost_home(request):
 
 
 @login_required
+@premium_required
 def season_pass_detail(request, pass_id):
     season_pass = get_object_or_404(SeasonPass, id=pass_id, user=request.user)
     if season_pass.skiarea_network:
@@ -109,6 +112,7 @@ def season_pass_detail(request, pass_id):
     return render (request, "cost/season_pass_detail.html", context)
 
 @login_required
+@premium_required
 def delete_season_pass(request, pass_id):
     season_pass = get_object_or_404(SeasonPass, id=pass_id, user=request.user)
     season_pass.delete()

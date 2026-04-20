@@ -58,6 +58,60 @@
         </div>
     </div>
 
+    <!-- Pricing configuration -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header fw-semibold">
+            <i class="bi bi-sliders me-2 text-primary"></i>Pricing &amp; Thresholds
+        </div>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_config">
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Monthly price (USD)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" min="0" name="monthly_price_usd"
+                               value="{{ premium_config.monthly_price_usd }}" class="form-control" required>
+                    </div>
+                    <div class="form-text">Displayed on the upgrade page.</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Yearly price (USD)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" min="0" name="yearly_price_usd"
+                               value="{{ premium_config.yearly_price_usd }}" class="form-control" required>
+                    </div>
+                    <div class="form-text">Displayed on the upgrade page.</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">BMC monthly threshold (USD)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" min="0" name="monthly_threshold_usd"
+                               value="{{ premium_config.monthly_threshold_usd }}" class="form-control" required>
+                    </div>
+                    <div class="form-text">Min. donation to grant 30 days.</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">BMC yearly threshold (USD)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" min="0" name="yearly_threshold_usd"
+                               value="{{ premium_config.yearly_threshold_usd }}" class="form-control" required>
+                    </div>
+                    <div class="form-text">Min. donation to grant 365 days.</div>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>Save Configuration
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Grant premium -->
     <div class="card shadow-sm mb-4">
         <div class="card-header fw-semibold">
@@ -67,7 +121,7 @@
             <form method="post" class="row g-2 align-items-end">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="grant">
-                <div class="col-md-6">
+                <div class="col-md-5">
                     <label class="form-label small fw-semibold">Select User</label>
                     <select name="user_id" class="form-select" required>
                         <option value="">— Choose a user —</option>
@@ -79,8 +133,15 @@
                     </select>
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Plan</label>
+                    <select name="plan" class="form-select" required>
+                        <option value="yearly">Yearly (365 days)</option>
+                        <option value="monthly">Monthly (30 days)</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
                     <button type="submit" class="btn btn-warning w-100">
-                        <i class="bi bi-star-fill me-1"></i>Grant 1 Year Premium
+                        <i class="bi bi-star-fill me-1"></i>Grant Premium
                     </button>
                 </div>
             </form>
@@ -98,6 +159,7 @@
                     <tr>
                         <th class="ps-3">Email</th>
                         <th>Status</th>
+                        <th>Plan</th>
                         <th>Expires</th>
                         <th>Source</th>
                         <th>Granted By</th>
@@ -114,6 +176,13 @@
                             {% else %}
                                 <span class="badge bg-secondary">Expired</span>
                             {% endif %}
+                        </td>
+                        <td>
+                            {% if profile.premium_plan == 'monthly' %}
+                                <span class="badge bg-info text-dark">Monthly</span>
+                            {% elif profile.premium_plan == 'yearly' %}
+                                <span class="badge bg-warning text-dark">Yearly</span>
+                            {% else %}—{% endif %}
                         </td>
                         <td>
                             {% if profile.premium_expires_at %}
@@ -151,7 +220,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">No premium users yet.</td>
+                        <td colspan="7" class="text-center text-muted py-4">No premium users yet.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

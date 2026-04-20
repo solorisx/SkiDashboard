@@ -10,6 +10,32 @@ PAYMENT_SOURCE_CHOICES = [
     ('manual', 'Manual'),
 ]
 
+PREMIUM_PLAN_CHOICES = [
+    ('monthly', 'Monthly'),
+    ('yearly', 'Yearly'),
+]
+
+
+class PremiumConfig(models.Model):
+    """Singleton model — staff configure premium pricing and BMC thresholds here."""
+    monthly_price_usd = models.DecimalField(max_digits=6, decimal_places=2, default=5.00)
+    yearly_price_usd = models.DecimalField(max_digits=6, decimal_places=2, default=50.00)
+    # Minimum BuyMeACoffee donation to trigger each plan
+    monthly_threshold_usd = models.DecimalField(max_digits=6, decimal_places=2, default=5.00)
+    yearly_threshold_usd = models.DecimalField(max_digits=6, decimal_places=2, default=50.00)
+
+    @classmethod
+    def get_config(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Premium Configuration"
+
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -38,6 +64,7 @@ class UserProfile(models.Model):
 
     # Premium membership
     is_premium = models.BooleanField(default=False, db_index=True)
+    premium_plan = models.CharField(max_length=20, choices=PREMIUM_PLAN_CHOICES, null=True, blank=True)
     premium_expires_at = models.DateTimeField(null=True, blank=True)
     premium_granted_at = models.DateTimeField(null=True, blank=True)
     premium_payment_source = models.CharField(max_length=50, choices=PAYMENT_SOURCE_CHOICES, null=True, blank=True)
