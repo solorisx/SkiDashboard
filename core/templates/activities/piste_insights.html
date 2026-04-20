@@ -5,7 +5,7 @@
 {% block pagetitle %} Piste Ride Insights {% endblock %}
 {% block extra_head %}
 {% load static %}
-<parameter name="link rel="stylesheet" href="{% static 'css/components/badges.css' %}">
+<link rel="stylesheet" href="{% static 'css/components/badges.css' %}">
 <link rel="stylesheet" href="{% static 'css/components/progress-circles.css' %}">
 {% endblock %}
 
@@ -320,7 +320,7 @@
       </div>
     </div>
 
-    <!-- Piste Difficulty Statistics (if available) -->
+    <!-- Piste Difficulty Statistics -->
     {% if piste_difficulty_stats %}
     <div class="col-12">
       <div class="card border-0 shadow-sm">
@@ -331,17 +331,33 @@
           </h5>
         </div>
         <div class="card-body">
-          <div class="row g-3">
-            {% for diff_stat in piste_difficulty_stats %}
-            <div class="col-12 col-md-6 col-lg-3">
-              <div class="card border-info border-opacity-25 h-100">
-                <div class="card-body text-center p-3">
-                  <div class="fs-4 fw-bold text-info">{{ diff_stat.count }}</div>
-                  <div class="text-muted">{{ diff_stat.piste__piste_difficulty|default:"Unknown" }}</div>
-                </div>
+          <div class="row g-3 align-items-center">
+            <div class="col-12 col-md-4 d-flex justify-content-center">
+              <div style="position:relative; width:200px; height:200px;">
+                <canvas id="difficultyDonut"></canvas>
               </div>
             </div>
-            {% endfor %}
+            <div class="col-12 col-md-8">
+              <div class="row g-2">
+                {% for diff_stat in piste_difficulty_stats %}
+                <div class="col-6 col-lg-4">
+                  <div class="card h-100" style="border-left: 4px solid
+                    {% if diff_stat.piste__piste_difficulty == 'novice' %}#4caf50
+                    {% elif diff_stat.piste__piste_difficulty == 'easy' %}#2196f3
+                    {% elif diff_stat.piste__piste_difficulty == 'intermediate' %}#f44336
+                    {% elif diff_stat.piste__piste_difficulty == 'advanced' %}#212121
+                    {% elif diff_stat.piste__piste_difficulty == 'expert' %}#ff5722
+                    {% elif diff_stat.piste__piste_difficulty == 'freeride' %}#ff9800
+                    {% else %}#9e9e9e{% endif %};">
+                    <div class="card-body text-center p-3">
+                      <div class="fs-4 fw-bold mb-1">{{ diff_stat.count }}</div>
+                      <div class="small text-muted text-capitalize">{{ diff_stat.piste__piste_difficulty|default:"Unknown" }}</div>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -351,24 +367,43 @@
 </div>
 
 <script>
-// Initialize progress rings
 document.addEventListener('DOMContentLoaded', function() {
-  const progressRings = document.querySelectorAll('.progress-ring');
-  progressRings.forEach(ring => {
-    const percentage = parseFloat(ring.dataset.percentage);
-    const circle = ring.querySelector('.progress-ring__bar');
-    const radius = circle.r.baseVal.value;
-    const circumference = radius * 2 * Math.PI;
-
-    circle.style.strokeDasharray = `${circumference} ${circumference}`;
-    circle.style.strokeDashoffset = circumference;
-
-    // Animate
-    setTimeout(() => {
-      const offset = circumference - (percentage / 100) * circumference;
-      circle.style.strokeDashoffset = offset;
-    }, 100);
+  // Progress rings
+  document.querySelectorAll('.progress-ring').forEach((ring, i) => {
+    const bar = ring.querySelector('.progress-ring__bar');
+    const pct = Math.max(0, Math.min(100, parseFloat(ring.dataset.percentage) || 0));
+    const c = 2 * Math.PI * 45;
+    bar.style.strokeDasharray = `${c} ${c}`;
+    bar.style.strokeDashoffset = c;
+    setTimeout(() => { bar.style.strokeDashoffset = c * (1 - pct / 100); }, i * 150 + 100);
   });
+
+  // ── Piste difficulty doughnut ─────────────────────────────────────────
+  const difficultyData = {{ piste_difficulty_chart|safe }};
+  if (difficultyData.length && document.getElementById('difficultyDonut')) {
+    new Chart(document.getElementById('difficultyDonut'), {
+      type: 'doughnut',
+      data: {
+        labels: difficultyData.map(d => d.difficulty),
+        datasets: [{
+          data: difficultyData.map(d => d.count),
+          backgroundColor: difficultyData.map(d => d.color),
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${ctx.parsed} rides`
+            }
+          }
+        }
+      }
+    });
+  }
 });
 </script>
 {% endblock %}

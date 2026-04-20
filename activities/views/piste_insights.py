@@ -1,3 +1,4 @@
+import json
 import logging
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Max, Min, Sum, Q
@@ -224,6 +225,24 @@ def piste_insights(request, season=None):
         'total_distance_skied': round(total_distance_skied, 1)
     }
 
+    # Piste difficulty breakdown for donut chart
+    difficulty_colors = {
+        'novice': '#4caf50',
+        'easy': '#2196f3',
+        'intermediate': '#f44336',
+        'advanced': '#212121',
+        'expert': '#ff5722',
+        'freeride': '#ff9800',
+    }
+    piste_difficulty_chart = json.dumps([
+        {
+            'difficulty': (row['piste__piste_difficulty'] or 'unknown').title(),
+            'count': row['count'],
+            'color': difficulty_colors.get(row['piste__piste_difficulty'] or '', '#9e9e9e'),
+        }
+        for row in piste_difficulty_stats
+    ])
+
     context = {
         'recent_rides': recent_rides,
         'most_ridden_piste_ever': most_ridden_piste_ever,
@@ -231,9 +250,10 @@ def piste_insights(request, season=None):
         'best_single_day_activity': best_single_day_activity,
         'most_unique_pistes_day': most_unique_pistes_day,
         'overall_completeness': overall_completeness,
-        'ski_area_completeness': ski_area_completeness[:10],  # Top 10 for display
+        'ski_area_completeness': ski_area_completeness[:10],
         'total_ski_areas': total_ski_areas_count,
         'piste_difficulty_stats': piste_difficulty_stats,
+        'piste_difficulty_chart': piste_difficulty_chart,
         'season_stats': season_stats,
         'seasons': seasons,
         'selected_season': season,

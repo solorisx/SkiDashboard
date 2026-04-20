@@ -75,6 +75,36 @@
     </div>
   </div>
 
+  <!-- Weekly Lift Rides Trend + Lift Type Donut -->
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 pb-2">
+          <h5 class="fw-bold mb-0">
+            <i class="bi bi-graph-up me-2 text-info"></i>
+            Lift Rides Per Week
+          </h5>
+        </div>
+        <div class="card-body" style="min-height: 220px;">
+          <canvas id="weeklyLiftsChart" style="max-height: 200px;"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0 pb-2">
+          <h5 class="fw-bold mb-0">
+            <i class="bi bi-pie-chart-fill me-2 text-primary"></i>
+            Lift Type Breakdown
+          </h5>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 220px;">
+          <canvas id="liftTypeDonut" style="max-height: 200px; max-width: 200px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="row g-4">
     <!-- Recent Lift Rides -->
     <div class="col-12 col-xl-6">
@@ -301,17 +331,24 @@
           </h5>
         </div>
         <div class="card-body">
-          <div class="row g-3">
-            {% for lift_type in lift_type_stats %}
-              <div class="col-6 col-md-4 col-lg-3">
-                <div class="card border lift-type-card">
-                  <div class="card-body text-center p-3">
-                    <div class="fs-4 fw-bold text-primary mb-1">{{ lift_type.count }}</div>
-                    <div class="small text-muted">{{ lift_type.aerialway__aerialway|default:"Unknown" }}</div>
+          <div class="row g-3 align-items-center">
+            <div class="col-12 col-md-5 d-flex justify-content-center">
+              <canvas id="liftTypeBarChart" style="max-height: 280px;"></canvas>
+            </div>
+            <div class="col-12 col-md-7">
+              <div class="row g-2">
+                {% for lift_type in lift_type_stats %}
+                <div class="col-6 col-lg-4">
+                  <div class="card border lift-type-card">
+                    <div class="card-body text-center p-3">
+                      <div class="fs-4 fw-bold text-primary mb-1">{{ lift_type.count }}</div>
+                      <div class="small text-muted">{{ lift_type.aerialway__aerialway|default:"Unknown"|cut:"_"|title }}</div>
+                    </div>
                   </div>
                 </div>
+                {% endfor %}
               </div>
-            {% endfor %}
+            </div>
           </div>
         </div>
       </div>
@@ -370,36 +407,88 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-  // Initialize progress rings
-  function initProgressRing(ring) {
-    const svg = ring.querySelector('svg');
-    const bar = svg.querySelector('.progress-ring__bar');
+  // Progress rings
+  document.querySelectorAll('.progress-ring').forEach((ring, i) => {
+    const bar = ring.querySelector('.progress-ring__bar');
+    const pct = Math.max(0, Math.min(100, parseFloat(ring.dataset.percentage) || 0));
+    const c = 2 * Math.PI * 45;
+    bar.style.strokeDasharray = `${c} ${c}`;
+    bar.style.strokeDashoffset = c;
+    setTimeout(() => { bar.style.strokeDashoffset = c * (1 - pct / 100); }, i * 150 + 100);
+  });
 
-    // Get the percentage from data attribute
-    const percentage = Math.max(0, Math.min(100, parseFloat(ring.dataset.percentage) || 0));
-
-    // Calculate circumference
-    const radius = 45;
-    const circumference = 2 * Math.PI * radius;
-
-    // Set up the progress bar
-    bar.style.strokeDasharray = `${circumference} ${circumference}`;
-    bar.style.strokeDashoffset = circumference; // Start at 0%
-
-    // Animate the progress after a short delay
-    setTimeout(() => {
-      const offset = circumference * (1 - percentage / 100);
-      bar.style.strokeDashoffset = offset;
-    }, 100);
+  // ── Weekly lift rides line chart ──────────────────────────────────────
+  const weeklyLifts = {{ weekly_lifts|safe }};
+  if (weeklyLifts.length && document.getElementById('weeklyLiftsChart')) {
+    new Chart(document.getElementById('weeklyLiftsChart'), {
+      type: 'line',
+      data: {
+        labels: weeklyLifts.map(d => d.week),
+        datasets: [{
+          label: 'Lift Rides',
+          data: weeklyLifts.map(d => d.count),
+          borderColor: 'rgba(13,202,240,0.9)',
+          backgroundColor: 'rgba(13,202,240,0.12)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }
+        }
+      }
+    });
   }
 
-  // Initialize all progress rings with staggered animation
-  const progressRings = document.querySelectorAll('.progress-ring');
-  progressRings.forEach((ring, index) => {
-    setTimeout(() => {
-      initProgressRing(ring);
-    }, index * 150);
-  });
+  // ── Lift type doughnut (header card) ──────────────────────────────────
+  const liftTypeData = {{ lift_type_chart|safe }};
+  const liftColors = ['#0dcaf0','#198754','#0d6efd','#ffc107','#dc3545','#6f42c1','#fd7e14','#20c997','#adb5bd'];
+
+  if (liftTypeData.length && document.getElementById('liftTypeDonut')) {
+    new Chart(document.getElementById('liftTypeDonut'), {
+      type: 'doughnut',
+      data: {
+        labels: liftTypeData.map(d => d.type),
+        datasets: [{ data: liftTypeData.map(d => d.count), backgroundColor: liftColors, borderWidth: 2 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+      }
+    });
+  }
+
+  // ── Lift type horizontal bar chart (detail section) ───────────────────
+  if (liftTypeData.length && document.getElementById('liftTypeBarChart')) {
+    new Chart(document.getElementById('liftTypeBarChart'), {
+      type: 'bar',
+      data: {
+        labels: liftTypeData.map(d => d.type),
+        datasets: [{
+          label: 'Rides',
+          data: liftTypeData.map(d => d.count),
+          backgroundColor: liftColors.slice(0, liftTypeData.length),
+          borderRadius: 4,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+          y: { grid: { display: false } }
+        }
+      }
+    });
+  }
 });
 </script>
 

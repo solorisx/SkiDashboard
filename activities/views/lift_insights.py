@@ -1,6 +1,8 @@
+import json
 import logging
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Max, Min, Sum
+from django.db.models.functions import TruncWeek
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.core.cache import cache
@@ -150,15 +152,40 @@ def lift_insights(request, season=None):
         if season_stats[key] is None:
             season_stats[key] = 0
 
+    # Weekly lift rides trend for line chart
+    weekly_lifts_raw = (
+        LiftRide.objects.filter(lap__activity__user=request.user)
+        .filter(filter_query)
+        .annotate(week=TruncWeek('timestamp'))
+        .values('week')
+        .annotate(count=Count('id'))
+        .order_by('week')
+    )
+    weekly_lifts = json.dumps([
+        {'week': row['week'].strftime('%b %d'), 'count': row['count']}
+        for row in weekly_lifts_raw if row['week']
+    ])
+
+    # Lift type breakdown for donut chart
+    lift_type_chart = json.dumps([
+        {
+            'type': (row['aerialway__aerialway'] or 'unknown').replace('_', ' ').title(),
+            'count': row['count'],
+        }
+        for row in lift_type_stats
+    ])
+
     context = {
         'recent_rides': recent_rides,
         'most_ridden_lift_ever': most_ridden_lift_ever,
         'best_single_day_activity': best_single_day_activity,
         'most_unique_lifts_day': most_unique_lifts_day,
         'overall_completeness': overall_completeness,
-        'ski_area_completeness': ski_area_completeness[:10],  # Top 10 for display
+        'ski_area_completeness': ski_area_completeness[:10],
         'total_ski_areas': total_ski_areas_count,
         'lift_type_stats': lift_type_stats,
+        'lift_type_chart': lift_type_chart,
+        'weekly_lifts': weekly_lifts,
         'season_stats': season_stats,
         'seasons': seasons,
         'selected_season': season,
