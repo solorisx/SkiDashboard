@@ -101,9 +101,9 @@
             Daily Breakdown
           </h5>
           <div class="btn-group btn-group-sm" id="dailyChartToggle">
-            <button class="btn btn-warning" data-metric="descent" onclick="switchDailyMetric('descent')">Descent</button>
-            <button class="btn btn-outline-warning" data-metric="lifts" onclick="switchDailyMetric('lifts')">Lifts</button>
-            <button class="btn btn-outline-warning" data-metric="distance_km" onclick="switchDailyMetric('distance_km')">Distance</button>
+            <button class="btn btn-warning" data-metric="descent">Descent</button>
+            <button class="btn btn-outline-warning" data-metric="lifts">Lifts</button>
+            <button class="btn btn-outline-warning" data-metric="distance_km">Distance</button>
           </div>
         </div>
         <div class="card-body" style="min-height: 240px;">
@@ -326,15 +326,19 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function switchDailyMetric(metric) {
+  if (document.getElementById('dailyChart')) {
+    buildDailyChart('descent');
     document.querySelectorAll('#dailyChartToggle .btn').forEach(btn => {
-      btn.classList.toggle('btn-warning', btn.dataset.metric === metric);
-      btn.classList.toggle('btn-outline-warning', btn.dataset.metric !== metric);
+      btn.addEventListener('click', function () {
+        const metric = this.dataset.metric;
+        document.querySelectorAll('#dailyChartToggle .btn').forEach(b => {
+          b.classList.toggle('btn-warning', b.dataset.metric === metric);
+          b.classList.toggle('btn-outline-warning', b.dataset.metric !== metric);
+        });
+        buildDailyChart(metric);
+      });
     });
-    buildDailyChart(metric);
   }
-
-  if (document.getElementById('dailyChart')) buildDailyChart('descent');
 
   // ── Mini Leaflet maps ──────────────────────────────────────────────────
   {% for activity in activities %}
