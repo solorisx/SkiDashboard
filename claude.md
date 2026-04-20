@@ -136,6 +136,53 @@ SkiDashboard/
 └── tmp/                  # Temporary files
 ```
 
+## Premium / Paywall Feature
+
+### Overview
+SlopeLog has a freemium model. Free users are limited to:
+- Strava sync history capped at `FREE_TIER_MAX_SYNC_DAYS` (default 365 days, env-configurable)
+- Access to current season only in all insights/statistics views
+
+Premium users get unlimited sync history and all past seasons. Premium is granted for 1 year (no auto-renewal).
+
+### Key Files
+| Purpose | File |
+|---------|------|
+| Premium fields + `is_premium_active()` | `core/models.py` — `UserProfile` |
+| Grant/revoke helpers, season filter, decorator | `core/premium.py` |
+| Free-tier sync enforcement | `activities/tasks.py` — `parse_strava_activities_task` |
+| Season restriction in views | `activities/views/insights.py`, `lift_insights.py`, `piste_insights.py`, `statistics.py` |
+| BuyMeACoffee webhook, admin view, premium info | `core/views.py` |
+| Expiry reminder Celery task | `core/tasks.py` — `send_premium_expiry_reminders` |
+| Context processor (`user_is_premium`) | `core/context_processors.py` |
+| Premium info page | `core/templates/premium/premium_info.html` |
+| Membership admin page | `core/templates/admin/membership.html` |
+
+### Payment Providers
+- **BuyMeACoffee**: Webhook at `POST /webhooks/buymeacoffee/`. Grants premium when donation ≥ `BUYMEACOFFEE_PREMIUM_THRESHOLD_USD` (default $20). Uses HMAC-SHA256 signature if `BUYMEACOFFEE_WEBHOOK_SECRET` is set.
+- **Manual**: Staff can grant/revoke via `/admin/membership/`.
+
+### Environment Variables
+```
+FREE_TIER_MAX_SYNC_DAYS=365         # Days of sync history for free users
+BUYMEACOFFEE_WEBHOOK_SECRET=...     # HMAC secret for webhook verification
+BUYMEACOFFEE_PREMIUM_THRESHOLD_USD=20  # Minimum donation amount for premium
+```
+
+### URLs
+- `GET /premium/` — Premium info page
+- `POST /webhooks/buymeacoffee/` — Payment webhook (csrf exempt)
+- `GET/POST /admin/membership/` — Staff-only membership admin
+
+### Reminder Emails
+Celery Beat runs `core.tasks.send_premium_expiry_reminders` daily at 08:00 UTC.
+Sends 30-day and 7-day expiry warnings. Notification flags (`premium_expiry_30d_notified`, `premium_expiry_7d_notified`) prevent duplicate sends and are reset on each `grant_premium()` call.
+
+### Adding a New Payment Provider
+1. Add a new `source` value to `PAYMENT_SOURCE_CHOICES` in `core/models.py`
+2. Create a webhook/callback view in `core/views.py` that calls `core.premium.grant_premium(user, source='yourprovider')`
+3. Register the URL in `core/urls.py`
+
 ## Database Models
 
 ### Core App
@@ -541,7 +588,7 @@ For issues or questions:
 
 ---
 
-**Last Updated:** 2025-12-25
+**Last Updated:** 2026-04-19
 **Django Version:** 5.2.6
 **Python Version:** 3.11
 **PostgreSQL Version:** 16

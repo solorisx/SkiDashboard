@@ -4,6 +4,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+PAYMENT_SOURCE_CHOICES = [
+    ('buymeacoffee', 'BuyMeACoffee'),
+    ('manual', 'Manual'),
+]
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     beta_tester = models.BooleanField(default=False)
@@ -29,8 +36,25 @@ class UserProfile(models.Model):
     # Profile completion tracking
     profile_confirmed = models.BooleanField(default=False, help_text="User has confirmed their initial profile settings")
 
+    # Premium membership
+    is_premium = models.BooleanField(default=False, db_index=True)
+    premium_expires_at = models.DateTimeField(null=True, blank=True)
+    premium_granted_at = models.DateTimeField(null=True, blank=True)
+    premium_payment_source = models.CharField(max_length=50, choices=PAYMENT_SOURCE_CHOICES, null=True, blank=True)
+    premium_granted_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name='premium_grants'
+    )
+    premium_expiry_30d_notified = models.BooleanField(default=False)
+    premium_expiry_7d_notified = models.BooleanField(default=False)
+
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
+
+    def is_premium_active(self):
+        from django.utils import timezone
+        return self.is_premium and (
+            self.premium_expires_at is None or self.premium_expires_at > timezone.now()
+        )
 
     def get_season_start_date(self, year):
         """Get season start date for a given year using user's preferences."""

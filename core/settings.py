@@ -178,6 +178,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.premium_status',
             ],
         },
     },
@@ -396,6 +397,19 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND")  # Optional: to store task results
 CELERY_TIMEZONE = 'UTC'
 broker_connection_retry_on_startup = True
+
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    'premium-expiry-reminders': {
+        'task': 'core.tasks.send_premium_expiry_reminders',
+        'schedule': crontab(hour=8, minute=0),
+    },
+}
+
+# --- Premium / Free Tier ---
+FREE_TIER_MAX_SYNC_DAYS = int(os.getenv('FREE_TIER_MAX_SYNC_DAYS', 365))
+BUYMEACOFFEE_WEBHOOK_SECRET = os.getenv('BUYMEACOFFEE_WEBHOOK_SECRET', '')
+BUYMEACOFFEE_PREMIUM_THRESHOLD_USD = float(os.getenv('BUYMEACOFFEE_PREMIUM_THRESHOLD_USD', 20))
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 # Add localhost/development hosts when in DEBUG mode or ALLOWED_HOSTS is empty

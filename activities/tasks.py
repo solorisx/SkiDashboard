@@ -48,16 +48,18 @@ def sync_user_activities_task(user_id, all=False, update=False):
 
 @shared_task
 def parse_strava_activities_task(user_id, all=False, update=False):
+    from django.conf import settings as django_settings
     user = User.objects.get(id=user_id)
+    profile = UserProfile.objects.get(user=user)
     if all:
-        max_strava_sync = UserProfile.objects.get(user=user).max_strava_sync
-        if max_strava_sync == -1:
+        if profile.is_premium_active():
             after = None
         else:
-            after = datetime.now() - timedelta(days=max_strava_sync)
+            max_days = getattr(django_settings, 'FREE_TIER_MAX_SYNC_DAYS', 365)
+            after = datetime.now() - timedelta(days=max_days)
     else:
-        if UserProfile.objects.get(user=user).last_strava_sync:
-            after = UserProfile.objects.get(user=user).last_strava_sync
+        if profile.last_strava_sync:
+            after = profile.last_strava_sync
         else:
             after = datetime.now() - timedelta(days=90)
     

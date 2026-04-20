@@ -12,19 +12,21 @@ from ..utils.completeness import (
 )
 from ..utils.queries import get_filter_query, get_user_activities_base_query
 from ..utils.seasons import get_seasons
+from core.premium import filter_seasons_for_user, premium_season_required
 from osm.models import SkiArea
 
 logger = logging.getLogger(__name__)
 
 
 @login_required
+@premium_season_required
 def lift_insights(request, season=None):
     """Show comprehensive lift ride insights and completeness statistics."""
 
     # Get season filter
     filter_query = get_filter_query(request, season)
     activities = get_user_activities_base_query(request.user).filter(filter_query)
-    seasons = get_seasons(user=request.user)
+    seasons = filter_seasons_for_user(get_seasons(user=request.user), request.user)
 
     # Recent lift rides with context
     recent_rides = LiftRide.objects.filter(
@@ -166,13 +168,14 @@ def lift_insights(request, season=None):
 
 
 @login_required
+@premium_season_required
 def ski_area_completeness_detail(request, ski_area_id, season=None):
     """Show detailed completeness view for a specific ski area."""
     ski_area = SkiArea.objects.get(id=ski_area_id)
 
     # Get season filter
     filter_query = get_filter_query(request, season)
-    seasons = get_seasons(user=request.user)
+    seasons = filter_seasons_for_user(get_seasons(user=request.user), request.user)
 
     # Get all available lifts in this ski area (with user exclusions)
     available_lifts = get_available_lifts_in_ski_area(ski_area, user=request.user)
@@ -262,10 +265,11 @@ def ski_area_completeness_detail(request, ski_area_id, season=None):
 
 
 @login_required
+@premium_season_required
 def ski_area_completeness_all(request, season=None):
     """Show completeness for all ski areas."""
     # Get season filter
-    seasons = get_seasons(user=request.user)
+    seasons = filter_seasons_for_user(get_seasons(user=request.user), request.user)
 
     # Get all ski areas by completeness
     ski_area_completeness = []
