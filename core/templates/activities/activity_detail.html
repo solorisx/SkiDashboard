@@ -300,6 +300,67 @@
     {% endif %}
   </div>
 
+  <!-- Extra stats row: speed, HR, calories (if available) -->
+  {% if activity.avg_speed or activity.avg_heart_rate or activity.total_calories %}
+  <div class="row row-cols-2 row-cols-sm-3 row-cols-md-5 g-3 mb-4">
+    {% if activity.max_speed %}
+    <div class="col">
+      <div class="card border-0 h-100" style="background:var(--sl-bg-card);border:1px solid var(--sl-border)!important;">
+        <div class="card-body text-center py-3 px-2">
+          <i class="bi bi-speedometer2 fs-3 mb-1" style="color:var(--sl-slope)"></i>
+          <div class="fw-bold" style="font-size:1.2rem;color:var(--sl-text-primary);">{{ activity.max_speed|floatformat:0 }} <small class="text-muted fw-normal" style="font-size:.75rem">km/h</small></div>
+          <small class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;">Max Speed</small>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if activity.avg_speed %}
+    <div class="col">
+      <div class="card border-0 h-100" style="background:var(--sl-bg-card);border:1px solid var(--sl-border)!important;">
+        <div class="card-body text-center py-3 px-2">
+          <i class="bi bi-wind fs-3 mb-1" style="color:var(--sl-pine)"></i>
+          <div class="fw-bold" style="font-size:1.2rem;color:var(--sl-text-primary);">{{ activity.avg_speed|floatformat:1 }} <small class="text-muted fw-normal" style="font-size:.75rem">km/h</small></div>
+          <small class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;">Avg Speed</small>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if activity.avg_heart_rate %}
+    <div class="col">
+      <div class="card border-0 h-100" style="background:var(--sl-bg-card);border:1px solid var(--sl-border)!important;">
+        <div class="card-body text-center py-3 px-2">
+          <i class="bi bi-heart-pulse fs-3 mb-1" style="color:var(--sl-danger)"></i>
+          <div class="fw-bold" style="font-size:1.2rem;color:var(--sl-text-primary);">{{ activity.avg_heart_rate }} <small class="text-muted fw-normal" style="font-size:.75rem">bpm</small></div>
+          <small class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;">Avg Heart Rate</small>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if activity.max_heart_rate %}
+    <div class="col">
+      <div class="card border-0 h-100" style="background:var(--sl-bg-card);border:1px solid var(--sl-border)!important;">
+        <div class="card-body text-center py-3 px-2">
+          <i class="bi bi-heart fs-3 mb-1" style="color:var(--sl-danger)"></i>
+          <div class="fw-bold" style="font-size:1.2rem;color:var(--sl-text-primary);">{{ activity.max_heart_rate }} <small class="text-muted fw-normal" style="font-size:.75rem">bpm</small></div>
+          <small class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;">Max Heart Rate</small>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% if activity.total_calories %}
+    <div class="col">
+      <div class="card border-0 h-100" style="background:var(--sl-bg-card);border:1px solid var(--sl-border)!important;">
+        <div class="card-body text-center py-3 px-2">
+          <i class="bi bi-fire fs-3 mb-1" style="color:var(--sl-sun)"></i>
+          <div class="fw-bold" style="font-size:1.2rem;color:var(--sl-text-primary);">{{ activity.total_calories|floatformat:0 }} <small class="text-muted fw-normal" style="font-size:.75rem">kcal</small></div>
+          <small class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;">Calories</small>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
   <!-- Piste Completeness Summary Card -->
   {% if piste_completeness and activity.ski_area %}
   <div class="row mb-4">
@@ -380,49 +441,94 @@
     </div>
   </div>
 
+  <!-- Elevation Profile Chart -->
+  {% if lap_chart_data and lap_chart_data != "[]" %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm" style="background:var(--sl-bg-card);border-color:var(--sl-border)!important;">
+        <div class="card-header border-bottom d-flex align-items-center justify-content-between" style="background:var(--sl-bg-card);border-color:var(--sl-border)!important;">
+          <h4 class="card-title mb-0 fw-bold" style="font-size:.95rem;color:var(--sl-text-primary);">
+            <i class="bi bi-graph-down me-2" style="color:var(--sl-slope)"></i>Elevation Profile by Lap
+          </h4>
+          <span style="font-size:.75rem;color:var(--sl-text-muted);">Descent per run</span>
+        </div>
+        <div class="card-body" style="padding:1rem 1.25rem;">
+          <div style="height:200px;position:relative;">
+            <canvas id="elevationChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Main Content Grid -->
   <div class="row g-4">
-    <!-- Laps Section -->
+    <!-- Laps Section — enhanced per-lap cards -->
     <div class="col-12 col-xl-6">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-header bg-white border-bottom py-3">
-          <h4 class="card-title mb-0 fw-bold">
-            <i class="bi bi-stopwatch me-2 text-success"></i>Laps
+      <div class="card border-0 shadow-sm h-100" style="background:var(--sl-bg-card);border-color:var(--sl-border)!important;">
+        <div class="card-header border-bottom py-3 d-flex align-items-center justify-content-between" style="background:var(--sl-bg-card);border-color:var(--sl-border)!important;">
+          <h4 class="card-title mb-0 fw-bold" style="font-size:.95rem;color:var(--sl-text-primary);">
+            <i class="bi bi-stopwatch me-2" style="color:var(--sl-pine)"></i>Laps
           </h4>
+          <span class="badge rounded-pill" style="background:var(--sl-pine-light);color:var(--sl-pine-dark);font-size:.75rem;">{{ laps|length }} runs</span>
         </div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-hover mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th class="fw-bold">Lap</th>
-                  <th class="fw-bold">Distance</th>
-                  <th class="fw-bold">Descent</th>
-                  <th class="fw-bold">Duration</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for lap in laps %}
-                <tr class="table-row-hover">
-                  <td class="fw-medium">
-                    <span class="badge bg-primary-subtle text-primary px-3 py-2">
-                      {{ lap.lap_index }}
+        <div class="card-body p-0" style="overflow-y:auto;max-height:400px;">
+          {% if laps %}
+          <div class="list-group list-group-flush">
+            {% for lap in laps %}
+            <div class="list-group-item border-0 px-3 py-2" style="background:var(--sl-bg-card);border-bottom:1px solid var(--sl-border)!important;">
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge rounded-pill px-2 py-1 flex-shrink-0
+                  {% if lap.lap_index == best_lap_index %}
+                  " style="background:var(--sl-sun-light);color:var(--sl-sun);font-size:.7rem;font-weight:700;"
+                  {% else %}
+                  " style="background:var(--sl-slope-light);color:var(--sl-slope);font-size:.7rem;font-weight:700;"
+                  {% endif %}
+                >
+                  {% if lap.lap_index == best_lap_index %}<i class="bi bi-star-fill me-1"></i>{% endif %}Lap {{ lap.lap_index }}
+                </span>
+                <div class="flex-grow-1" style="min-width:0;">
+                  <div class="d-flex flex-wrap gap-3">
+                    {% if lap.total_descent %}
+                    <span style="font-size:.8rem;color:var(--sl-text-primary);font-weight:600;">
+                      <i class="bi bi-arrow-down" style="color:var(--sl-slope)"></i> {{ lap.total_descent|floatformat:0 }}m
                     </span>
-                  </td>
-                  <td>{{ lap.total_distance|round_to:2 }}m</td>
-                  <td class="fw-bold text-primary">{{ lap.total_descent|round_to:0 }}m</td>
-                  <td>{{ lap.total_elapsed_time }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                  <td colspan="4" class="text-center py-4 text-muted">
-                    <i class="bi bi-info-circle me-2"></i>No laps recorded
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+                    {% endif %}
+                    {% if lap.total_distance %}
+                    <span style="font-size:.8rem;color:var(--sl-text-muted);">
+                      <i class="bi bi-arrows-expand"></i> {{ lap.total_distance|floatformat:0 }}m
+                    </span>
+                    {% endif %}
+                    {% if lap.max_speed %}
+                    <span style="font-size:.8rem;color:var(--sl-text-muted);">
+                      <i class="bi bi-speedometer2"></i> {{ lap.max_speed|floatformat:0 }} km/h
+                    </span>
+                    {% endif %}
+                    {% if lap.avg_heart_rate %}
+                    <span style="font-size:.8rem;color:var(--sl-text-muted);">
+                      <i class="bi bi-heart-pulse" style="color:var(--sl-danger)"></i> {{ lap.avg_heart_rate }} bpm
+                    </span>
+                    {% endif %}
+                    <span style="font-size:.8rem;color:var(--sl-text-muted);">
+                      <i class="bi bi-clock"></i> {{ lap.total_elapsed_time }}
+                    </span>
+                  </div>
+                  {% if lap.min_altitude and lap.max_altitude %}
+                  <div style="font-size:.72rem;color:var(--sl-text-faint);margin-top:2px;">
+                    {{ lap.min_altitude|floatformat:0 }}–{{ lap.max_altitude|floatformat:0 }} m asl
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
           </div>
+          {% else %}
+          <div class="text-center py-4" style="color:var(--sl-text-muted);">
+            <i class="bi bi-info-circle me-2"></i>No laps recorded
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -972,6 +1078,92 @@
     </div>
   </div>
 
+
+<!-- Elevation Profile Chart -->
+<script>
+(function() {
+    const lapData = {{ lap_chart_data|safe }};
+    const ctx = document.getElementById('elevationChart');
+    if (!ctx || !lapData || !lapData.length) return;
+
+    const hasDescent = lapData.some(d => d.descent);
+    if (!hasDescent) return;
+
+    const isDark = document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    const tickColor = isDark ? '#94a3b8' : '#64748b';
+
+    const labels  = lapData.map(d => `Lap ${d.lap}`);
+    const descents = lapData.map(d => d.descent || 0);
+    const maxSpeeds = lapData.map(d => d.max_speed_kmh);
+    const hasSpeed = maxSpeeds.some(s => s !== null);
+
+    const datasets = [
+        {
+            label: 'Descent (m)',
+            data: descents,
+            backgroundColor: 'rgba(14,165,233,0.55)',
+            borderColor: '#0ea5e9',
+            borderWidth: 1.5,
+            borderRadius: 5,
+            type: 'bar',
+            yAxisID: 'y',
+        }
+    ];
+
+    if (hasSpeed) {
+        datasets.push({
+            label: 'Max speed (km/h)',
+            data: maxSpeeds,
+            borderColor: '#f59e0b',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            type: 'line',
+            yAxisID: 'y2',
+            tension: 0.3,
+            pointRadius: 3,
+            pointBackgroundColor: '#f59e0b',
+        });
+    }
+
+    new Chart(ctx, {
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: hasSpeed,
+                    labels: { color: tickColor, font: { size: 11 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ctx.dataset.yAxisID === 'y2'
+                            ? ` Max speed: ${ctx.raw} km/h`
+                            : ` Descent: ${ctx.raw} m`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 11 } } },
+                y: {
+                    grid: { color: gridColor },
+                    ticks: { color: tickColor, font: { size: 11 } },
+                    title: { display: true, text: 'Descent (m)', color: tickColor, font: { size: 10 } }
+                },
+                ...(hasSpeed ? {
+                    y2: {
+                        position: 'right',
+                        grid: { display: false },
+                        ticks: { color: '#f59e0b', font: { size: 11 } },
+                        title: { display: true, text: 'Speed (km/h)', color: '#f59e0b', font: { size: 10 } }
+                    }
+                } : {})
+            }
+        }
+    });
+})();
+</script>
 
 <!-- Scripts -->
 <script>

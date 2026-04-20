@@ -1,13 +1,15 @@
+import json
 import logging
+
 from django.contrib.auth.decorators import login_required
 from django.db import models
 from django.db.models import Count, F, Max, Sum
-from django.db.models.functions import Round
+from django.db.models.functions import Round, TruncMonth
 from django.shortcuts import render
 
 from ..models import ActivityBadge
 from ..utils.queries import get_filter_query, get_user_activities_base_query
-from ..utils.seasons import get_seasons
+from ..utils.seasons import get_seasons, get_season_dates
 from core.premium import filter_seasons_for_user, premium_season_required
 
 logger = logging.getLogger(__name__)
@@ -117,11 +119,53 @@ def activity_insights(request, season=None):
         total_descent=Sum('total_descent'),
         total_lift_rides=Sum('num_lift_rides')
     )
-
-    # Handle None values
     for key in overall_stats:
         if overall_stats[key] is None:
             overall_stats[key] = 0
+
+    # Prior season stats for YoY comparison
+    prior_season_stats = None
+    prev_start, prev_end = get_season_dates(current=False)
+    try:
+        prior_season_stats = get_user_activities_base_query(request.user).filter(
+            timestamp__gte=prev_start,
+            timestamp__lte=prev_end
+        ).aggregate(
+            total_activities=Count('id'),
+            total_distance_km=Round(Sum(F("total_distance"))/1000, 2),
+            total_descent=Sum('total_descent'),
+            total_lift_rides=Sum('num_lift_rides')
+        )
+        for key in prior_season_stats:
+            if prior_season_stats[key] is None:
+                prior_season_stats[key] = 0
+    except Exception:
+        prior_season_stats = None
+
+    # Monthly breakdown for bar charts (activity count + descent by month)
+    monthly_raw = (
+        activities
+        .annotate(month=TruncMonth('timestamp'))
+        .values('month')
+        .annotate(count=Count('id'), descent=Sum('total_descent'), lifts=Sum('num_lift_rides'))
+        .order_by('month')
+    )
+    monthly_stats = [
+        {
+            'month': row['month'].strftime('%b %Y') if row['month'] else '',
+            'count': row['count'] or 0,
+            'descent': round(row['descent'] or 0),
+            'lifts': row['lifts'] or 0,
+        }
+        for row in monthly_raw
+    ]
+
+    # Calendar heatmap data (date → descent) for the current view
+    calendar_raw = activities.values('timestamp__date').annotate(descent=Sum('total_descent'))
+    calendar_data = {
+        str(row['timestamp__date']): round(row['descent'] or 0)
+        for row in calendar_raw
+    }
 
     context = {
         'recent_activities': recent_activities,
@@ -131,6 +175,9 @@ def activity_insights(request, season=None):
         'unique_badges': unique_badges,
         'rarity_breakdown': rarity_display,
         'overall_stats': overall_stats,
+        'prior_season_stats': prior_season_stats,
+        'monthly_stats': json.dumps(monthly_stats),
+        'calendar_data': json.dumps(calendar_data),
         'seasons': seasons,
         'selected_season': season,
     }

@@ -1,561 +1,517 @@
 {% extends "base/base.html" %}
 
-{% block title %}SlopeLog - Welcome{% endblock %}
+{% block title %}SlopeLog — Dashboard{% endblock %}
 
 {% block extra_css %}
 <style>
-  :root {
-    --ski-primary: #2563eb;
-    --ski-secondary: #1e40af;
-    --ski-accent: #06b6d4;
-    --ski-success: #10b981;
-    --ski-warning: #f59e0b;
-    --ski-danger: #ef4444;
-    --ski-snow: #f8fafc;
-
-    /* Glass tints tuned for white background */
-    --ski-glass-bg: rgba(0, 0, 0, 0.03);
-    --ski-glass-border: rgba(0, 0, 0, 0.06);
-  }
-
-  .hero-section {
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.015) 100%);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--ski-glass-border);
-    border-radius: 24px;
-    padding: 1rem 1rem;
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.12);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-  }
-
-  .hero-section:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 16px 48px rgba(31, 38, 135, 0.18);
-  }
-
-  .stats-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--ski-glass-border);
-    border-radius: 20px;
-    padding: 2rem;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    color: #111827;
-  }
-
-  .stats-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
-  }
-
-  .season-toggle {
-    background: var(--ski-glass-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--ski-glass-border);
-    border-radius: 50px;
-    padding: 0.5rem;
-    display: inline-flex;
-    margin: 2rem 0;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-  }
-
-  .season-option {
-    background: transparent;
-    border: none;
-    border-radius: 40px;
-    padding: 1rem 2rem;
-    color: #1f2937; /* slate-800 for visibility on white */
-    font-weight: 600;
-    transition: all 0.3s ease;
-    position: relative;
-    z-index: 2;
-  }
-
-  .season-option.active {
-    background: linear-gradient(135deg, var(--ski-primary) 0%, var(--ski-secondary) 100%);
-    color: #ffffff;
-    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
-    transform: scale(1.05);
-  }
-
-  .season-option:hover:not(.active) {
-    background: rgba(0, 0, 0, 0.04);
-    color: #111827;
-  }
-
-  .stat-number {
-    font-size: 3rem;
+.kpi-card {
+    background: var(--sl-bg-card);
+    border: 1px solid var(--sl-border);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: var(--sl-shadow-sm);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.kpi-card:hover { box-shadow: var(--sl-shadow-md); transform: translateY(-2px); }
+.kpi-value {
+    font-size: 2rem;
     font-weight: 800;
-    background: linear-gradient(135deg, var(--ski-primary) 0%, var(--ski-accent) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 0.5rem;
-    display: block;
-  }
-
-  .stat-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    opacity: 0.8;
-    color: #374151; /* slate-700 */
-  }
-
-  .welcome-title {
-    background: linear-gradient(135deg, var(--ski-primary) 0%, var(--ski-accent) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-size: 2rem;
-    font-weight: 900;
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);
-  }
-
-  .fade-in { animation: fadeIn 0.8s ease-out; }
-  .slide-up { animation: slideUp 0.6s ease-out; }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .metric-card {
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.015) 100%);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--ski-glass-border);
-    border-radius: 16px;
-    padding: 1.5rem;
-    text-align: center;
-    transition: all 0.3s ease;
-    margin-bottom: 1rem;
-    color: #111827;
-  }
-
-  .metric-card:hover {
-    transform: translateY(-5px);
-    background: rgba(0, 0, 0, 0.04);
-  }
-
-  .metric-value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #1f2937; /* dark text */
-    margin-bottom: 0.5rem;
-  }
-
-  .metric-label {
-    color: #6b7280; /* slate-500 */
-    font-size: 0.9rem;
+    line-height: 1.1;
+    color: var(--sl-text-primary);
+}
+.kpi-label {
+    font-size: 0.78rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 1px;
-  }
+    letter-spacing: 0.06em;
+    color: var(--sl-text-muted);
+}
+.kpi-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 100px;
+    margin-top: 4px;
+}
+.kpi-delta.up   { background: var(--sl-pine-light); color: var(--sl-pine-dark); }
+.kpi-delta.down { background: var(--sl-danger-light); color: var(--sl-danger); }
+.kpi-delta.flat { background: var(--sl-bg-subtle); color: var(--sl-text-muted); }
 
-  .favorite-area {
-    background: linear-gradient(135deg, var(--ski-warning) 0%, #fb923c 100%);
-    color: #ffffff;
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin-top: 1rem;
-    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.25);
-  }
+.chart-card {
+    background: var(--sl-bg-card);
+    border: 1px solid var(--sl-border);
+    border-radius: 14px;
+    box-shadow: var(--sl-shadow-sm);
+    overflow: hidden;
+}
+.chart-card-header {
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid var(--sl-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.chart-card-title { font-size: 0.9rem; font-weight: 700; color: var(--sl-text-primary); }
+.chart-card-body { padding: 1rem 1.25rem; }
 
-  .no-data-state {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.04) 100%);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-    border-radius: 16px;
+.season-toggle-group { display: inline-flex; background: var(--sl-bg-subtle); border-radius: 8px; padding: 3px; }
+.season-btn {
+    background: transparent; border: none; border-radius: 6px;
+    padding: 0.35rem 1rem; font-size: 0.8rem; font-weight: 600;
+    color: var(--sl-text-muted); cursor: pointer; transition: all 0.15s ease;
+}
+.season-btn.active { background: var(--sl-bg-card); color: var(--sl-slope); box-shadow: var(--sl-shadow-sm); }
+
+.highlight-card {
+    background: var(--sl-bg-card);
+    border: 1px solid var(--sl-border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    box-shadow: var(--sl-shadow-sm);
+}
+.favorite-resort-card {
+    background: linear-gradient(135deg, var(--sl-sun) 0%, #fb923c 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+
+.no-data-card {
+    background: var(--sl-bg-card);
+    border: 2px dashed var(--sl-border);
+    border-radius: 14px;
     padding: 3rem 2rem;
     text-align: center;
-    color: #7f1d1d; /* red-900 */
-  }
+}
 
-  .loading-spinner {
-    display: none;
-    color: var(--ski-primary);
-  }
-
-  .action-btn {
-    background: rgba(0, 0, 0, 0.04);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--ski-glass-border);
-    color: #1f2937;
-    transition: all 0.3s ease;
-  }
-
-  .action-btn:hover {
-    background: rgba(0, 0, 0, 0.06);
-    color: #111827;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-  }
-
-  .action-btn-primary {
-    background: linear-gradient(135deg, var(--ski-primary) 0%, var(--ski-secondary) 100%);
-    border: none;
-    color: #ffffff;
-  }
-
-  .action-btn-primary:hover {
-    background: linear-gradient(135deg, var(--ski-secondary) 0%, var(--ski-primary) 100%);
-    transform: translateY(-2px) scale(1.05);
-  }
-
-  @media (max-width: 768px) {
-    .welcome-title { font-size: 2.5rem; }
-    .hero-section { padding: 2rem 1rem; }
-    .season-toggle { width: 100%; justify-content: center; }
-    .metric-value { font-size: 1.5rem; }
-  }
+.page-header {
+    padding: 1.5rem 1.5rem 0;
+    margin-bottom: 1.5rem;
+}
+.page-header h1 { font-size: 1.5rem; font-weight: 800; color: var(--sl-text-primary); margin: 0; }
+.page-header p { font-size: 0.875rem; color: var(--sl-text-muted); margin: 0.25rem 0 0; }
 </style>
-
 {% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <!-- Welcome Section -->
-    <div class="hero-section fade-in text-center position-relative">
-        <h1 class="welcome-title">Welcome back, {{ user.username }}! ⛷️</h1>
-        <p class="text-muted mt-3 mb-4">Track your skiing adventures and lift completeness</p>
+<div class="container-fluid px-3 px-md-4 py-4">
 
-        <!-- Prominent About Button -->
-        <button type="button" class="btn btn-outline-primary btn-lg rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#aboutModal">
-            <i class="bi bi-info-circle me-2"></i>
-            About SlopeLog
-        </button>
-
-        <!-- Small info icon for mobile -->
-        <button type="button" class="btn btn-link position-absolute top-0 end-0 m-3 text-muted d-md-none" data-bs-toggle="modal" data-bs-target="#aboutModal" title="About SlopeLog">
-            <i class="bi bi-info-circle fs-4"></i>
-        </button>
-    </div>
-    <!-- Season Toggle -->
-    <div class="text-center">
-        <div class="season-toggle">
-            <button class="season-option active" data-season="current" onclick="switchSeason('current')">
-                <i class="bi bi-snow me-2"></i>Current Season
-            </button>
-            <button class="season-option" data-season="previous" onclick="switchSeason('previous')">
-                <i class="bi bi-clock-history me-2"></i>Previous Season
-            </button>
+    <!-- Page header -->
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+        <div>
+            <h1 style="font-size:1.5rem;font-weight:800;color:var(--sl-text-primary);margin:0;">
+                Welcome back, {{ user.get_full_name|default:user.username }}
+            </h1>
+            <p style="font-size:0.875rem;color:var(--sl-text-muted);margin:.2rem 0 0;">
+                {{ season }} season
+                {% if total_stats.total_num_activities %}&mdash; {{ total_stats.total_num_activities }} day{{ total_stats.total_num_activities|pluralize }} on snow{% endif %}
+            </p>
         </div>
-        <div class="loading-spinner">
-            <div class="spinner-border" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2 text-white-50">Loading season data...</p>
+        <!-- Season toggle -->
+        <div class="season-toggle-group" id="seasonToggle">
+            <button class="season-btn active" data-season="current" onclick="switchDashboardSeason('current')">
+                Current
+            </button>
+            <button class="season-btn" data-season="previous" onclick="switchDashboardSeason('previous')">
+                Previous
+            </button>
         </div>
     </div>
 
-    <!-- Stats Dashboard -->
-    <div id="stats-container" class="slide-up">
-        {% if total_stats %}
-        <!-- Stats Cards Row -->
-        <div class="row g-4 mb-4">
-            <div class="col-lg-4">
-                <div class="metric-card">
-                    <div class="stat-icon text-info">
-                        <i class="bi bi-map"></i>
-                    </div>
-                    <div class="metric-value">{{ total_stats.total_distance_km }}</div>
-                    <div class="metric-label">Kilometers Skied</div>
-                </div>
-            </div>
-            
-            <div class="col-lg-4">
-                <div class="metric-card">
-                    <div class="stat-icon text-success">
-                        <i class="bi bi-arrow-up-circle"></i>
-                    </div>
-                    <div class="metric-value">{{ total_stats.total_num_lift_rides }}</div>
-                    <div class="metric-label">Lift Rides</div>
-                </div>
-            </div>
-            
-            <div class="col-lg-4">
-                <div class="metric-card">
-                    <div class="stat-icon text-warning">
-                        <i class="bi bi-house"></i>
-                    </div>
-                    <div class="metric-value">{{ total_stats.total_num_activities }}</div>
-                    <div class="metric-label">Activities</div>
-                </div>
-            </div>
+    {% if total_stats.total_num_activities %}
 
+    <!-- KPI Strip -->
+    <div class="row g-3 mb-4" id="kpiRow">
+        <!-- Descent -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-arrow-down me-1" style="color:var(--sl-slope)"></i>Descent</div>
+                <div class="kpi-value" id="kpiDescent">
+                    {{ total_stats.total_descent|floatformat:0 }}<small style="font-size:1rem;font-weight:600;color:var(--sl-text-muted)"> m</small>
+                </div>
+                {% if prev_stats.total_descent %}
+                    {% with delta=total_stats.total_descent|add:"-"|add:prev_stats.total_descent %}
+                    <span class="kpi-delta {% if total_stats.total_descent >= prev_stats.total_descent %}up{% else %}down{% endif %}" id="kpiDescentDelta">
+                        <i class="bi bi-arrow-{% if total_stats.total_descent >= prev_stats.total_descent %}up{% else %}down{% endif %}"></i>
+                        vs last season
+                    </span>
+                    {% endwith %}
+                {% endif %}
+            </div>
         </div>
-
-        <!-- Main Stats Card -->
-        <div class="stats-card">
-            <div class="row align-items-center">
-                <div class="col-lg-8">
-                    <h2 class="text-primary fw-bold mb-3">
-                        <i class="bi bi-graph-up me-3"></i>Season Summary
-                    </h2>
-                    <h3 class="mb-3">
-                        You've conquered <span class="stat-number d-inline">{{ total_stats.total_distance_km }}</span> 
-                        <span class="text-success fw-bold">kilometers</span> of slopes this season! 🎿
-                    </h3>
+        <!-- Distance -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-geo-alt me-1" style="color:var(--sl-pine)"></i>Distance</div>
+                <div class="kpi-value" id="kpiDistance">
+                    {{ total_stats.total_distance_km }}<small style="font-size:1rem;font-weight:600;color:var(--sl-text-muted)"> km</small>
                 </div>
-                <div class="col-lg-4 text-center">
-                    <div class="stat-icon text-primary">
-                        <i class="bi bi-trophy"></i>
-                    </div>
-                </div>
+                {% if prev_stats.total_distance_km %}
+                <span class="kpi-delta {% if total_stats.total_distance_km >= prev_stats.total_distance_km %}up{% else %}down{% endif %}">
+                    <i class="bi bi-arrow-{% if total_stats.total_distance_km >= prev_stats.total_distance_km %}up{% else %}down{% endif %}"></i>
+                    vs last season
+                </span>
+                {% endif %}
             </div>
-            
-            <div class="favorite-area">
-                <h4 class="fw-bold mb-2">
-                    <i class="bi bi-heart-fill me-2"></i>Your Favorite Resort
-                </h4>
-                <h3 class="mb-1">{{ skiarea.name }} 🏔️</h3>
-                <p class="mb-0 opacity-75">{{ count }} activities and counting!</p>
-            </div>
-
         </div>
-        
-        {% else %}
-        <!-- No Data State -->
-        <div class="no-data-state">
-            <div class="text-center">
-                <i class="bi bi-bar-chart text-muted" style="font-size: 4rem; margin-bottom: 2rem;"></i>
-                <h2 class="text-muted fw-bold mb-3">No Activities Yet! 📉</h2>
-                <p class="lead text-muted mb-4">Start your skiing adventure by recording your first activity.</p>
+        <!-- Lift rides -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-arrow-up-circle me-1" style="color:var(--sl-summit)"></i>Lift Rides</div>
+                <div class="kpi-value" id="kpiLifts">{{ total_stats.total_num_lift_rides }}</div>
+                {% if prev_stats.total_num_lift_rides %}
+                <span class="kpi-delta {% if total_stats.total_num_lift_rides >= prev_stats.total_num_lift_rides %}up{% else %}down{% endif %}">
+                    <i class="bi bi-arrow-{% if total_stats.total_num_lift_rides >= prev_stats.total_num_lift_rides %}up{% else %}down{% endif %}"></i>
+                    vs last season
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <!-- Ski days -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-calendar3 me-1" style="color:var(--sl-sun)"></i>Ski Days</div>
+                <div class="kpi-value" id="kpiDays">{{ total_stats.total_num_activities }}</div>
+                {% if prev_stats.total_num_activities %}
+                <span class="kpi-delta {% if total_stats.total_num_activities >= prev_stats.total_num_activities %}up{% else %}down{% endif %}">
+                    <i class="bi bi-arrow-{% if total_stats.total_num_activities >= prev_stats.total_num_activities %}up{% else %}down{% endif %}"></i>
+                    vs last season
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <!-- Unique areas -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-map me-1" style="color:var(--sl-slope)"></i>Ski Areas</div>
+                <div class="kpi-value" id="kpiAreas">{{ unique_areas }}</div>
+                <span class="kpi-delta flat">this season</span>
+            </div>
+        </div>
+        <!-- Season pass savings -->
+        {% if season_passes %}
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-ticket-perforated me-1" style="color:var(--sl-pine)"></i>Pass Savings</div>
+                {% for sp, sp_data in season_passes.items %}
+                <div class="kpi-value" style="font-size:1.4rem;">
+                    {% if sp_data.total_savings %}{{ sp_data.total_savings }}{% else %}—{% endif %}
+                </div>
+                {% endfor %}
+                <span class="kpi-delta up"><i class="bi bi-arrow-up"></i> saved vs day passes</span>
             </div>
         </div>
         {% endif %}
     </div>
 
-    <!-- Quick Actions -->
-    <div class="text-center mt-5 mb-5">
-        <p class="lead text-muted mb-4">Ready for your next adventure?</p>
-        <div class="d-flex flex-wrap justify-content-center gap-3">
-            <a href="{% url 'activity_list' %}" class="btn action-btn-primary btn-lg rounded-pill px-5">
-                <i class="bi bi-list-ul me-2"></i>View Activities
-            </a>
-            <button type="button" class="btn action-btn btn-lg rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#aboutModal">
-                <i class="bi bi-heart me-2"></i>Support & Feedback
-            </button>
+    <!-- Charts row -->
+    <div class="row g-4 mb-4">
+        <!-- Weekly descent line chart -->
+        <div class="col-12 col-xl-8">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <span class="chart-card-title">
+                        <i class="bi bi-graph-up me-2" style="color:var(--sl-slope)"></i>Weekly Descent
+                    </span>
+                    <span style="font-size:0.75rem;color:var(--sl-text-muted)">
+                        <span style="display:inline-block;width:12px;height:3px;background:var(--sl-slope);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>This season
+                        <span style="display:inline-block;width:12px;height:3px;background:var(--sl-border-strong);border-radius:2px;vertical-align:middle;margin-left:8px;margin-right:4px;"></span>Last season
+                    </span>
+                </div>
+                <div class="chart-card-body">
+                    <div class="chart-container" style="height:220px;">
+                        <canvas id="weeklyDescentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Area breakdown donut -->
+        <div class="col-12 col-xl-4">
+            <div class="chart-card h-100">
+                <div class="chart-card-header">
+                    <span class="chart-card-title">
+                        <i class="bi bi-pie-chart me-2" style="color:var(--sl-summit)"></i>Descent by Area
+                    </span>
+                </div>
+                <div class="chart-card-body d-flex align-items-center justify-content-center">
+                    <div class="chart-container" style="height:200px;width:100%;">
+                        <canvas id="areaDonutChart"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Bottom row -->
+    <div class="row g-4">
+        <!-- Favorite resort -->
+        {% if skiarea %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="highlight-card">
+                <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--sl-text-muted);margin-bottom:.75rem;">
+                    <i class="bi bi-heart-fill me-1" style="color:var(--sl-danger)"></i>Favourite Resort
+                </div>
+                <div class="favorite-resort-card">
+                    <div style="font-size:1.4rem;font-weight:800;margin-bottom:.25rem;">{{ skiarea.name }}</div>
+                    <div style="opacity:.85;font-size:.875rem;">{{ count }} activit{{ count|pluralize:"y,ies" }} this season</div>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'activity_list' %}?ski_area={{ skiarea.id }}" class="btn btn-sm btn-outline-primary rounded-pill">
+                        View activities <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Quick actions -->
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="highlight-card">
+                <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--sl-text-muted);margin-bottom:.75rem;">
+                    <i class="bi bi-lightning-fill me-1" style="color:var(--sl-sun)"></i>Quick Actions
+                </div>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'activity_list' %}" class="btn btn-primary rounded-pill">
+                        <i class="bi bi-list-ul me-2"></i>All Activities
+                    </a>
+                    <a href="{% url 'activity_insights' %}" class="btn btn-outline-secondary rounded-pill">
+                        <i class="bi bi-graph-up me-2"></i>View Insights
+                    </a>
+                    <a href="{% url 'trip_list' %}" class="btn btn-outline-secondary rounded-pill">
+                        <i class="bi bi-map me-2"></i>My Trips
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Season pass info -->
+        {% if season_passes %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="highlight-card">
+                <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--sl-text-muted);margin-bottom:.75rem;">
+                    <i class="bi bi-ticket-perforated-fill me-1" style="color:var(--sl-pine)"></i>Season Passes
+                </div>
+                {% for sp, sp_data in season_passes.items %}
+                <div class="d-flex align-items-center justify-content-between py-2 border-bottom" style="border-color:var(--sl-border)!important;">
+                    <div>
+                        <div style="font-weight:600;font-size:.875rem;color:var(--sl-text-primary);">{{ sp_data.name }}</div>
+                        <div style="font-size:.78rem;color:var(--sl-text-muted);">{{ sp_data.activities }} activit{{ sp_data.activities|pluralize:"y,ies" }}</div>
+                    </div>
+                    {% if sp_data.total_savings %}
+                    <div style="font-weight:700;color:var(--sl-pine);font-size:.9rem;">+{{ sp_data.total_savings }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                <div class="mt-2">
+                    <a href="{% url 'cost_home' %}" class="btn btn-sm btn-outline-success rounded-pill">
+                        Manage passes <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% else %}
+    <!-- No data state -->
+    <div class="no-data-card">
+        <i class="bi bi-snow" style="font-size:3.5rem;color:var(--sl-text-faint);display:block;margin-bottom:1rem;"></i>
+        <h3 style="font-weight:700;color:var(--sl-text-secondary);">No activities yet</h3>
+        <p style="color:var(--sl-text-muted);margin-bottom:1.5rem;">Connect your Strava account and sync your skiing activities to get started.</p>
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <a href="{% url 'strava-connection' %}" class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-link-45deg me-2"></i>Connect Strava
+            </a>
+            <a href="{% url 'sync_strava' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="bi bi-arrow-repeat me-2"></i>Sync Now
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 
-<!-- About Modal -->
-<div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
+<!-- About modal (keep for existing links) -->
+<div class="modal fade" id="aboutModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header border-0">
-        <h5 class="modal-title fw-bold" id="aboutModalLabel">
-          <i class="bi bi-snow me-2 text-primary"></i>
-          About SlopeLog
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h5 class="modal-title fw-bold"><i class="bi bi-snow me-2 text-primary"></i>About SlopeLog</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <div class="mb-4">
-          <h6 class="fw-bold mb-3">🎿 Welcome to Your Personal Ski Tracker</h6>
-          <p class="text-muted mb-3">
-            SlopeLog helps you track your skiing adventures, monitor lift completeness, and discover new slopes.
-            Connect your Strava account to automatically import activities and start building your skiing statistics!
-          </p>
-        </div>
-
-        <div class="row g-4">
-          <!-- Feedback Section -->
-          <div class="col-md-6">
-            <div class="card border-0 bg-light h-100">
-              <div class="card-body">
-                <h6 class="fw-bold text-primary mb-3">
-                  <i class="bi bi-chat-heart me-2"></i>
-                  Share Your Feedback
-                </h6>
-                <p class="small text-muted mb-3">
-                  Your feedback helps make SlopeLog better! Share your thoughts, suggestions, or report any issues you encounter.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Bug Reports Section -->
-          <div class="col-md-6">
-            <div class="card border-0 bg-light h-100">
-              <div class="card-body">
-                <h6 class="fw-bold text-warning mb-3">
-                  <i class="bi bi-bug me-2"></i>
-                  Found a Bug?
-                </h6>
-                <p class="small text-muted mb-3">
-                  Help us fix issues quickly by reporting bugs with detailed information about what happened and how to reproduce it.
-                </p>
-                <div class="d-grid gap-2">
-                  <a href="https://github.com/solorisx/SkiDashboard/issues" target="_blank" class="btn btn-outline-warning btn-sm">
-                    <i class="bi bi-exclamation-triangle me-1"></i>
-                    Report Bug
-                  </a>
-                  <a href="mailto:contact@slopelog.com" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-envelope me-1"></i>
-                    Email Support
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Support Section -->
-        <div class="alert alert-info border-0 bg-info bg-opacity-10 mt-4">
-          <div class="d-flex align-items-start">
-            <i class="bi bi-heart-fill me-2 text-danger mt-1"></i>
-            <div class="flex-grow-1">
-              <h6 class="fw-bold mb-2">Support the Project</h6>
-              <p class="mb-3 small">
-                SlopeLog is a passion project built for the skiing community. If you find it useful,
-                consider supporting its development and hosting costs. By default, only activities up to one year old are synced from Strava to keep things efficient. Any support helps keep the lights on, reach out and I will gladly increase this limit for you!
-              </p>
-              <div class="d-flex gap-2 flex-wrap">
-                <a href="https://buymeacoffee.com/slopelog" target="_blank" class="btn btn-warning btn-sm">
-                  <i class="bi bi-cup-hot me-1"></i>
-                  Buy Me a Coffee
-                </a>
-                <a href="https://github.com/solorisx/SkiDashboard" target="_blank" class="btn btn-dark btn-sm">
-                  <i class="bi bi-star me-1"></i>
-                  Star on GitHub
-                </a>
-                <a href="https://github.com/solorisx/SkiDashboard" target="_blank" class="btn btn-outline-dark btn-sm">
-                  <i class="bi bi-code-slash me-1"></i>
-                  Contribute
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="text-center mt-4">
-          <small class="text-muted">
-            <i class="bi bi-code-square me-1"></i>
-            Built with ❤️ for the skiing community
-          </small>
+        <p class="text-muted">SlopeLog helps you track your skiing adventures, monitor lift completeness, and discover new slopes. Connect your Strava account to automatically import activities.</p>
+        <div class="d-flex gap-2 flex-wrap mt-3">
+            <a href="https://github.com/solorisx/SkiDashboard/issues" target="_blank" class="btn btn-outline-warning btn-sm">
+                <i class="bi bi-exclamation-triangle me-1"></i>Report Bug
+            </a>
+            <a href="https://buymeacoffee.com/slopelog" target="_blank" class="btn btn-warning btn-sm">
+                <i class="bi bi-cup-hot me-1"></i>Buy Me a Coffee
+            </a>
+            <a href="https://github.com/solorisx/SkiDashboard" target="_blank" class="btn btn-dark btn-sm">
+                <i class="bi bi-star me-1"></i>Star on GitHub
+            </a>
         </div>
       </div>
     </div>
   </div>
 </div>
-
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-let currentSeason = 'current';
+const weeklyCurrentData = {{ weekly_current|safe }};
+const weeklyPriorData   = {{ weekly_prior|safe }};
+const areaBreakdown     = {{ area_breakdown|safe }};
 
-function switchSeason(season) {
-    if (currentSeason === season) return;
-    
-    currentSeason = season;
-    
-    // Update toggle buttons
-    document.querySelectorAll('.season-option').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`[data-season="${season}"]`).classList.add('active');
-    
-    // Show loading state
-    const loadingSpinner = document.querySelector('.loading-spinner');
-    const statsContainer = document.getElementById('stats-container');
-    
-    loadingSpinner.style.display = 'block';
-    statsContainer.style.opacity = '0.5';
-    
-    // Make AJAX call to fetch season data
-    fetch(`/api/season-stats/?season=${season}`, {
-        method: 'GET',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/json',
+// ── Weekly Descent Chart ────────────────────────────
+(function() {
+    const ctx = document.getElementById('weeklyDescentChart');
+    if (!ctx || !weeklyCurrentData.length) return;
+
+    // Convert offset days → week labels (Wk 1, Wk 2 …)
+    const allOffsets = [...new Set([
+        ...weeklyCurrentData.map(d => d.offset),
+        ...weeklyPriorData.map(d => d.offset)
+    ])].sort((a,b) => a-b);
+
+    const labels = allOffsets.map(o => `Wk ${Math.floor(o/7)+1}`);
+
+    function seriesFromData(data) {
+        const map = Object.fromEntries(data.map(d => [d.offset, d.descent]));
+        return allOffsets.map(o => map[o] || 0);
+    }
+
+    const isDark = document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    const tickColor = isDark ? '#94a3b8' : '#64748b';
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'This season (m)',
+                    data: seriesFromData(weeklyCurrentData),
+                    backgroundColor: 'rgba(14, 165, 233, 0.7)',
+                    borderColor: '#0ea5e9',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    order: 1,
+                },
+                {
+                    label: 'Last season (m)',
+                    data: seriesFromData(weeklyPriorData),
+                    backgroundColor: 'rgba(148,163,184,0.35)',
+                    borderColor: 'rgba(148,163,184,0.6)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    order: 2,
+                }
+            ]
         },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()} m`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 11 } } },
+                y: {
+                    grid: { color: gridColor },
+                    ticks: {
+                        color: tickColor,
+                        font: { size: 11 },
+                        callback: v => v >= 1000 ? `${v/1000}k` : v
+                    }
+                }
+            }
+        }
+    });
+})();
+
+// ── Area Donut Chart ────────────────────────────────
+(function() {
+    const ctx = document.getElementById('areaDonutChart');
+    if (!ctx || !areaBreakdown.length) return;
+
+    const colors = ['#0ea5e9','#10b981','#6366f1','#f59e0b','#ef4444','#94a3b8'];
+    const isDark = document.documentElement.classList.contains('dark');
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: areaBreakdown.map(d => d.name),
+            datasets: [{
+                data: areaBreakdown.map(d => d.descent),
+                backgroundColor: colors,
+                borderWidth: isDark ? 2 : 1,
+                borderColor: isDark ? '#1e293b' : '#ffffff',
+                hoverBorderWidth: 3,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '68%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: isDark ? '#cbd5e1' : '#334155',
+                        font: { size: 11 },
+                        padding: 12,
+                        boxWidth: 12,
+                        boxHeight: 12,
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.label}: ${ctx.raw.toLocaleString()} m`
+                    }
+                }
+            }
+        }
+    });
+})();
+
+// ── Season toggle (AJAX) ────────────────────────────
+let currentDashboardSeason = 'current';
+
+function switchDashboardSeason(season) {
+    if (currentDashboardSeason === season) return;
+    currentDashboardSeason = season;
+
+    document.querySelectorAll('.season-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.season === season);
+    });
+
+    fetch(`/api/season-stats/?season=${season}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
-    .then(response => response.json())
+    .then(r => r.json())
     .then(data => {
-        updateStatsDisplay(data);
-        
-        // Hide loading state
-        loadingSpinner.style.display = 'none';
-        statsContainer.style.opacity = '1';
-        
-        // Add subtle animation
-        statsContainer.style.transform = 'translateY(10px)';
-        setTimeout(() => {
-            statsContainer.style.transform = 'translateY(0)';
-        }, 100);
+        if (data.total_stats) {
+            const s = data.total_stats;
+            const el = id => document.getElementById(id);
+            if (el('kpiDescent'))  el('kpiDescent').childNodes[0].textContent = (s.total_descent || 0).toLocaleString();
+            if (el('kpiDistance')) el('kpiDistance').childNodes[0].textContent = s.total_distance_km || 0;
+            if (el('kpiLifts'))    el('kpiLifts').textContent = s.total_num_lift_rides || 0;
+            if (el('kpiDays'))     el('kpiDays').textContent  = s.total_num_activities || 0;
+        }
     })
-    .catch(error => {
-        console.error('Error fetching season data:', error);
-        
-        // Hide loading state even on error
-        loadingSpinner.classList.remove('show');
-        statsContainer.style.opacity = '1';
-        
-        // You could show an error message here
-        // showErrorMessage('Failed to load season data. Please try again.');
-    });
+    .catch(() => {});
 }
-
-function updateStatsDisplay(data) {
-    // Update metric cards
-    const metricValues = document.querySelectorAll('.metric-value');
-    if (data.total_stats) {
-        metricValues[0].textContent = data.total_stats.total_distance_km || '0';
-        metricValues[1].textContent = data.total_stats.total_num_lift_rides || '0';
-        metricValues[2].textContent = data.total_stats.total_num_activities || '0';
-    }
-    
-    // Update main stats text
-    const statNumbers = document.querySelectorAll('.stat-number');
-    if (statNumbers.length > 0 && data.total_stats) {
-        statNumbers[0].textContent = data.total_stats.total_distance_km || '0';
-    }
-    
-    // Update season text conditionally
-    const seasonText = document.querySelector('.season-text');
-    if (seasonText) {
-        seasonText.textContent = currentSeason === 'current' ? 'this season' : 'last season';
-    }
-    
-    // Update favorite resort if present
-    const favoriteArea = document.querySelector('.favorite-area');
-    if (favoriteArea && data.skiarea) {
-        const resortName = favoriteArea.querySelector('h3');
-        const activityCount = favoriteArea.querySelector('p');
-        if (resortName) resortName.innerHTML = `${data.skiarea.name} 🏔️`;
-        if (activityCount) activityCount.innerHTML = `${data.count} activities and counting!`;
-        favoriteArea.style.display = 'block';
-    } else if (favoriteArea) {
-        favoriteArea.style.display = 'none';
-    }
-    
-    // Handle no data state
-    if (!data.total_stats || (data.total_stats.total_distance_km === 0 && data.total_stats.total_num_lift_rides === 0)) {
-        // You could switch to no-data state here if needed
-        console.log('No data for this season');
-    }
-}
-
-// Add smooth scrolling and entrance animations
-document.addEventListener('DOMContentLoaded', function() {
-    // Add staggered animation to metric cards
-    const metricCards = document.querySelectorAll('.metric-card');
-    metricCards.forEach((card, index) => {
-        card.style.animationDelay = `${index * 0.1}s`;
-        card.classList.add('slide-up');
-    });
-
-    const favoriteArea = document.querySelector('.favorite-area');
-    const activityCount = favoriteArea.querySelector('p');
-    if (favoriteArea && activityCount && parseInt(activityCount.textContent) === 0) {
-        favoriteArea.style.display = 'none';
-    }
-});
 </script>
 {% endblock %}

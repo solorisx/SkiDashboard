@@ -1,10 +1,11 @@
+import json
 import logging
+
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, F, Sum
-from django.db.models.functions import Round
+from django.db.models.functions import Round, TruncWeek, TruncMonth
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-import json
 
 from cost.models import SeasonPass
 from osm.models import SkiArea
@@ -93,13 +94,19 @@ def season_stats(request):
 
 
 def home_stats(request):
-    """
-    Generate statistics for the home page.
-    """
+    """Generate statistics for the home page including YoY comparison and chart data."""
+    from datetime import timedelta
+
     season_start, season_end = get_season_dates(current=True)
+    prev_start, prev_end = get_season_dates(current=False)
+
     activities = get_user_activities_base_query(request.user).filter(
-        timestamp__gte=season_start, 
+        timestamp__gte=season_start,
         timestamp__lte=season_end
+    )
+    prev_activities = get_user_activities_base_query(request.user).filter(
+        timestamp__gte=prev_start,
+        timestamp__lte=prev_end
     )
 
     skiarea = (
@@ -109,8 +116,6 @@ def home_stats(request):
         .first()
     )
 
-    logger.debug(f"Ski area: {skiarea}")
-
     total_stats = activities.aggregate(
         total_distance_km=Round(Sum(F("total_distance"))/1000, 2),
         total_descent=Sum("total_descent"),
@@ -118,47 +123,82 @@ def home_stats(request):
         total_num_lift_rides=Sum("num_lift_rides"),
         total_num_activities=Count("id"),
     )
+    for key in total_stats:
+        if total_stats[key] is None:
+            total_stats[key] = 0
 
-    # Handle None values
-    if not total_stats['total_distance_km']:
-        total_stats['total_distance_km'] = 0
-    if not total_stats['total_descent']:
-        total_stats['total_descent'] = 0
-    if not total_stats['total_num_laps']:
-        total_stats['total_num_laps'] = 0
-    if not total_stats['total_num_lift_rides']:
-        total_stats['total_num_lift_rides'] = 0
+    # Prior season totals for YoY deltas
+    prev_stats = prev_activities.aggregate(
+        total_distance_km=Round(Sum(F("total_distance"))/1000, 2),
+        total_descent=Sum("total_descent"),
+        total_num_lift_rides=Sum("num_lift_rides"),
+        total_num_activities=Count("id"),
+    )
+    for key in prev_stats:
+        if prev_stats[key] is None:
+            prev_stats[key] = 0
 
-    # Calculate season pass statistics
+    # Weekly descent for line chart (current + prior season)
+    def weekly_descent_series(qs, start):
+        rows = (
+            qs.annotate(week=TruncWeek('timestamp'))
+            .values('week')
+            .annotate(descent=Sum('total_descent'))
+            .order_by('week')
+        )
+        result = []
+        for row in rows:
+            offset_days = (row['week'].date() - start.date()).days
+            result.append({'offset': offset_days, 'descent': round(row['descent'] or 0)})
+        return result
+
+    weekly_current = weekly_descent_series(activities, season_start)
+    weekly_prior = weekly_descent_series(prev_activities, prev_start)
+
+    # Descent by ski area (top 5 + Other) for donut chart
+    area_breakdown_qs = (
+        activities.exclude(ski_area__isnull=True)
+        .values('ski_area__name')
+        .annotate(descent=Sum('total_descent'))
+        .order_by('-descent')[:6]
+    )
+    area_breakdown = [
+        {'name': row['ski_area__name'], 'descent': round(row['descent'] or 0)}
+        for row in area_breakdown_qs
+    ]
+
+    # Season pass statistics
     season_passes = SeasonPass.objects.filter(
-        user=request.user, 
-        valid_from__lte=season_end, 
+        user=request.user,
+        valid_from__lte=season_end,
         valid_until__gte=season_start
     )
-    
-    for sp in season_passes:
-        logger.debug(f"Season pass: {sp}")
-        activities_for_pass = sp.get_valid_activities(season_start, season_end)
-        logger.debug(f"Activities: {activities_for_pass}")
-    
     season_pass_stats = {}
-    if season_passes:
-        for sp in season_passes:
-            activities_for_pass = sp.get_valid_activities(season_start, season_end)
-            if activities_for_pass:
-                season_pass_stats[sp] = {
-                    'name': sp.skiarea.name if sp.skiarea else sp.skiarea_network, 
-                    'activities': activities_for_pass.count(), 
-                    'total_savings': activities_for_pass.aggregate(total_savings=Sum('value'))['total_savings']
-                }
-    
-    logger.debug(f"Season pass stats: {season_pass_stats}")
+    for sp in season_passes:
+        activities_for_pass = sp.get_valid_activities(season_start, season_end)
+        if activities_for_pass:
+            season_pass_stats[sp] = {
+                'name': sp.skiarea.name if sp.skiarea else str(sp.skiarea_network),
+                'activities': activities_for_pass.count(),
+                'total_savings': activities_for_pass.aggregate(
+                    total_savings=Sum('value')
+                )['total_savings']
+            }
+
+    # Unique ski areas this season
+    unique_areas = activities.exclude(ski_area__isnull=True).values('ski_area').distinct().count()
 
     return {
         "season": f"{season_start.year}-{season_end.year}",
+        "prev_season": f"{prev_start.year}-{prev_end.year}",
         "skiarea": SkiArea.objects.get(id=skiarea["ski_area"]) if skiarea else None,
         "count": skiarea["count"] if skiarea else 0,
         "total_stats": total_stats,
+        "prev_stats": prev_stats,
+        "unique_areas": unique_areas,
+        "weekly_current": weekly_current,
+        "weekly_prior": weekly_prior,
+        "area_breakdown": area_breakdown,
         "season_passes": season_pass_stats,
     }
 

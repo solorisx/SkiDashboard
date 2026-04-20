@@ -1,0 +1,159 @@
+{% load static %}
+{% with request_path=request.path %}
+<aside class="sidebar" id="sidebar">
+
+    <!-- Brand -->
+    <a href="{% url 'home' %}" class="sl-sidebar-brand">
+        <div class="sl-brand-icon">
+            <i class="bi bi-snow"></i>
+        </div>
+        <div class="sl-brand-text">
+            <div class="sl-brand-name">SlopeLog</div>
+            <div class="sl-brand-tagline">Track Your Adventures</div>
+        </div>
+    </a>
+
+    <!-- Desktop collapse toggle -->
+    <button class="sl-sidebar-toggle d-none d-lg-flex" onclick="toggleSidebar()" title="Collapse sidebar">
+        <i class="bi bi-chevron-left" id="sidebarToggleIcon"></i>
+    </button>
+
+    <!-- Navigation -->
+    <nav class="sl-nav">
+
+        <a href="{% url 'home' %}"
+           class="sl-nav-item {% if request_path == '/' %}active{% endif %}"
+           data-label="Dashboard">
+            <i class="bi bi-house-door"></i>
+            <span class="sl-nav-label">Dashboard</span>
+        </a>
+
+        <div class="sl-section-label">Activities</div>
+
+        <a href="{% url 'activity_list' %}"
+           class="sl-nav-item {% if '/activities/' in request_path and 'insights' not in request_path %}active{% endif %}"
+           data-label="All Activities">
+            <i class="bi bi-list-ul"></i>
+            <span class="sl-nav-label">All Activities</span>
+        </a>
+
+        <a href="{% url 'trip_list' %}"
+           class="sl-nav-item {% if '/trips/' in request_path %}active{% endif %}"
+           data-label="Trips">
+            <i class="bi bi-map"></i>
+            <span class="sl-nav-label">Trips</span>
+        </a>
+
+        <div class="sl-section-label">Analytics</div>
+
+        <a href="{% url 'activity_insights' %}"
+           class="sl-nav-item {% if 'insights' in request_path and 'lift' not in request_path and 'piste' not in request_path %}active{% endif %}"
+           data-label="Overview">
+            <i class="bi bi-graph-up"></i>
+            <span class="sl-nav-label">Overview</span>
+        </a>
+
+        <a href="{% url 'lift_insights' %}"
+           class="sl-nav-item {% if 'lift-insights' in request_path %}active{% endif %}"
+           data-label="Lift Analysis">
+            <i class="bi bi-arrow-up-circle"></i>
+            <span class="sl-nav-label">Lift Analysis</span>
+        </a>
+
+        <a href="{% url 'piste_insights' %}"
+           class="sl-nav-item {% if 'piste-insights' in request_path %}active{% endif %}"
+           data-label="Piste Analysis">
+            <i class="bi bi-arrow-down-circle"></i>
+            <span class="sl-nav-label">Piste Analysis</span>
+        </a>
+
+        <div class="sl-section-label">More</div>
+
+        <a href="{% url 'lift_ride_list_season_all' %}"
+           class="sl-nav-item {% if 'statistics' in request_path %}active{% endif %}"
+           data-label="Lift Statistics">
+            <i class="bi bi-bar-chart"></i>
+            <span class="sl-nav-label">Lift Statistics</span>
+        </a>
+
+        <a href="{% url 'cost_home' %}"
+           class="sl-nav-item {% if '/cost/' in request_path %}active{% endif %}"
+           data-label="Season Passes">
+            <i class="bi bi-ticket-perforated"></i>
+            <span class="sl-nav-label">Season Passes</span>
+        </a>
+
+        {% if user.is_staff %}
+        <div class="sl-section-label">Admin</div>
+        <a href="{% url 'sync_strava_admin' %}" class="sl-nav-item" data-label="Sync Strava">
+            <i class="bi bi-arrow-repeat" style="color:var(--sl-slope)"></i>
+            <span class="sl-nav-label">Sync Strava</span>
+        </a>
+        <a href="{% url 'sync_osm' %}" class="sl-nav-item" data-label="Sync OSM">
+            <i class="bi bi-map" style="color:var(--sl-pine)"></i>
+            <span class="sl-nav-label">Sync OSM</span>
+        </a>
+        <a href="{% url 'activity_profiling_dashboard' %}" class="sl-nav-item" data-label="Profiling">
+            <i class="bi bi-speedometer2" style="color:var(--sl-slope)"></i>
+            <span class="sl-nav-label">Profiling</span>
+        </a>
+        <a href="{% url 'membership_admin' %}" class="sl-nav-item" data-label="Membership">
+            <i class="bi bi-star" style="color:var(--sl-sun)"></i>
+            <span class="sl-nav-label">Membership</span>
+        </a>
+        {% endif %}
+
+    </nav>
+
+    <!-- User section at bottom -->
+    <div class="sl-sidebar-user">
+        {% if not user_is_premium %}
+        <a href="{% url 'premium_info' %}" class="sl-user-item" style="color:var(--sl-sun)" data-label="Go Premium">
+            <i class="bi bi-star-fill" style="width:20px;text-align:center;flex-shrink:0;font-size:1rem;"></i>
+            <span class="sl-nav-label">Go Premium</span>
+        </a>
+        {% endif %}
+
+        <button class="sl-user-item" onclick="toggleDarkMode()" data-label="Toggle dark mode">
+            <i class="bi {% if user.userprofile.dark_mode %}bi-sun{% else %}bi-moon{% endif %}"
+               id="darkModeIcon"
+               style="width:20px;text-align:center;flex-shrink:0;font-size:1rem;"></i>
+            <span class="sl-nav-label">
+                {% if user.userprofile.dark_mode %}Light mode{% else %}Dark mode{% endif %}
+            </span>
+        </button>
+
+        <a href="{% url 'profile_management' %}" class="sl-user-item" data-label="Settings">
+            <div class="sl-user-avatar">{{ user.username|first|upper }}</div>
+            <div class="sl-nav-label" style="overflow:hidden;min-width:0;">
+                <div style="font-size:0.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    {{ user.get_full_name|default:user.username }}
+                </div>
+                <div style="font-size:0.7rem;color:var(--sl-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    {{ user.email }}
+                </div>
+            </div>
+        </a>
+
+        <a href="{% url 'account_logout' %}" class="sl-user-item" style="color:var(--sl-danger)" data-label="Logout">
+            <i class="bi bi-box-arrow-right" style="width:20px;text-align:center;flex-shrink:0;font-size:1rem;"></i>
+            <span class="sl-nav-label">Logout</span>
+        </a>
+    </div>
+
+</aside>
+{% endwith %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+    const icon = document.getElementById('sidebarToggleIcon');
+    const observer = new MutationObserver(function() {
+        if (icon) {
+            icon.className = sidebar.classList.contains('collapsed') ? 'bi bi-chevron-right' : 'bi bi-chevron-left';
+        }
+    });
+    observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+});
+</script>

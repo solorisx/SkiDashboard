@@ -1,9 +1,6 @@
 {% include './head.html' %}
 
-{% block extra_head %}{% endblock %}
-{% block extra_css %}{% endblock %}
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js"></script>
 
 {% if form %}
@@ -11,24 +8,118 @@
 {% endif %}
 
 <body>
-    <header>
-        {% include './navbar.html' %}
-    </header>
 
-    {% include 'base/messages.html' %}
+{% if user.is_authenticated %}
+<!-- ── Authenticated layout: sidebar + main area ───── -->
+<div class="app-layout">
 
-    <main>
-        <h1 class="bd-title" id="content"> {% block pagetitle %} {% endblock %}</h1>
-        {% block content %}{% endblock %}
-    </main>
+    <!-- Sidebar -->
+    {% include './sidebar.html' %}
 
-    {% include './footer.html' %}
+    <!-- Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-    {% include './scripts.html' %}
-    
-    <!-- Page-specific scripts block -->
-    {% block extra_scripts %}{% endblock %}
-    {% block extra_js %}{% endblock %}
+    <!-- Main area -->
+    <div class="main-area" id="mainArea">
+
+        <!-- Mobile top bar -->
+        <div class="mobile-topbar">
+            <button class="btn btn-sm btn-link p-0 text-muted" onclick="openSidebar()" aria-label="Open menu">
+                <i class="bi bi-list fs-4"></i>
+            </button>
+            <a href="{% url 'home' %}" class="mobile-topbar-brand">
+                <i class="bi bi-snow text-primary me-1"></i>SlopeLog
+            </a>
+            <a href="{% url 'profile_management' %}" class="btn btn-sm btn-link p-0 text-muted">
+                <i class="bi bi-person-circle fs-5"></i>
+            </a>
+        </div>
+
+        {% include 'base/messages.html' %}
+
+        <main>
+            <h1 class="bd-title" id="content">{% block pagetitle %}{% endblock %}</h1>
+            {% block content %}{% endblock %}
+        </main>
+
+        {% include './footer.html' %}
+    </div>
+</div>
+
+{% else %}
+<!-- ── Public layout: top navbar ───────────────────── -->
+<header>
+    {% include './navbar.html' %}
+</header>
+
+{% include 'base/messages.html' %}
+
+<main>
+    <h1 class="bd-title" id="content">{% block pagetitle2 %}{% endblock %}</h1>
+    {% block content2 %}{% block content %}{% endblock %}{% endblock %}
+</main>
+
+{% include './footer.html' %}
+{% endif %}
+
+{% include './scripts.html' %}
+
+{% block extra_scripts %}{% endblock %}
+{% block extra_js %}{% endblock %}
+
+<script>
+// Sidebar toggle (desktop)
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
+    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed') ? '1' : '0');
+}
+
+// Sidebar open/close (mobile)
+function openSidebar() {
+    document.getElementById('sidebar').classList.add('mobile-open');
+    document.getElementById('sidebarOverlay').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    document.getElementById('sidebarOverlay').classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+// Restore collapsed state on desktop
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+    if (window.innerWidth >= 992 && localStorage.getItem('sidebarCollapsed') === '1') {
+        sidebar.classList.add('collapsed');
+    }
+    // Close sidebar on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeSidebar();
+    });
+    // Close on nav link click (mobile)
+    sidebar.querySelectorAll('.sl-nav-item').forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth < 992) closeSidebar();
+        });
+    });
+});
+
+// Dark mode toggle helper
+function toggleDarkMode() {
+    fetch('{% url "toggle_dark_mode" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' }
+    }).then(r => r.json()).then(data => {
+        if (data.dark_mode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    });
+}
+</script>
 
 </body>
 </html>

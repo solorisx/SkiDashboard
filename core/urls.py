@@ -43,6 +43,7 @@ urlpatterns = [
     path("manage/membership/", views.membership_admin, name="membership_admin"),
 
     path("api/season-stats/", views.season_stats_api, name="season_stats_api"),
+    path("api/toggle-dark-mode/", views.toggle_dark_mode, name="toggle_dark_mode"),
     path("api/lift-ride/", views.lift_ride_api, name="lift_ride_api"),
     path("api/lift-ride/<int:lift_ride_id>/", views.lift_ride_api, name="lift_ride_api"),
     path("api/piste-ride/<int:piste_ride_id>/", views.piste_ride_api, name="piste_ride_api"),

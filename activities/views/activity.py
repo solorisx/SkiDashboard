@@ -277,6 +277,31 @@ def activity_detail(request, activity_id):
         from activities.utils.completeness import calculate_activity_piste_completeness
         piste_completeness = calculate_activity_piste_completeness(activity)
 
+    # Build lap chart data for elevation profile and per-lap stats
+    import json as _json
+    lap_chart_data = []
+    for lap in laps:
+        duration_secs = int(lap.total_elapsed_time.total_seconds()) if lap.total_elapsed_time else 0
+        lap_chart_data.append({
+            'lap': lap.lap_index,
+            'min_alt': round(lap.min_altitude) if lap.min_altitude is not None else None,
+            'max_alt': round(lap.max_altitude) if lap.max_altitude is not None else None,
+            'descent': round(lap.total_descent) if lap.total_descent is not None else None,
+            'distance': round(lap.total_distance) if lap.total_distance is not None else None,
+            'duration': duration_secs,
+            'avg_speed_kmh': round(lap.avg_speed * 3.6, 1) if lap.avg_speed is not None else None,
+            'max_speed_kmh': round(lap.max_speed * 3.6, 1) if lap.max_speed is not None else None,
+            'avg_hr': lap.avg_heart_rate,
+            'calories': round(lap.total_calories) if lap.total_calories is not None else None,
+        })
+
+    # Find best lap (most descent)
+    best_lap_index = None
+    if lap_chart_data:
+        best = max(lap_chart_data, key=lambda x: x['descent'] or 0)
+        if best['descent']:
+            best_lap_index = best['lap']
+
     return render(
         request,
         "activities/activity_detail.html",
@@ -290,6 +315,8 @@ def activity_detail(request, activity_id):
             "aerialways_dropdown": aerialways_dropdown,
             "user_opt_in_strava_write": user_opt_in_strava_write,
             "piste_completeness": piste_completeness,
+            "lap_chart_data": _json.dumps(lap_chart_data),
+            "best_lap_index": best_lap_index,
         },
     )
 

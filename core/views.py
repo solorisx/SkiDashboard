@@ -211,6 +211,19 @@ def profile_management(request):
 def season_stats_api(request):
     return season_stats(request)
 
+
+@require_http_methods(["POST"])
+@login_required
+def toggle_dark_mode(request):
+    """Toggle dark mode preference for the user."""
+    try:
+        profile = request.user.userprofile
+    except UserProfile.DoesNotExist:
+        profile = UserProfile.objects.create(user=request.user)
+    profile.dark_mode = not profile.dark_mode
+    profile.save(update_fields=['dark_mode'])
+    return JsonResponse({'dark_mode': profile.dark_mode})
+
 @require_http_methods(["POST", "PATCH", "DELETE"])
 @login_required
 def lift_ride_api(request, lift_ride_id=None):

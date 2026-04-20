@@ -1,0 +1,105 @@
+/* SlopeLog 2.0 Design Tokens */
+
+:root {
+    /* Brand palette */
+    --sl-slope:         #0ea5e9;   /* sky-500 — primary action */
+    --sl-slope-dark:    #0284c7;   /* sky-600 */
+    --sl-slope-light:   #e0f2fe;   /* sky-100 */
+    --sl-pine:          #10b981;   /* emerald-500 — success / lifts */
+    --sl-pine-dark:     #059669;
+    --sl-pine-light:    #d1fae5;
+    --sl-summit:        #6366f1;   /* indigo-500 — badges / accent */
+    --sl-summit-light:  #e0e7ff;
+    --sl-sun:           #f59e0b;   /* amber-500 — warnings / favorites */
+    --sl-sun-light:     #fef3c7;
+    --sl-danger:        #ef4444;   /* red-500 */
+    --sl-danger-light:  #fee2e2;
+
+    /* Light mode surfaces */
+    --sl-bg-page:       #f8fafc;   /* slate-50 */
+    --sl-bg-card:       #ffffff;
+    --sl-bg-subtle:     #f1f5f9;   /* slate-100 */
+    --sl-bg-input:      #ffffff;
+
+    /* Light mode text */
+    --sl-text-primary:  #0f172a;   /* slate-900 */
+    --sl-text-secondary:#334155;   /* slate-700 */
+    --sl-text-muted:    #64748b;   /* slate-500 */
+    --sl-text-faint:    #94a3b8;   /* slate-400 */
+
+    /* Light mode borders */
+    --sl-border:        #e2e8f0;   /* slate-200 */
+    --sl-border-strong: #cbd5e1;   /* slate-300 */
+
+    /* Shadows */
+    --sl-shadow-sm:  0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --sl-shadow-md:  0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+    --sl-shadow-lg:  0 10px 30px rgba(0,0,0,.10), 0 4px 8px rgba(0,0,0,.04);
+
+    /* Sidebar */
+    --sl-sidebar-width:       240px;
+    --sl-sidebar-collapsed:   64px;
+    --sl-sidebar-bg:          #ffffff;
+    --sl-sidebar-border:      #e2e8f0;
+    --sl-sidebar-item-hover:  #f1f5f9;
+    --sl-sidebar-item-active: #e0f2fe;
+    --sl-sidebar-text:        #334155;
+    --sl-sidebar-text-active: #0ea5e9;
+
+    /* Chart colours */
+    --sl-chart-1: #0ea5e9;
+    --sl-chart-2: #10b981;
+    --sl-chart-3: #6366f1;
+    --sl-chart-4: #f59e0b;
+    --sl-chart-5: #ef4444;
+    --sl-chart-1-alpha: rgba(14, 165, 233, 0.15);
+    --sl-chart-2-alpha: rgba(16, 185, 129, 0.15);
+
+    /* Difficulty colours */
+    --sl-diff-novice:       #4ade80;  /* green */
+    --sl-diff-easy:         #22c55e;  /* green */
+    --sl-diff-intermediate: #3b82f6;  /* blue */
+    --sl-diff-advanced:     #ef4444;  /* red */
+    --sl-diff-expert:       #1e293b;  /* dark */
+    --sl-diff-freeride:     #f97316;  /* orange */
+
+    /* Rarity colours */
+    --sl-rarity-bronze:    #cd7f32;
+    --sl-rarity-silver:    #a8a9ad;
+    --sl-rarity-gold:      #ffd700;
+    --sl-rarity-platinum:  #9acedb;
+    --sl-rarity-legendary: #9400d3;
+}
+
+/* ── Dark mode ─────────────────────────────────────── */
+html.dark {
+    --sl-bg-page:       #0f172a;   /* slate-900 */
+    --sl-bg-card:       #1e293b;   /* slate-800 */
+    --sl-bg-subtle:     #334155;   /* slate-700 */
+    --sl-bg-input:      #1e293b;
+
+    --sl-text-primary:  #f1f5f9;   /* slate-100 */
+    --sl-text-secondary:#cbd5e1;   /* slate-300 */
+    --sl-text-muted:    #94a3b8;   /* slate-400 */
+    --sl-text-faint:    #64748b;   /* slate-500 */
+
+    --sl-border:        #334155;   /* slate-700 */
+    --sl-border-strong: #475569;   /* slate-600 */
+
+    --sl-shadow-sm: 0 1px 3px rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.2);
+    --sl-shadow-md: 0 4px 12px rgba(0,0,0,.4), 0 2px 4px rgba(0,0,0,.2);
+    --sl-shadow-lg: 0 10px 30px rgba(0,0,0,.5), 0 4px 8px rgba(0,0,0,.3);
+
+    --sl-sidebar-bg:          #1e293b;
+    --sl-sidebar-border:      #334155;
+    --sl-sidebar-item-hover:  #334155;
+    --sl-sidebar-item-active: rgba(14, 165, 233, 0.15);
+    --sl-sidebar-text:        #cbd5e1;
+    --sl-sidebar-text-active: #38bdf8;
+
+    --sl-slope-light:  rgba(14, 165, 233, 0.15);
+    --sl-pine-light:   rgba(16, 185, 129, 0.15);
+    --sl-summit-light: rgba(99, 102, 241, 0.15);
+    --sl-sun-light:    rgba(245, 158, 11, 0.15);
+    --sl-danger-light: rgba(239, 68, 68, 0.15);
+}
