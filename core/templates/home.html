@@ -1,4 +1,4 @@
-{% extends "base/base.html" %}
+m{% extends "base/base.html" %}
 
 {% block title %}SlopeLog — Dashboard{% endblock %}
 
@@ -114,12 +114,10 @@
                     {{ total_stats.total_descent|floatformat:0 }}<small style="font-size:1rem;font-weight:600;color:var(--sl-text-muted)"> m</small>
                 </div>
                 {% if prev_stats.total_descent %}
-                    {% with delta=total_stats.total_descent|add:"-"|add:prev_stats.total_descent %}
                     <span class="kpi-delta {% if total_stats.total_descent >= prev_stats.total_descent %}up{% else %}down{% endif %}" id="kpiDescentDelta">
                         <i class="bi bi-arrow-{% if total_stats.total_descent >= prev_stats.total_descent %}up{% else %}down{% endif %}"></i>
-                        vs last season
+                        {{ deltas.descent }} m vs last season
                     </span>
-                    {% endwith %}
                 {% endif %}
             </div>
         </div>
@@ -133,7 +131,7 @@
                 {% if prev_stats.total_distance_km %}
                 <span class="kpi-delta {% if total_stats.total_distance_km >= prev_stats.total_distance_km %}up{% else %}down{% endif %}">
                     <i class="bi bi-arrow-{% if total_stats.total_distance_km >= prev_stats.total_distance_km %}up{% else %}down{% endif %}"></i>
-                    vs last season
+                    {{ deltas.distance_km }} km vs last season
                 </span>
                 {% endif %}
             </div>
@@ -146,7 +144,7 @@
                 {% if prev_stats.total_num_lift_rides %}
                 <span class="kpi-delta {% if total_stats.total_num_lift_rides >= prev_stats.total_num_lift_rides %}up{% else %}down{% endif %}">
                     <i class="bi bi-arrow-{% if total_stats.total_num_lift_rides >= prev_stats.total_num_lift_rides %}up{% else %}down{% endif %}"></i>
-                    vs last season
+                    {{ deltas.lift_rides }} vs last season
                 </span>
                 {% endif %}
             </div>
@@ -159,7 +157,7 @@
                 {% if prev_stats.total_num_activities %}
                 <span class="kpi-delta {% if total_stats.total_num_activities >= prev_stats.total_num_activities %}up{% else %}down{% endif %}">
                     <i class="bi bi-arrow-{% if total_stats.total_num_activities >= prev_stats.total_num_activities %}up{% else %}down{% endif %}"></i>
-                    vs last season
+                    {{ deltas.days }} days vs last season
                 </span>
                 {% endif %}
             </div>
@@ -169,21 +167,16 @@
             <div class="kpi-card">
                 <div class="kpi-label"><i class="bi bi-map me-1" style="color:var(--sl-slope)"></i>Ski Areas</div>
                 <div class="kpi-value" id="kpiAreas">{{ unique_areas }}</div>
+                {% if prev_unique_areas %}
+                <span class="kpi-delta {% if unique_areas >= prev_unique_areas %}up{% else %}down{% endif %}">
+                    <i class="bi bi-arrow-{% if unique_areas >= prev_unique_areas %}up{% else %}down{% endif %}"></i>
+                    {{ deltas.areas }} vs last season
+                </span>
+                {% else %}
                 <span class="kpi-delta flat">this season</span>
+                {% endif %}
             </div>
         </div>
-        <!-- Avg cost per day -->
-        {% if avg_cost_per_day %}
-        <div class="col-6 col-md-4 col-xl-2">
-            <div class="kpi-card">
-                <div class="kpi-label"><i class="bi bi-ticket-perforated me-1" style="color:var(--sl-pine)"></i>Cost / Day</div>
-                <div class="kpi-value" id="kpiCostPerDay">
-                    {{ avg_cost_per_day.amount }}<small style="font-size:1rem;font-weight:600;color:var(--sl-text-muted);"> {{ avg_cost_per_day.currency }}</small>
-                </div>
-                <span class="kpi-delta flat">avg · season pass</span>
-            </div>
-        </div>
-        {% endif %}
     </div>
 
     <!-- Charts row -->

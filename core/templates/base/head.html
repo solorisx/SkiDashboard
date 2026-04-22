@@ -89,7 +89,8 @@
         html.dark .bg-light { background-color: var(--sl-bg-subtle) !important; }
         html.dark .bg-white { background-color: var(--sl-bg-card) !important; }
         html.dark .border-top, html.dark .border-bottom, html.dark .border { border-color: var(--sl-border) !important; }
-        html.dark .table { color: var(--sl-text-primary); }
+        html.dark .table { color: var(--sl-text-primary); --bs-table-bg: transparent; --bs-table-border-color: var(--sl-border); }
+        html.dark .table thead th, html.dark .table td { border-color: var(--sl-border); }
         html.dark .table-hover > tbody > tr:hover > * { background-color: var(--sl-bg-subtle); }
         html.dark .modal-content { background-color: var(--sl-bg-card); color: var(--sl-text-primary); }
         html.dark .dropdown-menu { background-color: var(--sl-bg-card); border-color: var(--sl-border); }

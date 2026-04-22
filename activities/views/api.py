@@ -193,8 +193,9 @@ def home_stats(request):
                 'cost_per_day': cost_per_day,
             }
 
-    # Unique ski areas this season
+    # Unique ski areas this season and prior
     unique_areas = activities.exclude(ski_area__isnull=True).values('ski_area').distinct().count()
+    prev_unique_areas = prev_activities.exclude(ski_area__isnull=True).values('ski_area').distinct().count()
 
     # Average cost per ski day across active season passes
     avg_cost_per_day = None
@@ -213,6 +214,18 @@ def home_stats(request):
                 'currency': currency,
             }
 
+    def fmt_delta(val, prev, decimals=0):
+        d = round(val - prev, decimals)
+        return f"+{d}" if d > 0 else str(d)
+
+    deltas = {
+        'descent': fmt_delta(total_stats['total_descent'], prev_stats['total_descent']),
+        'distance_km': fmt_delta(total_stats['total_distance_km'], prev_stats['total_distance_km'], 1),
+        'lift_rides': fmt_delta(total_stats['total_num_lift_rides'], prev_stats['total_num_lift_rides']),
+        'days': fmt_delta(total_stats['total_num_activities'], prev_stats['total_num_activities']),
+        'areas': fmt_delta(unique_areas, prev_unique_areas),
+    }
+
     return {
         "season": f"{season_start.year}-{season_end.year}",
         "prev_season": f"{prev_start.year}-{prev_end.year}",
@@ -220,7 +233,9 @@ def home_stats(request):
         "count": skiarea["count"] if skiarea else 0,
         "total_stats": total_stats,
         "prev_stats": prev_stats,
+        "deltas": deltas,
         "unique_areas": unique_areas,
+        "prev_unique_areas": prev_unique_areas,
         "weekly_current": weekly_current,
         "weekly_prior": weekly_prior,
         "area_breakdown": area_breakdown,

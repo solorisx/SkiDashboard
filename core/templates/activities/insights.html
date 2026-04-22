@@ -160,51 +160,51 @@
             <thead>
               <tr>
                 <th class="text-muted fw-normal small ps-0">Metric</th>
-                <th class="text-end fw-semibold small">This Season</th>
-                <th class="text-end fw-semibold small text-muted">Prior</th>
-                <th class="text-end small" style="width:24px;"></th>
+                <th class="text-end fw-semibold small">{% if is_all_seasons %}All Seasons{% else %}This Season{% endif %}</th>
+                {% if not is_all_seasons %}<th class="text-end fw-semibold small text-muted">Prior</th>
+                <th class="text-end small" style="width:24px;"></th>{% endif %}
               </tr>
             </thead>
             <tbody class="small">
               <tr>
                 <td class="ps-0 text-muted">Ski Days</td>
                 <td class="text-end fw-bold">{{ overall_stats.total_activities }}</td>
-                <td class="text-end text-muted">{{ prior_season_stats.total_activities }}</td>
+                {% if not is_all_seasons %}<td class="text-end text-muted">{{ prior_season_stats.total_activities }}</td>
                 <td class="text-end">
                   {% if overall_stats.total_activities > prior_season_stats.total_activities %}<span class="text-success">↑</span>
                   {% elif overall_stats.total_activities < prior_season_stats.total_activities %}<span class="text-danger">↓</span>
                   {% else %}<span class="text-muted">—</span>{% endif %}
-                </td>
+                </td>{% endif %}
               </tr>
               <tr>
                 <td class="ps-0 text-muted">Distance (km)</td>
                 <td class="text-end fw-bold">{{ overall_stats.total_distance_km }}</td>
-                <td class="text-end text-muted">{{ prior_season_stats.total_distance_km }}</td>
+                {% if not is_all_seasons %}<td class="text-end text-muted">{{ prior_season_stats.total_distance_km }}</td>
                 <td class="text-end">
                   {% if overall_stats.total_distance_km > prior_season_stats.total_distance_km %}<span class="text-success">↑</span>
                   {% elif overall_stats.total_distance_km < prior_season_stats.total_distance_km %}<span class="text-danger">↓</span>
                   {% else %}<span class="text-muted">—</span>{% endif %}
-                </td>
+                </td>{% endif %}
               </tr>
               <tr>
                 <td class="ps-0 text-muted">Descent (m)</td>
                 <td class="text-end fw-bold">{{ overall_stats.total_descent }}</td>
-                <td class="text-end text-muted">{{ prior_season_stats.total_descent }}</td>
+                {% if not is_all_seasons %}<td class="text-end text-muted">{{ prior_season_stats.total_descent }}</td>
                 <td class="text-end">
                   {% if overall_stats.total_descent > prior_season_stats.total_descent %}<span class="text-success">↑</span>
                   {% elif overall_stats.total_descent < prior_season_stats.total_descent %}<span class="text-danger">↓</span>
                   {% else %}<span class="text-muted">—</span>{% endif %}
-                </td>
+                </td>{% endif %}
               </tr>
               <tr>
                 <td class="ps-0 text-muted">Lift Rides</td>
                 <td class="text-end fw-bold">{{ overall_stats.total_lift_rides }}</td>
-                <td class="text-end text-muted">{{ prior_season_stats.total_lift_rides }}</td>
+                {% if not is_all_seasons %}<td class="text-end text-muted">{{ prior_season_stats.total_lift_rides }}</td>
                 <td class="text-end">
                   {% if overall_stats.total_lift_rides > prior_season_stats.total_lift_rides %}<span class="text-success">↑</span>
                   {% elif overall_stats.total_lift_rides < prior_season_stats.total_lift_rides %}<span class="text-danger">↓</span>
                   {% else %}<span class="text-muted">—</span>{% endif %}
-                </td>
+                </td>{% endif %}
               </tr>
             </tbody>
           </table>
