@@ -12,7 +12,7 @@
     <div class="col-12">
       <div class="d-flex align-items-center justify-content-between">
         <div>
-          <h1 class="display-6 fw-bold text-dark mb-2">My Activities</h1>
+          <h1 class="display-6 fw-bold mb-2" style="color:var(--sl-text-primary);">My Activities</h1>
           <p class="text-muted fs-5 mb-0">Track your skiing adventures and achievements</p>
         </div>
         <div class="badge bg-primary fs-6 px-3 py-2">
@@ -34,7 +34,7 @@
         <div class="card-header bg-transparent border-0 py-3">
           <div class="d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center">
-              <button class="btn btn-link text-decoration-none p-0 fw-medium text-dark"
+              <button class="btn btn-link text-decoration-none p-0 fw-medium" style="color:var(--sl-text-primary);"
                       type="button"
                       data-bs-toggle="collapse"
                       data-bs-target="#filterControls"
@@ -115,6 +115,17 @@
                 </div>
               </div>
 
+              <!-- Group Sort (only shown when grouped) -->
+              {% if is_grouped %}
+              <div class="col-auto">
+                <label for="groupSortSelect" class="form-label fw-medium text-muted small mb-1">Sort Groups By</label>
+                <select name="group_sort" id="groupSortSelect" class="form-select form-select-sm">
+                  <option value="name" {% if group_sort != 'visits' %}selected{% endif %}>Name</option>
+                  <option value="visits" {% if group_sort == 'visits' %}selected{% endif %}>Most Visits</option>
+                </select>
+              </div>
+              {% endif %}
+
               <!-- Action Buttons -->
               <div class="col-auto ms-auto">
                 <div class="d-flex gap-2">
@@ -163,7 +174,7 @@
               <div class="card-header bg-transparent border-0 py-3">
                 <div class="d-flex align-items-center justify-content-between">
                   <div class="d-flex align-items-center">
-                    <button class="btn btn-link text-decoration-none p-0 fw-bold text-dark h4 mb-0"
+                    <button class="btn btn-link text-decoration-none p-0 fw-bold h4 mb-0" style="color:var(--sl-text-primary);"
                             type="button"
                             data-bs-toggle="collapse"
                             data-bs-target="#skiArea{{ group.ski_area.id|default:"unknown" }}"
@@ -246,12 +257,12 @@
         <ul class="pagination pagination-lg shadow-sm">
           {% if page_obj.has_previous %}
             <li class="page-item">
-              <a class="page-link rounded-start-pill px-4" href="?page=1{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}{% if current_season_filter %}&season={{ current_season_filter }}{% endif %}{% if is_grouped %}&group_by=ski_area{% endif %}" aria-label="First page">
+              <a class="page-link rounded-start-pill px-4" href="?page=1{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}{% if current_season_filter %}&season={{ current_season_filter }}{% endif %}{% if is_grouped %}&group_by=ski_area{% endif %}{% if group_sort == 'visits' %}&group_sort=visits{% endif %}" aria-label="First page">
                 <i class="bi bi-chevron-double-left"></i>
               </a>
             </li>
             <li class="page-item">
-              <a class="page-link px-4" href="?page={{ page_obj.previous_page_number }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}{% if current_season_filter %}&season={{ current_season_filter }}{% endif %}{% if is_grouped %}&group_by=ski_area{% endif %}" aria-label="Previous page">
+              <a class="page-link px-4" href="?page={{ page_obj.previous_page_number }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}{% if current_season_filter %}&season={{ current_season_filter }}{% endif %}{% if is_grouped %}&group_by=ski_area{% endif %}{% if group_sort == 'visits' %}&group_sort=visits{% endif %}" aria-label="Previous page">
                 <i class="bi bi-chevron-left"></i>
               </a>
             </li>
@@ -276,12 +287,12 @@
 
           {% if page_obj.has_next %}
             <li class="page-item">
-              <a class="page-link px-4" href="?page={{ page_obj.next_page_number }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}{% if current_season_filter %}&season={{ current_season_filter }}{% endif %}{% if is_grouped %}&group_by=ski_area{% endif %}" aria-label="Next page">
+              <a class="page-link px-4" href="?page={{ page_obj.next_page_number }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}{% if current_season_filter %}&season={{ current_season_filter }}{% endif %}{% if is_grouped %}&group_by=ski_area{% endif %}{% if group_sort == 'visits' %}&group_sort=visits{% endif %}" aria-label="Next page">
                 <i class="bi bi-chevron-right"></i>
               </a>
             </li>
             <li class="page-item">
-              <a class="page-link rounded-end-pill px-4" href="?page={{ page_obj.paginator.num_pages }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}{% if current_season_filter %}&season={{ current_season_filter }}{% endif %}{% if is_grouped %}&group_by=ski_area{% endif %}" aria-label="Last page">
+              <a class="page-link rounded-end-pill px-4" href="?page={{ page_obj.paginator.num_pages }}{% if current_ski_area_filter %}&ski_area={{ current_ski_area_filter }}{% endif %}{% if current_season_filter %}&season={{ current_season_filter }}{% endif %}{% if is_grouped %}&group_by=ski_area{% endif %}{% if group_sort == 'visits' %}&group_sort=visits{% endif %}" aria-label="Last page">
                 <i class="bi bi-chevron-double-right"></i>
               </a>
             </li>
@@ -443,6 +454,13 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
+  const groupSortSelect = document.getElementById('groupSortSelect');
+  if (groupSortSelect) {
+    groupSortSelect.addEventListener('change', function() {
+      filterForm.submit();
+    });
+  }
+
   // Handle collapse chevron rotation for filter controls
   const filterControls = document.getElementById('filterControls');
   if (filterControls) {
@@ -590,27 +608,11 @@ document.addEventListener("DOMContentLoaded", function() {
           else if (percentage >= 50) badgeIcon = 'award';
 
           card.innerHTML = `
-            <a href="/activities/ski-area-completeness/${skiAreaId}/" class="text-decoration-none">
-              <div class="d-flex align-items-center justify-content-between">
-                <div class="text-start">
-                  <div class="fs-5 fw-bold text-${badgeClass} mb-0">${percentage}%</div>
-                  <small class="text-muted fw-medium">Area completeness</small>
-                </div>
-                <div class="text-end">
-                  <div class="d-flex align-items-center gap-1 mb-1">
-                    <i class="bi bi-${badgeIcon} text-${badgeClass}"></i>
-                    <small class="text-muted">${liftsUsed}/${totalLifts} lifts</small>
-                  </div>
-                  <div class="mb-1" style="min-height: 20px;">
-                    ${newLifts > 0 ? `<div class="badge bg-success text-white small">+${newLifts} new!</div>` : ''}
-                  </div>
-                  <div class="text-center">
-                    <small class="text-primary fw-medium">
-                      <i class="bi bi-arrow-right me-1"></i>View Details
-                    </small>
-                  </div>
-                </div>
-              </div>
+            <a href="/activities/ski-area-completeness/${skiAreaId}/" class="text-decoration-none text-center d-block">
+              <div class="fs-5 fw-bold text-${badgeClass} mb-0">${percentage}%</div>
+              <small class="text-muted fw-medium">Area completeness</small>
+              <div class="text-muted small mt-1">${liftsUsed}/${totalLifts} lifts</div>
+              ${newLifts > 0 ? `<div class="badge bg-success text-white small mt-1">+${newLifts} new!</div>` : ''}
             </a>
           `;
 
@@ -678,7 +680,7 @@ document.addEventListener("DOMContentLoaded", function() {
           // Update the card with piste completeness data
           const percentage = Math.round(data.daily_completion_percentage || 0);
           const distanceSkiedKm = ((data.distance_skied_today || 0) / 1000).toFixed(1);
-          const totalDistanceKm = ((data.total_distance_available || 0) / 1000).toFixed(1);
+          const totalDistanceKm = Math.round((data.total_distance_available || 0) / 1000);
           const newPistes = ((data.new_distance_discovered || 0) / 1000).toFixed(1);
 
           let badgeClass = 'secondary';
@@ -691,27 +693,11 @@ document.addEventListener("DOMContentLoaded", function() {
           else if (percentage >= 50) badgeIcon = 'award';
 
           card.innerHTML = `
-            <a href="/activities/ski-area-piste-completeness/${skiAreaId}/" class="text-decoration-none">
-              <div class="d-flex align-items-center justify-content-between">
-                <div class="text-start">
-                  <div class="fs-5 fw-bold text-${badgeClass} mb-0">${percentage}%</div>
-                  <small class="text-muted fw-medium">Piste completeness</small>
-                </div>
-                <div class="text-end">
-                  <div class="d-flex align-items-center gap-1 mb-1">
-                    <i class="bi bi-${badgeIcon} text-${badgeClass}"></i>
-                    <small class="text-muted">${distanceSkiedKm}km/${totalDistanceKm}km</small>
-                  </div>
-                  <div class="mb-1" style="min-height: 20px;">
-                    ${newPistes > 0 ? `<div class="badge bg-success text-white small">+${newPistes}km new!</div>` : ''}
-                  </div>
-                  <div class="text-center">
-                    <small class="text-primary fw-medium">
-                      <i class="bi bi-arrow-right me-1"></i>View Details
-                    </small>
-                  </div>
-                </div>
-              </div>
+            <a href="/activities/ski-area-piste-completeness/${skiAreaId}/" class="text-decoration-none text-center d-block">
+              <div class="fs-5 fw-bold text-${badgeClass} mb-0">${percentage}%</div>
+              <small class="text-muted fw-medium">Piste completeness</small>
+              <div class="text-muted small mt-1">${distanceSkiedKm}/${totalDistanceKm}km</div>
+              ${newPistes > 0 ? `<div class="badge bg-success text-white small mt-1">+${newPistes}km new!</div>` : ''}
             </a>
           `;
 

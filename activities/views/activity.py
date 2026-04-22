@@ -59,6 +59,7 @@ def activity_list(request):
     ski_area_filter = request.GET.get('ski_area')
     season_filter = request.GET.get('season')
     group_by_ski_area = request.GET.get('group_by') == 'ski_area'
+    group_sort = request.GET.get('group_sort', 'name')  # 'name' or 'visits'
 
     activities = get_user_activities_base_query(request.user).order_by("-timestamp")
 
@@ -115,7 +116,7 @@ def activity_list(request):
 
     # Handle grouping by ski area
     if group_by_ski_area:
-        # Get all activities ordered by ski area, then by timestamp
+        # Must order by ski_area__name first so groupby works correctly
         all_activities_query = activities.order_by('ski_area__name', '-timestamp')
         total_count = all_activities_query.count()
 
@@ -129,6 +130,9 @@ def activity_list(request):
                 'activities': activities_list,
                 'count': len(activities_list)
             })
+
+        if group_sort == 'visits':
+            all_grouped_activities.sort(key=lambda g: g['count'], reverse=True)
 
         # paginate by complete groups
         groups_per_page = 5  # Show 5 complete ski area groups per page
@@ -172,6 +176,7 @@ def activity_list(request):
             'current_season_filter': season_filter,
             'selected_ski_area': selected_ski_area,
             'total_activities': total_count,
+            'group_sort': group_sort,
             'page_obj': page_obj,  # Include pagination info for grouped mode
         }
     else:
