@@ -29,7 +29,7 @@ from cost.seasonpass import has_seasonpass
 
 
 
-from .strava_interface import load_activities, load_activity, load_activity_streams, load_activity_laps, update_activity_description
+from .strava_interface import load_activities, load_activity, load_activity_streams, load_activity_laps, update_activity_description, StravaWritePermissionError
 
 # Get an instance of a logger
 logger = logging.getLogger('core')
@@ -1497,6 +1497,16 @@ class ActivityParser:
             self.profiler.end_operation('update_strava_description')
             return success
 
+        except StravaWritePermissionError:
+            # Token lacks activity:write — reset user to read-only and propagate
+            profile.opt_in_strava_write = False
+            profile.save(update_fields=['opt_in_strava_write'])
+            logger.warning(
+                f"Reset opt_in_strava_write=False for user {activity_instance.user.username}: "
+                "Strava token is missing activity:write_permission"
+            )
+            self.profiler.end_operation('update_strava_description')
+            raise
         except UserProfile.DoesNotExist:
             logger.warning(f"No profile found for user {activity_instance.user.username}")
             self.profiler.end_operation('update_strava_description')
