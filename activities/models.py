@@ -69,6 +69,7 @@ class Activity(models.Model):
     version = models.PositiveIntegerField(default=1)
     device_name = models.CharField(max_length=255, null=True)
     manually_modified = models.BooleanField(default=False, help_text="True if user has manually added/edited lift rides")
+    strava_description_updated = models.BooleanField(default=False, help_text="True if Strava description has been updated with lift rides")
 
     ski_area = models.ForeignKey(SkiArea, on_delete=models.PROTECT, null=True)
     trip = models.ForeignKey('Trip', on_delete=models.SET_NULL, null=True, blank=True, related_name='activities')

@@ -874,7 +874,7 @@
       </div>
 
       <!-- Update Strava Description -->
-      {% if user_opt_in_strava_write and activity.strava_id %}
+      {% if user_opt_in_strava_write and activity.strava_id and not activity.strava_description_updated %}
       <div class="col">
         <div class="h-100 p-3 rounded-3 bg-info bg-opacity-10 border border-info border-opacity-25">
           <h6 class="fw-bold mb-1 text-info text-center">Update Strava</h6>
@@ -1445,6 +1445,7 @@ async function updateStravaDescription(activityId) {
 
     if (res.ok) {
       showSuccessToast('Strava description updated successfully!');
+      setTimeout(() => location.reload(), 1500);
       return;
     }
 

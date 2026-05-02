@@ -400,11 +400,23 @@ def update_strava_description_api(request, activity_id):
 
         # Import and use the activity parser to update description
         from ..activity_parser import ActivityParser
+        from ..strava_interface import StravaWritePermissionError
         parser = ActivityParser()
 
-        success = parser.update_strava_description(activity)
+        try:
+            success = parser.update_strava_description(activity)
+        except StravaWritePermissionError:
+            return JsonResponse({
+                'error': (
+                    'Strava write permission is missing. '
+                    'Your profile has been reset to read-only. '
+                    'Please reconnect Strava with write access to use this feature.'
+                )
+            }, status=403)
 
         if success:
+            activity.strava_description_updated = True
+            activity.save(update_fields=['strava_description_updated'])
             return JsonResponse({
                 'success': True,
                 'message': 'Strava description updated successfully'

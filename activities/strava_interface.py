@@ -93,10 +93,16 @@ def load_activity_laps(User, activity_id):
     laps = client.get_activity_laps(activity_id)
     return laps
 
+class StravaWritePermissionError(Exception):
+    """Raised when the Strava token is missing activity:write_permission."""
+    pass
+
+
 def update_activity_description(user, activity_id, description):
     """
     Updates the description of a Strava activity.
     Requires 'activity:write' scope.
+    Raises StravaWritePermissionError if the token lacks write permission.
     """
     try:
         access_token = get_access_token(user)
@@ -105,5 +111,9 @@ def update_activity_description(user, activity_id, description):
         logger.info(f"Updated Strava activity {activity_id} description for user {user.username}")
         return True
     except Exception as e:
+        error_str = str(e)
+        if 'activity:write_permission' in error_str and 'missing' in error_str:
+            logger.error(f"Failed to update Strava activity {activity_id} description: {e}")
+            raise StravaWritePermissionError(error_str)
         logger.error(f"Failed to update Strava activity {activity_id} description: {e}", exc_info=True, stack_info=True)
         return False
