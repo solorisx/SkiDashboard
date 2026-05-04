@@ -27,6 +27,7 @@ urlpatterns = [
     path("admin/profiling/<int:activity_id>/", views.activity_profiling_detail, name="activity_profiling_detail"),
     path("insights/", views.activity_insights, name="activity_insights"),
     path("insights/<str:season>/", views.activity_insights, name="activity_insights_season"),
+    path("insights/<str:season>/share-image/", views.generate_season_share_image_view, name="generate_season_share_image"),
     path("lift-insights/", views.lift_insights, name="lift_insights"),
     path("lift-insights/<str:season>/", views.lift_insights, name="lift_insights_season"),
     path("piste-insights/", views.piste_insights, name="piste_insights"),

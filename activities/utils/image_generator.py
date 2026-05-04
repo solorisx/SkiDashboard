@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 IMAGE_WIDTH = 1080
 IMAGE_HEIGHT = 1920
 
-# Color scheme
+# Activity share color scheme
 COLOR_BG = '#1a1a2e'  # Dark blue background
 COLOR_TEXT_PRIMARY = '#ffffff'
 COLOR_TEXT_SECONDARY = '#a0a0b0'
@@ -26,6 +26,23 @@ COLOR_ACCENT = '#0d6efd'  # Bootstrap primary blue
 COLOR_SUCCESS = '#198754'
 COLOR_WARNING = '#ffc107'
 COLOR_CARD_BG = '#2a2a3e'
+
+# Season share color scheme (premium, darker palette)
+COLOR_SEASON_BG = '#0f172a'        # Very deep navy
+COLOR_SEASON_CARD = '#1a2644'      # Card background
+COLOR_SEASON_CARD_ALT = '#1e2d52'  # Alternate card
+COLOR_SEASON_ACCENT = '#38bdf8'    # Sky blue
+COLOR_SEASON_GOLD = '#f59e0b'      # Amber/gold for highlights
+COLOR_SEASON_DIVIDER = '#1e3055'   # Subtle divider lines
+
+# Badge rarity colors (shared)
+RARITY_COLORS = {
+    'legendary': '#9333ea',
+    'platinum':  '#cbd5e1',
+    'gold':      '#f59e0b',
+    'silver':    '#94a3b8',
+    'bronze':    '#b45309',
+}
 
 
 def get_font(size, bold=False):
@@ -431,6 +448,379 @@ def create_shareable_image(activity):
              fill=hex_to_rgb(COLOR_TEXT_SECONDARY), anchor="mt", font=font_branding)
 
     return img
+
+
+def _draw_mountain_icon(draw, cx, top_y, size=46):
+    """Draw a simple mountain peak icon. cx = horizontal center, top_y = peak y-coordinate."""
+    half = size // 2
+    draw.polygon([
+        (cx, top_y),
+        (cx - half, top_y + size),
+        (cx + half, top_y + size),
+    ], fill=hex_to_rgb(COLOR_SEASON_ACCENT))
+    # Snow cap (top ~35%)
+    cap_h = int(size * 0.35)
+    cap_hw = max(4, int(half * 0.42))
+    draw.polygon([
+        (cx, top_y),
+        (cx - cap_hw, top_y + cap_h),
+        (cx + cap_hw, top_y + cap_h),
+    ], fill=(255, 255, 255))
+
+
+def _draw_horiz_bar(draw, x, y, total_w, h, fill_ratio, fill_color, bg_color='#1e3055'):
+    """Draw a rounded horizontal progress bar."""
+    r = h // 2
+    draw.rounded_rectangle([(x, y), (x + total_w, y + h)], radius=r,
+                             fill=hex_to_rgb(bg_color))
+    fill_w = max(h, int(total_w * fill_ratio))
+    draw.rounded_rectangle([(x, y), (x + fill_w, y + h)], radius=r,
+                             fill=hex_to_rgb(fill_color))
+
+
+def _generate_monthly_pil_bars(draw, x, y, w, h, monthly_stats, accent, gold):
+    """
+    Draw a minimal bar chart for monthly descent directly with PIL.
+    Returns the y offset after drawing.
+    """
+    if not monthly_stats:
+        return y
+
+    max_descent = max((m['descent'] for m in monthly_stats), default=1) or 1
+    n = len(monthly_stats)
+    gap = max(4, w // (n * 6))
+    bar_w = (w - gap * (n + 1)) // n
+    label_font = get_font(20)
+
+    for i, month in enumerate(monthly_stats):
+        bx = x + gap + i * (bar_w + gap)
+        ratio = month['descent'] / max_descent
+        bar_h = max(4, int((h - 36) * ratio))
+        bar_y = y + (h - 36) - bar_h
+        color = gold if month['descent'] == max_descent else accent
+        draw.rounded_rectangle([(bx, bar_y), (bx + bar_w, y + h - 36)],
+                                radius=max(2, bar_w // 4),
+                                fill=hex_to_rgb(color))
+        # Month label
+        label = month['month'][:3]
+        draw.text((bx + bar_w // 2, y + h - 30), label,
+                  fill=hex_to_rgb('#64748b'), anchor='mt', font=label_font)
+
+    return y + h
+
+
+def create_season_share_image(season_label, season_start, season_end, stats,
+                               top_ski_areas, best_activity, badges_by_rarity,
+                               total_badge_count, monthly_stats):
+    """
+    Create a shareable Instagram story (1080×1920 px) with a full season summary.
+
+    Args:
+        season_label:     str like "2025-2026"
+        season_start/end: datetime objects for the season boundaries
+        stats:            dict – total_activities, total_descent, total_distance_km,
+                          total_lift_rides (all numeric, 0 if missing)
+        top_ski_areas:    list of dicts {ski_area__name, count}, up to 3
+        best_activity:    Activity instance or None (highest single-day descent)
+        badges_by_rarity: dict rarity → count
+        total_badge_count: int
+        monthly_stats:    list of {'month': 'Jan', 'descent': 12000}
+
+    Returns:
+        PIL Image (1080×1920 RGB)
+    """
+    img = Image.new('RGB', (IMAGE_WIDTH, IMAGE_HEIGHT), color=hex_to_rgb(COLOR_SEASON_BG))
+    draw = ImageDraw.Draw(img)
+
+    BG       = hex_to_rgb(COLOR_SEASON_BG)
+    CARD     = hex_to_rgb(COLOR_SEASON_CARD)
+    ACCENT   = hex_to_rgb(COLOR_SEASON_ACCENT)
+    GOLD     = hex_to_rgb(COLOR_SEASON_GOLD)
+    WHITE    = hex_to_rgb(COLOR_TEXT_PRIMARY)
+    MUTED    = hex_to_rgb('#64748b')
+    MUTED2   = hex_to_rgb('#94a3b8')
+    DIV      = hex_to_rgb(COLOR_SEASON_DIVIDER)
+    CX       = IMAGE_WIDTH // 2
+
+    # Fonts
+    f_wordmark  = get_font(56, bold=True)
+    f_season_yr = get_font(96, bold=True)
+    f_hero_num  = get_font(86, bold=True)
+    f_hero_lbl  = get_font(30)
+    f_section   = get_font(28, bold=True)
+    f_stat_val  = get_font(58, bold=True)
+    f_stat_lbl  = get_font(24)
+    f_body      = get_font(28)
+    f_small     = get_font(24)
+    f_tiny      = get_font(20)
+    f_branding  = get_font(34, bold=True)
+
+    PAD = 72   # side padding
+
+    # ── Sky-blue accent stripe at very top ──────────────────────────────
+    draw.rectangle([(0, 0), (IMAGE_WIDTH, 5)], fill=ACCENT)
+
+    # ─────────────────────────────────────────────────────────────────────
+    # SECTION 1 — Logo header  (y 5 → ~185)
+    # ─────────────────────────────────────────────────────────────────────
+    y = 28
+    icon_size = 42
+    _draw_mountain_icon(draw, CX, y, size=icon_size)
+    y += icon_size + 12
+
+    draw.text((CX, y), "SlopeLog", fill=ACCENT, anchor='mt', font=f_wordmark)
+    y += 66
+
+    draw.text((CX, y), "S E A S O N   R E C A P", fill=MUTED2, anchor='mt', font=f_tiny)
+    y += 34
+
+    # ─────────────────────────────────────────────────────────────────────
+    # SECTION 2 — Season year + date range  (~185 → ~370)
+    # ─────────────────────────────────────────────────────────────────────
+    y += 18
+    parts = season_label.split('-')
+    year_display = f"{parts[0]} · {parts[1]}" if len(parts) == 2 else season_label
+    draw.text((CX, y), year_display, fill=WHITE, anchor='mt', font=f_season_yr)
+    y += 108
+
+    try:
+        start_str = season_start.strftime('%b %Y')
+        end_str   = season_end.strftime('%b %Y')
+        date_range = f"{start_str}  –  {end_str}"
+    except Exception:
+        date_range = season_label
+    draw.text((CX, y), date_range, fill=MUTED2, anchor='mt', font=f_small)
+    y += 44
+
+    # Thin divider
+    draw.line([(CX - 80, y), (CX + 80, y)], fill=ACCENT, width=2)
+    y += 28
+
+    # ─────────────────────────────────────────────────────────────────────
+    # SECTION 3 — Hero descent stat  (~398 → ~618)
+    # ─────────────────────────────────────────────────────────────────────
+    y += 18
+    total_descent = int(stats.get('total_descent') or 0)
+    descent_str = f"{total_descent:,} m"
+
+    draw.text((CX, y), "↓", fill=ACCENT, anchor='mt', font=f_hero_num)
+    y += 94
+
+    draw.text((CX, y), descent_str, fill=WHITE, anchor='mt', font=f_hero_num)
+    y += 98
+
+    draw.text((CX, y), "vertical descent", fill=MUTED2, anchor='mt', font=f_hero_lbl)
+    y += 40
+
+    # Everest equivalent
+    if total_descent > 0:
+        everests = total_descent / 8848
+        if everests >= 1.0:
+            eq_text = f"≈ {everests:.1f}× the height of Everest"
+        else:
+            eq_text = f"≈ {total_descent / 1000:.1f} km straight down the mountain"
+        draw.text((CX, y), eq_text, fill=GOLD, anchor='mt', font=f_small)
+        y += 38
+    y += 6
+
+    # ─────────────────────────────────────────────────────────────────────
+    # SECTION 4 — Three secondary stats  (~660 → ~800)
+    # ─────────────────────────────────────────────────────────────────────
+    draw.line([(PAD, y), (IMAGE_WIDTH - PAD, y)], fill=DIV, width=1)
+    y += 28
+
+    secondary = [
+        (str(int(stats.get('total_activities') or 0)),          "Ski Days"),
+        (str(int(stats.get('total_lift_rides') or 0)),          "Lift Rides"),
+        (f"{float(stats.get('total_distance_km') or 0):.0f} km", "Distance"),
+    ]
+    col_w = IMAGE_WIDTH // 3
+    for i, (val, lbl) in enumerate(secondary):
+        cx_col = i * col_w + col_w // 2
+        if i > 0:
+            sep_x = i * col_w
+            draw.line([(sep_x, y + 8), (sep_x, y + 104)], fill=DIV, width=1)
+        draw.text((cx_col, y + 4),  val, fill=WHITE,  anchor='mt', font=f_stat_val)
+        draw.text((cx_col, y + 74), lbl, fill=MUTED2, anchor='mt', font=f_stat_lbl)
+
+    y += 118
+    draw.line([(PAD, y), (IMAGE_WIDTH - PAD, y)], fill=DIV, width=1)
+    y += 28
+
+    # ─────────────────────────────────────────────────────────────────────
+    # SECTION 5 — Mountains visited  (~846 → ~1080)
+    # ─────────────────────────────────────────────────────────────────────
+    draw.text((CX, y), "MOUNTAINS VISITED", fill=ACCENT, anchor='mt', font=f_section)
+    y += 44
+
+    if top_ski_areas:
+        bar_x = PAD
+        bar_w = IMAGE_WIDTH - PAD * 2
+        bar_h = 16
+        max_count = max(a['count'] for a in top_ski_areas)
+        area_fills = [COLOR_SEASON_ACCENT, '#60a5fa', '#818cf8']
+
+        for i, area in enumerate(top_ski_areas[:3]):
+            name = (area.get('ski_area__name') or 'Unknown Area')[:26]
+            count = area['count']
+            ratio = count / max_count if max_count else 0
+            fill_col = area_fills[i] if i < len(area_fills) else COLOR_SEASON_ACCENT
+
+            draw.text((bar_x, y), name,
+                      fill=WHITE, anchor='lt', font=f_small)
+            count_label = f"{count} day{'s' if count != 1 else ''}"
+            draw.text((IMAGE_WIDTH - bar_x, y), count_label,
+                      fill=MUTED2, anchor='rt', font=f_small)
+            y += 30
+
+            _draw_horiz_bar(draw, bar_x, y, bar_w, bar_h, ratio, fill_col)
+            y += bar_h + 16
+
+        extra = len(top_ski_areas) - 3
+        if extra > 0:
+            draw.text((CX, y), f"+ {extra} more mountain{'s' if extra > 1 else ''}",
+                      fill=MUTED, anchor='mt', font=f_tiny)
+            y += 28
+    else:
+        draw.text((CX, y), "No ski areas recorded", fill=MUTED, anchor='mt', font=f_body)
+        y += 38
+
+    draw.line([(PAD, y + 8), (IMAGE_WIDTH - PAD, y + 8)], fill=DIV, width=1)
+    y += 36
+
+    # ─────────────────────────────────────────────────────────────────────
+    # SECTION 6 — Best day  (~1116 → ~1306)
+    # ─────────────────────────────────────────────────────────────────────
+    draw.text((CX, y), "BEST DAY", fill=GOLD, anchor='mt', font=f_section)
+    y += 44
+
+    card_x = PAD
+    card_w = IMAGE_WIDTH - PAD * 2
+    card_h = 148
+    draw.rounded_rectangle([(card_x, y), (card_x + card_w, y + card_h)],
+                             radius=18, fill=CARD)
+
+    if best_activity:
+        import pytz
+        tz = pytz.timezone(best_activity.timezone) if best_activity.timezone else pytz.UTC
+        local_dt = best_activity.start_time.astimezone(tz)
+        date_str = local_dt.strftime('%B %d, %Y')
+        area_name = (best_activity.ski_area.name if best_activity.ski_area else 'Unknown Area')[:24]
+        best_desc = int(best_activity.total_descent or 0)
+        best_lifts = best_activity.num_lift_rides or 0
+        best_dist = round((best_activity.total_distance or 0) / 1000, 1)
+
+        cx_card = card_x + card_w // 2
+        draw.text((cx_card, y + 18), f"{date_str}  ·  {area_name}",
+                  fill=MUTED2, anchor='mt', font=f_small)
+        draw.text((cx_card, y + 54), f"↓ {best_desc:,} m",
+                  fill=GOLD, anchor='mt', font=f_stat_val)
+        draw.text((cx_card, y + 116), f"{best_lifts} lifts  ·  {best_dist} km",
+                  fill=MUTED2, anchor='mt', font=f_small)
+    else:
+        draw.text((card_x + card_w // 2, y + card_h // 2),
+                  "No activities recorded", fill=MUTED, anchor='mm', font=f_body)
+
+    y += card_h + 14
+    draw.line([(PAD, y + 8), (IMAGE_WIDTH - PAD, y + 8)], fill=DIV, width=1)
+    y += 36
+
+    # ─────────────────────────────────────────────────────────────────────
+    # SECTION 7 — Month by month  (~1356 → ~1594)
+    # ─────────────────────────────────────────────────────────────────────
+    draw.text((CX, y), "MONTH BY MONTH", fill=ACCENT, anchor='mt', font=f_section)
+    y += 44
+
+    chart_w = IMAGE_WIDTH - PAD * 2
+    chart_h = 180
+    draw.rounded_rectangle([(PAD, y), (PAD + chart_w, y + chart_h)],
+                             radius=16, fill=CARD)
+
+    if monthly_stats:
+        _generate_monthly_pil_bars(draw, PAD + 16, y + 12,
+                                    chart_w - 32, chart_h - 12,
+                                    monthly_stats, COLOR_SEASON_ACCENT, COLOR_SEASON_GOLD)
+    else:
+        draw.text((CX, y + chart_h // 2), "No data",
+                  fill=MUTED, anchor='mm', font=f_body)
+
+    y += chart_h + 14
+    draw.line([(PAD, y + 8), (IMAGE_WIDTH - PAD, y + 8)], fill=DIV, width=1)
+    y += 36
+
+    # ─────────────────────────────────────────────────────────────────────
+    # SECTION 8 — Achievements  (~1644 → ~1820)
+    # ─────────────────────────────────────────────────────────────────────
+    draw.text((CX, y), "ACHIEVEMENTS", fill=ACCENT, anchor='mt', font=f_section)
+    y += 44
+
+    rarity_order = ['legendary', 'platinum', 'gold', 'silver', 'bronze']
+    earned = [(r, badges_by_rarity[r]) for r in rarity_order if badges_by_rarity.get(r)]
+
+    if earned:
+        n_cols = len(earned)
+        col_w2 = IMAGE_WIDTH // n_cols
+        circle_r = 26
+
+        for i, (rarity, count) in enumerate(earned):
+            bx = i * col_w2 + col_w2 // 2
+            rc = hex_to_rgb(RARITY_COLORS.get(rarity, '#6c757d'))
+            # Filled circle
+            draw.ellipse([(bx - circle_r, y), (bx + circle_r, y + circle_r * 2)],
+                          fill=rc)
+            # Count inside
+            draw.text((bx, y + circle_r), str(count),
+                       fill=WHITE, anchor='mm', font=f_section)
+            # Rarity label below
+            draw.text((bx, y + circle_r * 2 + 8), rarity.capitalize(),
+                       fill=MUTED2, anchor='mt', font=f_tiny)
+
+        y += circle_r * 2 + 36
+        draw.text((CX, y), f"{total_badge_count} badge{'s' if total_badge_count != 1 else ''} earned",
+                  fill=MUTED, anchor='mt', font=f_small)
+        y += 34
+    else:
+        draw.text((CX, y), "No achievements yet this season",
+                  fill=MUTED, anchor='mt', font=f_body)
+        y += 38
+
+    # ─────────────────────────────────────────────────────────────────────
+    # FOOTER — always pinned to bottom of canvas
+    # ─────────────────────────────────────────────────────────────────────
+    footer_y = IMAGE_HEIGHT - 82
+    draw.rectangle([(0, footer_y - 1), (IMAGE_WIDTH, IMAGE_HEIGHT)],
+                   fill=hex_to_rgb('#070c17'))
+    draw.line([(0, footer_y - 1), (IMAGE_WIDTH, footer_y - 1)], fill=ACCENT, width=2)
+    draw.text((CX, footer_y + 12), "slopelog.com",
+              fill=ACCENT, anchor='mt', font=f_branding)
+    draw.text((CX, footer_y + 54), "✦  Premium Season Summary  ✦",
+              fill=MUTED, anchor='mt', font=f_tiny)
+
+    return img
+
+
+def generate_season_share_image_bytes(season_label, season_start, season_end, stats,
+                                       top_ski_areas, best_activity, badges_by_rarity,
+                                       total_badge_count, monthly_stats):
+    """
+    Generate season summary image and return as a BytesIO PNG.
+    Raises on failure.
+    """
+    img = create_season_share_image(
+        season_label=season_label,
+        season_start=season_start,
+        season_end=season_end,
+        stats=stats,
+        top_ski_areas=top_ski_areas,
+        best_activity=best_activity,
+        badges_by_rarity=badges_by_rarity,
+        total_badge_count=total_badge_count,
+        monthly_stats=monthly_stats,
+    )
+    buf = io.BytesIO()
+    img.save(buf, format='PNG', optimize=True)
+    buf.seek(0)
+    return buf
 
 
 def generate_activity_share_image_bytes(activity):

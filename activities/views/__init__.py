@@ -54,6 +54,7 @@ from .admin_profiling import (
 
 from .insights import (
     activity_insights,
+    generate_season_share_image_view,
 )
 
 from .lift_insights import (
@@ -130,6 +131,7 @@ __all__ = [
 
     # Insights views
     'activity_insights',
+    'generate_season_share_image_view',
     'lift_insights',
     'ski_area_completeness_detail',
     'ski_area_completeness_all',
