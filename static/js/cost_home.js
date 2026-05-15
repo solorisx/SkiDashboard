@@ -82,8 +82,20 @@ function isoToLocaleDate(isoDate) {
   return `${day}.${month}.${year}`;
 }
 
+function btnLoading(btn, text) {
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>${text}`;
+  return original;
+}
+
+function btnReset(btn, original) {
+  btn.disabled = false;
+  btn.innerHTML = original;
+}
+
 // Create season pass
-function saveSeasonPass() {
+async function saveSeasonPass() {
   const type = document.querySelector('input[name="pass_type"]:checked').value;
   const modal = document.getElementById('addSeasonPassModal');
   const skiarea = document.getElementById('id_skiareaAdd')?.value || '';
@@ -100,28 +112,29 @@ function saveSeasonPass() {
   if (type === 'skiarea') { payload.skiarea = skiarea || null; payload.skiarea_network = null; }
   else { payload.skiarea_network = network || null; payload.skiarea = null; }
 
-  fetch(`/api/season-pass/`, {
-    method: "POST",
-    headers: {
-      "X-CSRFToken": getCookie("csrftoken"),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  })
-  .then(r => {
+  const btn = document.getElementById('saveSeasonPassBtn');
+  const original = btnLoading(btn, 'Saving…');
+
+  try {
+    const r = await fetch(`/api/season-pass/`, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
     if (!r.ok) throw new Error('Failed to create pass');
-    // TODO: Handle successful response with toast/notification
-    return null;
-  })
-  .then(() => location.reload())
-  .catch(err => {
+    location.reload();
+  } catch (err) {
     console.error(err);
     alert("❌ Failed to create season pass.");
-  });
+    btnReset(btn, original);
+  }
 }
 
 // Update season pass
-function updateSeasonPass() {
+async function updateSeasonPass() {
   const id = document.getElementById('editPassId').value;
   const modal = document.getElementById('editSeasonPassModal');
   const type = document.querySelector('input[name="edit_pass_type"]:checked').value;
@@ -131,52 +144,55 @@ function updateSeasonPass() {
   const valid_until = localeDateToISO(document.getElementById('editValidUntil').value);
 
   const payload = {
-    valid_from, valid_until, 
+    valid_from, valid_until,
     price_0: modal.querySelector('[name="priceEdit_0"]').value,
     price_1: modal.querySelector('[name="priceEdit_1"]').value,
     skiarea: (type === 'skiarea') ? (skiarea || null) : null,
     skiarea_network: (type === 'network') ? (network || null) : null,
   };
 
-  fetch(`/api/season-pass/${id}/`, {
-    method: "PATCH",
-    headers: {
-      "X-CSRFToken": getCookie("csrftoken"),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  })
-  .then(r => {
+  const btn = document.getElementById('updateSeasonPassBtn');
+  const original = btnLoading(btn, 'Saving…');
+
+  try {
+    const r = await fetch(`/api/season-pass/${id}/`, {
+      method: "PATCH",
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
     if (!r.ok) throw new Error('Failed to update pass');
-    // TODO: Handle successful response with toast/notification
-    return null;
-  })
-  .then(() => location.reload())
-  .catch(err => {
+    location.reload();
+  } catch (err) {
     console.error(err);
     alert("❌ Failed to update season pass.");
-  });
+    btnReset(btn, original);
+  }
 }
 
 // Delete season pass via modal
-function confirmDeleteSeasonPass() {
+async function confirmDeleteSeasonPass() {
   const id = document.getElementById('deletePassId').value;
-  fetch(`/api/season-pass/${id}/`, {
-    method: "DELETE",
-    headers: {
-      "X-CSRFToken": getCookie("csrftoken"),
-      "Content-Type": "application/json",
-    },
-  })
-  .then(r => {
+  const btn = document.getElementById('deleteSeasonPassBtn');
+  const original = btnLoading(btn, 'Deleting…');
+
+  try {
+    const r = await fetch(`/api/season-pass/${id}/`, {
+      method: "DELETE",
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken"),
+        "Content-Type": "application/json",
+      },
+    });
     if (!r.ok) throw new Error('Failed to delete pass');
-    return null;
-  })
-  .then(() => location.reload())
-  .catch(err => {
+    location.reload();
+  } catch (err) {
     console.error(err);
     alert("❌ Failed to delete season pass.");
-  });
+    btnReset(btn, original);
+  }
 }
 
 // DOM ready initialization
