@@ -19,21 +19,39 @@
           <p class="text-muted fs-5 mb-0">Discover your skiing patterns and achievements</p>
         </div>
 
-        <!-- Season Filter -->
-        {% if seasons %}
-        <div class="dropdown">
-          <button class="btn btn-outline-primary btn-lg dropdown-toggle d-flex align-items-center gap-2" type="button" id="seasonDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-calendar-event"></i>
-            {% if selected_season %}Season {{ selected_season }}{% else %}All Seasons{% endif %}
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="seasonDropdown">
-            <li><a class="dropdown-item {% if not selected_season %}active{% endif %}" href="{% url 'activity_insights' %}">All Seasons</a></li>
-            {% for season in seasons %}
-              <li><a class="dropdown-item {% if selected_season == season %}active{% endif %}" href="{% url 'activity_insights_season' season %}">Season {{ season }}</a></li>
-            {% endfor %}
-          </ul>
+        <!-- Season Filter + Share -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          {% if seasons %}
+          <div class="dropdown">
+            <button class="btn btn-outline-primary btn-lg dropdown-toggle d-flex align-items-center gap-2" type="button" id="seasonDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-calendar-event"></i>
+              {% if selected_season %}Season {{ selected_season }}{% else %}All Seasons{% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="seasonDropdown">
+              <li><a class="dropdown-item {% if not selected_season %}active{% endif %}" href="{% url 'activity_insights' %}">All Seasons</a></li>
+              {% for season in seasons %}
+                <li><a class="dropdown-item {% if selected_season == season %}active{% endif %}" href="{% url 'activity_insights_season' season %}">Season {{ season }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          {% if user_is_premium %}
+            <a href="{% url 'generate_season_share_image' share_season %}"
+               class="btn btn-lg d-flex align-items-center gap-2 share-season-btn"
+               title="Download Instagram Story image for Season {{ share_season }}">
+              <i class="bi bi-instagram"></i>
+              <span class="d-none d-sm-inline">Share Season</span>
+            </a>
+          {% else %}
+            <a href="{% url 'premium_info' %}"
+               class="btn btn-outline-secondary btn-lg d-flex align-items-center gap-2"
+               title="Premium feature – upgrade to share your season">
+              <i class="bi bi-lock me-1"></i>
+              <span class="d-none d-sm-inline">Share Season</span>
+            </a>
+          {% endif %}
         </div>
-        {% endif %}
       </div>
     </div>
     {% if not user_is_premium %}
@@ -451,6 +469,26 @@
 
 .hover-lift:hover {
   transform: translateY(-2px);
+}
+
+/* Instagram share button */
+.share-season-btn {
+  background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.share-season-btn:hover {
+  color: #fff;
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.share-season-btn:active {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .badge-card {
