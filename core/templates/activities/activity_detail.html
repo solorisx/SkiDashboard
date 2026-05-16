@@ -576,7 +576,13 @@
                   </td>
                   <td>
                     <div class="btn-group" role="group">
-                      <button class="btn btn-outline-primary btn-sm" onclick="editLiftRide({{ lift_ride.id }})" title="Edit">
+                      <button class="btn btn-outline-primary btn-sm"
+                              onclick="editLiftRide({{ lift_ride.id }}, this)"
+                              data-lap-id="{{ lift_ride.lap.id }}"
+                              data-aerialway-id="{{ lift_ride.aerialway.id }}"
+                              data-uphill="{{ lift_ride.uphill|yesno:'true,false,' }}"
+                              data-timestamp="{% timezone activity.timezone %}{{ lift_ride.timestamp|date:'H:i' }}{% endtimezone %}"
+                              title="Edit">
                         <i class="bi bi-pencil"></i>
                       </button>
                       <button class="btn btn-outline-danger btn-sm" onclick="deleteLiftRide({{ lift_ride.id }}, this)" title="Delete">
@@ -1247,11 +1253,25 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
+  // Prefill timestamp when a lap is selected in the Add Lift Ride modal
+  const lapStartTimes = {
+    {% for lap in laps %}"{{ lap.id }}": "{% timezone activity.timezone %}{{ lap.start_time|date:'H:i' }}{% endtimezone %}",
+    {% endfor %}
+  };
+  document.getElementById('lapSelect').addEventListener('change', function() {
+    const time = lapStartTimes[this.value];
+    if (time) document.getElementById('timestampInput').value = time;
+  });
+
 });
 
-function editLiftRide(liftRideId) {
-  const modal = new bootstrap.Modal(document.getElementById('editLiftRideModal'));
+function editLiftRide(liftRideId, btn) {
   document.getElementById('editLiftRideId').value = liftRideId;
+  document.getElementById('editLapSelect').value = btn.dataset.lapId;
+  document.getElementById('editLiftSelect').value = btn.dataset.aerialwayId;
+  document.getElementById('editDirectionSelect').value = btn.dataset.uphill;
+  document.getElementById('editTimestampInput').value = btn.dataset.timestamp;
+  const modal = new bootstrap.Modal(document.getElementById('editLiftRideModal'));
   modal.show();
 }
 
