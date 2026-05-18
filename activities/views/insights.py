@@ -247,10 +247,17 @@ def generate_season_share_image_view(request, season):
         if stats[key] is None:
             stats[key] = 0
 
+    from django.db.models.functions import TruncDate
+    from ..models import Activity
+
+    # Use a clean queryset (no badge JOIN from the base query) to avoid inflated counts.
     top_ski_areas = list(
-        activities.exclude(ski_area__isnull=True)
+        Activity.objects
+        .filter(user=request.user, ski_area__isnull=False)
+        .filter(filter_query)
+        .annotate(day=TruncDate('timestamp'))
         .values('ski_area__name')
-        .annotate(count=Count('id'))
+        .annotate(count=Count('day', distinct=True))
         .order_by('-count')[:5]
     )
 
