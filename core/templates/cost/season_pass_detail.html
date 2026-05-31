@@ -57,7 +57,26 @@
                     <div class="fs-5 fw-bold text-warning">
                         {{ cost_per_day|format_money }}
                     </div>
-                    <div class="small text-muted">Cost per day</div>
+                    <div class="small text-muted">Winter cost / day</div>
+                    {% if total_summer_value %}
+                    <div class="small text-muted" style="font-size:0.7rem">net of summer value</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if total_summer_value %}
+        <div class="col-md-3 col-6">
+            <div class="card stats-card border-0 bg-info bg-opacity-10">
+                <div class="card-body text-center p-3">
+                    <div class="badge-icon bg-info text-white rounded-circle mb-2 mx-auto">
+                        <i class="bi bi-sun"></i>
+                    </div>
+                    <div class="fs-5 fw-bold text-info">{{ total_summer_value|format_money }}</div>
+                    <div class="small text-muted">Summer value ({{ summer_count }})</div>
+                    {% if summer_avg_value %}
+                    <div class="small text-muted" style="font-size:0.7rem">avg {{ summer_avg_value|format_money }}/activity</div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -205,6 +224,56 @@
             </table>
         </div>
     </div>
+
+    {% if summer_activities %}
+    <!-- Summer Activities attributed to this pass -->
+    <div class="card modern-table-card mt-4">
+        <div class="card-header bg-white border-bottom-0 py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 fw-semibold">
+                    <i class="bi bi-sun me-2 text-info"></i>Summer Activities
+                </h5>
+                <small class="text-muted">{{ summer_count }} activit{{ summer_count|pluralize:"y,ies" }}</small>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th><i class="bi bi-tag me-2"></i>Name</th>
+                        <th><i class="bi bi-grid me-2"></i>Type</th>
+                        <th><i class="bi bi-calendar-event me-2"></i>Date</th>
+                        <th class="text-end"><i class="bi bi-cash-coin me-2"></i>Value</th>
+                        <th class="text-center"><i class="bi bi-link-45deg me-2"></i>Links</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in summer_activities %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'summer_activity_edit' s.pk %}" class="fw-medium text-decoration-none">{{ s.name }}</a>
+                        </td>
+                        <td>
+                            <span class="badge bg-info bg-opacity-10 text-info px-2 py-1">
+                                <i class="{{ s.activity_type.icon }} me-1"></i>{{ s.activity_type.name }}
+                            </span>
+                        </td>
+                        <td>{{ s.date|date:"M d, Y" }}</td>
+                        <td class="text-end">{% if s.value %}{{ s.value|format_money }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                        <td class="text-center">
+                            {% if s.get_strava_url %}
+                                <a href="{{ s.get_strava_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Strava
+                                </a>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 

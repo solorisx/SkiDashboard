@@ -300,3 +300,126 @@ class ActivityParserProfile(models.Model):
 
     def __str__(self):
         return f"{self.activity} - {self.operation}"
+
+
+class SummerActivityType(models.Model):
+    """
+    A user-selectable category for a manually tracked off-season (summer) activity,
+    e.g. Hiking, Mountain Biking, Via Ferrata.
+
+    Built-in types are global (``user`` is NULL) and seeded via data migration.
+    Users may additionally create their own custom types (``user`` set).
+    """
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, blank=True,
+        help_text="Owner of a custom type; NULL for built-in global types.",
+    )
+    name = models.CharField(max_length=100)
+    natural_key = models.SlugField(
+        max_length=120, unique=True,
+        help_text="Stable identifier, unique across deployments (e.g. 'mountain-biking').",
+    )
+    icon = models.CharField(
+        max_length=100, default='bi bi-bicycle',
+        help_text="Bootstrap-icons class used in the UI.",
+    )
+    color = models.CharField(max_length=20, default='#2e7d32')
+    sort_order = models.PositiveIntegerField(default=100)
+    is_active = models.BooleanField(default=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', 'name']
+        indexes = [
+            models.Index(fields=['user'], name='summertype_user_idx'),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def for_user(cls, user):
+        """Return active types available to a user: built-in globals + their own."""
+        from django.db.models import Q
+        return cls.objects.filter(is_active=True).filter(Q(user__isnull=True) | Q(user=user))
+
+
+class SummerActivity(models.Model):
+    """
+    A manually tracked off-season activity that does not come from the GPS/lift
+    parsing pipeline. Kept deliberately separate from :class:`Activity` so that
+    all ski-specific views, statistics, badges and trip clustering (which query
+    ``Activity``) remain winter-only by construction.
+
+    Summer activities may optionally reference a Strava activity, be located at a
+    ski area and be attributed to a :class:`cost.SeasonPass` so that their
+    ``value`` offsets the effective cost of winter ski days.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='summer_activities')
+    name = models.CharField(max_length=200)
+    activity_type = models.ForeignKey(
+        SummerActivityType, on_delete=models.PROTECT, related_name='activities',
+    )
+    date = models.DateField(help_text="Calendar date the activity took place.")
+    timezone = models.CharField(
+        max_length=100, null=True, blank=True,
+        help_text="IANA timezone name (e.g., Europe/Zurich).",
+    )
+
+    # Optional Strava link (manual association only; not auto-synced).
+    strava_id = models.PositiveBigIntegerField(null=True, blank=True, unique=True)
+    strava_type = models.CharField(
+        max_length=100, null=True, blank=True,
+        help_text="Raw Strava sport_type (e.g. Run, Ride, Hike) when linked.",
+    )
+
+    # Location / season-pass attribution.
+    ski_area = models.ForeignKey(
+        SkiArea, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='summer_activities',
+    )
+    season_pass = models.ForeignKey(
+        'cost.SeasonPass', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='summer_activities',
+        help_text="Season pass covering this activity, if any.",
+    )
+
+    # Optional metrics (manual entry).
+    distance = models.FloatField(null=True, blank=True, help_text="Distance in meters.")
+    elevation_gain = models.FloatField(null=True, blank=True, help_text="Total ascent in meters.")
+    duration = models.DurationField(null=True, blank=True)
+
+    # Money: out-of-pocket cost paid, and ticket-equivalent value when covered.
+    cost = MoneyField(
+        max_digits=10, decimal_places=2, default_currency='CHF', null=True, blank=True,
+        help_text="Out-of-pocket cost paid for this activity.",
+    )
+    value = MoneyField(
+        max_digits=10, decimal_places=2, default_currency='CHF', null=True, blank=True,
+        help_text="Equivalent ticket value when covered by a season pass.",
+    )
+
+    notes = models.TextField(blank=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    modified_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "summer activity"
+        verbose_name_plural = "summer activities"
+        ordering = ['-date']
+        indexes = [
+            models.Index(fields=['user', '-date'], name='summeract_user_date_idx'),
+            models.Index(fields=['season_pass'], name='summeract_seasonpass_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.date})"
+
+    @property
+    def is_covered(self):
+        """True if this activity is attributed to a season pass."""
+        return self.season_pass_id is not None
+
+    def get_strava_url(self):
+        return f"https://www.strava.com/activities/{self.strava_id}" if self.strava_id else None

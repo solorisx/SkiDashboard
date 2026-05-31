@@ -1,0 +1,143 @@
+{% extends "base/base.html" %}
+{% load custom_filters %}
+{% load static %}
+
+{% block pagetitle %}Summer Activities{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/components/cards.css' %}" rel="stylesheet">
+<link href="{% static 'css/components/empty-states.css' %}" rel="stylesheet">
+<link href="{% static 'css/layouts/page-header.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <!-- Page Header -->
+  <div class="page-header with-actions">
+    <div class="page-header-content">
+      <h1>Summer Activities</h1>
+      <p>Manually track your off-season adventures and the value you get from your passes outside ski season</p>
+      <div class="page-subtitle">
+        <i class="bi bi-info-circle"></i>
+        <span>{{ count }} activit{{ count|pluralize:"y,ies" }}</span>
+        {% if total_value %}<span class="ms-3"><i class="bi bi-cash-coin"></i> {{ total_value|format_money }} value</span>{% endif %}
+        {% if total_cost %}<span class="ms-3"><i class="bi bi-wallet2"></i> {{ total_cost|format_money }} spent</span>{% endif %}
+      </div>
+    </div>
+    <div class="page-header-actions">
+      <a class="btn btn-primary" href="{% url 'summer_activity_create' %}">
+        <i class="bi bi-plus-circle me-2"></i>Add Activity
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+      <label class="form-label small text-muted mb-1">Activity type</label>
+      <select name="type" class="form-select" onchange="this.form.submit()">
+        <option value="">All types</option>
+        {% for t in types %}
+          <option value="{{ t.natural_key }}" {% if selected_type == t.natural_key %}selected{% endif %}>{{ t.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <label class="form-label small text-muted mb-1">Year</label>
+      <select name="year" class="form-select" onchange="this.form.submit()">
+        <option value="">All years</option>
+        {% for y in years %}
+          <option value="{{ y }}" {% if selected_year == y|stringformat:'s' %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if selected_type or selected_year %}
+    <div class="col-auto">
+      <a class="btn btn-outline-secondary" href="{% url 'summer_activity_list' %}">
+        <i class="bi bi-x-circle me-1"></i>Clear
+      </a>
+    </div>
+    {% endif %}
+  </form>
+
+  {% if activities %}
+    <div class="row g-3">
+      {% for a in activities %}
+      <div class="col-12">
+        <div class="data-card">
+          <div class="data-card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="data-card-title">
+                <i class="{{ a.activity_type.icon }} me-2" style="color: {{ a.activity_type.color }}"></i>
+                {{ a.name }}
+              </div>
+              <div class="d-flex gap-2">
+                <span class="badge type-info data-card-badge">{{ a.activity_type.name }}</span>
+                {% if a.is_covered %}
+                  <span class="badge status-active data-card-badge"><i class="bi bi-ticket-perforated me-1"></i>Covered</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="data-card-body">
+            <div class="metrics-grid">
+              <div class="metric-item">
+                <span class="metric-value">{{ a.date|date:"M d, Y" }}</span>
+                <span class="metric-label">Date</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-value">{% if a.ski_area %}{{ a.ski_area.name }}{% else %}—{% endif %}</span>
+                <span class="metric-label">Location</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-value">{% if a.distance %}{{ a.distance|divide:1000|round_to:1 }} km{% else %}—{% endif %}</span>
+                <span class="metric-label">Distance</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-value">{% if a.elevation_gain %}{{ a.elevation_gain|round_to:0|floatformat:0 }} m{% else %}—{% endif %}</span>
+                <span class="metric-label">Ascent</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-value">{% if a.value %}{{ a.value|format_money }}{% else %}—{% endif %}</span>
+                <span class="metric-label">Value</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-value">{% if a.cost %}{{ a.cost|format_money }}{% else %}—{% endif %}</span>
+                <span class="metric-label">Cost</span>
+              </div>
+            </div>
+          </div>
+          <div class="data-card-footer">
+            <div class="card-actions">
+              {% if a.get_strava_url %}
+                <a href="{{ a.get_strava_url }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
+                  <i class="bi bi-box-arrow-up-right me-1"></i>Strava
+                </a>
+              {% endif %}
+              <a href="{% url 'summer_activity_edit' a.pk %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-pencil me-1"></i>Edit
+              </a>
+              <a href="{% url 'summer_activity_delete' a.pk %}" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-trash me-1"></i>Delete
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <i class="bi bi-sun display-1"></i>
+      </div>
+      <h4>No Summer Activities Yet</h4>
+      <p>Track hikes, bike rides, via ferratas and more. Optionally attribute them to a season pass to see the off-season value you're getting.</p>
+      <a class="btn btn-primary btn-lg" href="{% url 'summer_activity_create' %}">
+        <i class="bi bi-plus-circle me-2"></i>Add Your First Activity
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib import messages
 from .models import Activity, ActivityBadge, Badge
 from .models import StravaSyncSettings
+from .models import SummerActivity, SummerActivityType
 
 
 def update_strava_descriptions(modeladmin, request, queryset):
@@ -102,3 +103,20 @@ class StravaSyncSettingsAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         # Enforce single-row settings (optional)
         return not StravaSyncSettings.objects.exists()
+
+
+@admin.register(SummerActivityType)
+class SummerActivityTypeAdmin(admin.ModelAdmin):
+    list_display = ['name', 'natural_key', 'user', 'sort_order', 'is_active']
+    list_filter = ['is_active']
+    search_fields = ['name', 'natural_key']
+    prepopulated_fields = {'natural_key': ('name',)}
+
+
+@admin.register(SummerActivity)
+class SummerActivityAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'user', 'activity_type', 'date', 'ski_area', 'season_pass', 'value']
+    list_filter = ['activity_type', 'date', 'user']
+    search_fields = ['name', 'user__username', 'strava_id']
+    raw_id_fields = ['ski_area', 'season_pass']
+    readonly_fields = ['created_on', 'modified_on']

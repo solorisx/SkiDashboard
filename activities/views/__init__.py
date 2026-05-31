@@ -78,6 +78,13 @@ from .trips import (
     recluster_trips,
 )
 
+from .summer import (
+    summer_activity_list,
+    summer_activity_create,
+    summer_activity_edit,
+    summer_activity_delete,
+)
+
 # For backward compatibility, we also need to ensure the home_stats view 
 # returns a proper HttpResponse for template rendering
 from django.shortcuts import render
@@ -148,4 +155,10 @@ __all__ = [
     'trip_detail',
     'rename_trip',
     'recluster_trips',
+
+    # Summer activity views
+    'summer_activity_list',
+    'summer_activity_create',
+    'summer_activity_edit',
+    'summer_activity_delete',
 ]

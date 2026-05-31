@@ -102,12 +102,64 @@ class SeasonPass(models.Model):
     def count_valid_activities(self, date_from: datetime = make_aware(datetime.min), date_until: datetime = make_aware(datetime.max)):
         return self.get_valid_activities(date_from, date_until).count()
 
+    # --- Summer (off-season) activities attributed to this pass -------------
+
+    def get_summer_activities(self):
+        """Manually tracked summer activities explicitly attributed to this pass."""
+        from activities.models import SummerActivity
+        return SummerActivity.objects.filter(season_pass=self)
+
+    def count_summer_activities(self):
+        return self.get_summer_activities().count()
+
+    @property
+    def total_summer_value(self):
+        """
+        Sum of the ``value`` of all summer activities attributed to this pass.
+
+        Summed in Python (rather than via the ORM) to safely skip NULL values.
+        Assumes summer values share the pass currency; mixing currencies will
+        raise, which is the desired loud failure.
+        """
+        total = None
+        for sa in self.get_summer_activities().only('value', 'value_currency'):
+            if sa.value is not None:
+                total = sa.value if total is None else total + sa.value
+        return total
+
+    @property
+    def summer_avg_value(self):
+        """
+        Average value of summer activities = the cost attributed to a summer day.
+        Defined per spec as ``total summer value / number of summer activities``.
+        """
+        total = self.total_summer_value
+        count = self.count_summer_activities()
+        if total is not None and count > 0:
+            return round(total / count, 2)
+        return None
+
     @property
     def cost_per_day(self):
+        """
+        Effective cost attributed to a single winter (ski) day.
+
+        Summer activities covered by this pass consume part of the pass value, so
+        the price remaining for winter days is reduced by the total summer value:
+
+            winter_cost_per_day = (price - total_summer_value) / winter_activities
+        """
         count = self.count_valid_activities()
-        if count > 0:
-            return round(self.price / count, 2)
-        return None
+        if count <= 0:
+            return None
+        net_price = self.price
+        summer_value = self.total_summer_value
+        if summer_value is not None:
+            try:
+                net_price = self.price - summer_value
+            except Exception:
+                net_price = self.price
+        return round(net_price / count, 2)
 
     def __str__(self):
         return f'{self.user} - {self.skiarea}{self.skiarea_network} - {self.valid_from} - {self.valid_until}'

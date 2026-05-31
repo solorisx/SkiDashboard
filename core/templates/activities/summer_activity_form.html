@@ -1,0 +1,124 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block pagetitle %}{% if mode == 'edit' %}Edit{% else %}Add{% endif %} Summer Activity{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/layouts/page-header.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 820px;">
+
+  <div class="page-header">
+    <div class="page-header-content">
+      <h1>{% if mode == 'edit' %}Edit Summer Activity{% else %}Add Summer Activity{% endif %}</h1>
+      <p>Manually log an off-season activity. Fields other than name, type and date are optional.</p>
+    </div>
+  </div>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-body">
+        <div class="row g-3">
+
+          <div class="col-md-8">
+            <label class="form-label fw-semibold" for="{{ form.name.id_for_label }}">Name</label>
+            {{ form.name }}
+            {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="{{ form.activity_type.id_for_label }}">Activity type</label>
+            {{ form.activity_type }}
+            {% if form.activity_type.errors %}<div class="text-danger small">{{ form.activity_type.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="{{ form.date.id_for_label }}">Date</label>
+            {{ form.date }}
+            {% if form.date.errors %}<div class="text-danger small">{{ form.date.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-8">
+            <label class="form-label fw-semibold" for="{{ form.ski_area.id_for_label }}">Ski area / location (optional)</label>
+            {{ form.ski_area }}
+            {% if form.ski_area.errors %}<div class="text-danger small">{{ form.ski_area.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="{{ form.distance_km.id_for_label }}">Distance (km)</label>
+            {{ form.distance_km }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="{{ form.elevation_gain.id_for_label }}">Ascent (m)</label>
+            {{ form.elevation_gain }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="{{ form.duration_minutes.id_for_label }}">Duration (min)</label>
+            {{ form.duration_minutes }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-ticket-perforated me-2"></i>Season pass &amp; cost</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold" for="{{ form.season_pass.id_for_label }}">Covered by season pass (optional)</label>
+            {{ form.season_pass }}
+            <div class="form-text">Attribute this activity to a pass so its value offsets your winter cost per day.</div>
+            {% if form.season_pass.errors %}<div class="text-danger small">{{ form.season_pass.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold" for="{{ form.value.id_for_label }}">Value (if covered)</label>
+            {{ form.value }}
+            <div class="form-text">Equivalent ticket price.</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold" for="{{ form.cost.id_for_label }}">Cost paid</label>
+            {{ form.cost }}
+            <div class="form-text">Out-of-pocket amount.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header bg-white fw-semibold"><i class="bi bi-link-45deg me-2"></i>Strava link &amp; notes (optional)</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="{{ form.strava_id.id_for_label }}">Strava activity ID</label>
+            {{ form.strava_id }}
+            {% if form.strava_id.errors %}<div class="text-danger small">{{ form.strava_id.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" for="{{ form.strava_type.id_for_label }}">Strava sport type</label>
+            {{ form.strava_type }}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold" for="{{ form.notes.id_for_label }}">Notes</label>
+            {{ form.notes }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-between mt-4">
+      <a href="{% url 'summer_activity_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Cancel
+      </a>
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check-circle me-1"></i>{% if mode == 'edit' %}Save changes{% else %}Add activity{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

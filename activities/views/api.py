@@ -178,11 +178,15 @@ def home_stats(request):
         activities_for_pass = sp.get_valid_activities(season_start, season_end)
         if activities_for_pass:
             act_count = activities_for_pass.count()
+            # Summer activities covered by this pass offset the winter cost/day.
+            summer_value = sp.total_summer_value
+            summer_value_amount = float(summer_value.amount) if summer_value is not None else 0.0
             cost_per_day = None
             if act_count > 0:
                 try:
+                    net_amount = float(sp.price.amount) - summer_value_amount
                     cost_per_day = {
-                        'amount': round(float(sp.price.amount) / act_count, 2),
+                        'amount': round(net_amount / act_count, 2),
                         'currency': str(sp.price.currency),
                     }
                 except Exception:
@@ -190,6 +194,7 @@ def home_stats(request):
             season_pass_stats[sp] = {
                 'name': sp.skiarea.name if sp.skiarea else str(sp.skiarea_network),
                 'activities': act_count,
+                'summer_value': summer_value_amount,
                 'cost_per_day': cost_per_day,
             }
 
@@ -205,7 +210,8 @@ def home_stats(request):
         currency = None
         for sp, sp_data in season_pass_stats.items():
             if sp_data['activities'] > 0:
-                total_amount += float(sp.price.amount)
+                # Net of summer value, consistent with per-pass winter cost/day.
+                total_amount += float(sp.price.amount) - sp_data.get('summer_value', 0.0)
                 currency = str(sp.price.currency)
                 total_acts += sp_data['activities']
         if total_acts > 0:

@@ -1,0 +1,29 @@
+{% extends "base/base.html" %}
+
+{% block pagetitle %}Delete Summer Activity{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 620px;">
+  <div class="card">
+    <div class="card-header bg-danger text-white fw-semibold">
+      <i class="bi bi-exclamation-triangle me-2"></i>Delete Summer Activity
+    </div>
+    <div class="card-body">
+      <p class="mb-0">Are you sure you want to delete
+        <span class="fw-bold">{{ activity.name }}</span> ({{ activity.date|date:"M d, Y" }})?
+        This action cannot be undone.</p>
+    </div>
+    <div class="card-footer d-flex justify-content-between">
+      <a href="{% url 'summer_activity_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Cancel
+      </a>
+      <form method="post" action="{% url 'summer_activity_delete' activity.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">
+          <i class="bi bi-trash me-1"></i>Delete
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

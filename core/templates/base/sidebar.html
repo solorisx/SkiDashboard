@@ -31,7 +31,7 @@
         <div class="sl-section-label">Activities</div>
 
         <a href="{% url 'activity_list' %}"
-           class="sl-nav-item {% if '/activities/' in request_path and 'insights' not in request_path %}active{% endif %}"
+           class="sl-nav-item {% if '/activities/' in request_path and 'insights' not in request_path and '/activities/summer' not in request_path %}active{% endif %}"
            data-label="All Activities">
             <i class="bi bi-list-ul"></i>
             <span class="sl-nav-label">All Activities</span>
@@ -42,6 +42,13 @@
            data-label="Trips">
             <i class="bi bi-map"></i>
             <span class="sl-nav-label">Trips</span>
+        </a>
+
+        <a href="{% url 'summer_activity_list' %}"
+           class="sl-nav-item {% if '/activities/summer' in request_path %}active{% endif %}"
+           data-label="Summer">
+            <i class="bi bi-sun"></i>
+            <span class="sl-nav-label">Summer</span>
         </a>
 
         <div class="sl-section-label">Analytics</div>

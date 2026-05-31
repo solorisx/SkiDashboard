@@ -101,12 +101,24 @@ def season_pass_detail(request, pass_id):
         total_distance_km=Round(Sum('total_distance') / 1000, 2)
     )
 
+    # Summer activities attributed to this pass (manually tracked).
+    summer_activities = (
+        season_pass.get_summer_activities()
+        .select_related('activity_type', 'ski_area')
+        .order_by('-date')
+    )
+
     context = {
         'season_pass': season_pass,
         'activities': activities,
-        'cost_per_day': round(season_pass.price / activities.count(), 2) if activities.count() > 0 else None,
+        # Winter cost/day already deducts total summer value (see SeasonPass.cost_per_day).
+        'cost_per_day': season_pass.cost_per_day,
         'sum_cost': activities.aggregate(Sum('cost'))['cost__sum'],
         'sum_value': activities.aggregate(Sum('value'))['value__sum'],
+        'summer_activities': summer_activities,
+        'summer_count': summer_activities.count(),
+        'total_summer_value': season_pass.total_summer_value,
+        'summer_avg_value': season_pass.summer_avg_value,
     }
 
     return render (request, "cost/season_pass_detail.html", context)
