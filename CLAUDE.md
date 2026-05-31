@@ -85,7 +85,8 @@ SkiDashboard/
 ├── activities/                  # Strava integration & GPS analysis
 │   ├── models.py               # Activity, Lap, Record, LiftRide, PisteRide,
 │   │                           #   Badge, ActivityBadge, Trip, StravaSyncSettings,
-│   │                           #   ActivityParserProfile, ActivityPisteSegment
+│   │                           #   ActivityParserProfile, ActivityPisteSegment,
+│   │                           #   SummerActivity, SummerActivityType
 │   ├── activity_parser.py      # GPS track analysis (~1700 lines)
 │   ├── segment_matcher.py      # Piste segment matching logic
 │   ├── strava_interface.py     # Strava API client
@@ -115,6 +116,7 @@ SkiDashboard/
 │   │   ├── statistics.py       # Statistics views
 │   │   ├── sync.py             # Strava sync views
 │   │   ├── trips.py            # Trip list, detail, rename, recluster
+│   │   ├── summer.py           # Summer activity CRUD (list/create/edit/delete)
 │   │   └── webhook.py          # Strava webhook handler
 │   ├── urls.py
 │   ├── trips_urls.py
@@ -148,6 +150,8 @@ SkiDashboard/
 ├── staticfiles/                 # Collected static files (WhiteNoise)
 ├── locale/                      # i18n translation files
 ├── sql/                         # Raw SQL scripts
+├── docs/                        # Internal technical docs (local only, not served)
+│   └── technical/              # Confluence-style engineering reference
 ├── docker-compose.yaml
 ├── Dockerfile
 ├── requirements.txt
@@ -174,6 +178,8 @@ SkiDashboard/
 - **ActivityBadge** — User badge assignments per activity
 - **StravaSyncSettings** — Singleton-ish row: scheduled sync toggle, interval, webhook toggle, webhook secrets
 - **ActivityParserProfile** — Per-activity performance profiling data
+- **SummerActivityType** — Category for manually tracked summer activities. Built-in types are global (`user IS NULL`, seeded by migration `0027`); users may add their own. Has `natural_key`, `icon`, `color`, `sort_order`, `is_active`; `for_user()` returns globals + the user's own
+- **SummerActivity** — Manually tracked off-season activity (hike, bike, via ferrata, …), **separate from `Activity`** so ski views stay winter-only. Has `activity_type` FK, `date`, optional `strava_id`/`strava_type` link, optional `ski_area` and `season_pass` (`cost.SeasonPass`, lazy string FK), optional `distance`/`elevation_gain`/`duration`, and `cost`/`value` money fields
 
 ### OSM App
 - **Node** — OSM nodes (base spatial entity, `osm_id`, `geom` PointField, `tags`)
@@ -191,7 +197,10 @@ SkiDashboard/
 
 ### Cost App
 - **TicketPrice** — Day/season pass pricing per ski area and date range
-- **SeasonPass** — User season pass: covers a `SkiArea` OR a `SkiAreaNetwork`. Includes `cost_per_day` property
+- **SeasonPass** — User season pass: covers a `SkiArea` OR a `SkiAreaNetwork`. Distinguishes summer vs winter days:
+  - `cost_per_day` (**winter**) = `(price − total_summer_value) / count_valid_activities` (winter ski activities)
+  - `summer_avg_value` (**summer**) = `total_summer_value / count_summer_activities`
+  - `get_summer_activities()` / `total_summer_value` aggregate the `SummerActivity` rows attributed to the pass
 
 ---
 
@@ -207,6 +216,10 @@ SkiDashboard/
 | `/activities/insights/`                      | Insights dashboard      |
 | `/activities/lift-insights/`                 | Lift analytics          |
 | `/activities/piste-insights/`               | Piste analytics         |
+| `/activities/summer/`                        | Summer activity list (type/year filters) |
+| `/activities/summer/new/`                    | Create summer activity  |
+| `/activities/summer/<pk>/edit/`             | Edit summer activity    |
+| `/activities/summer/<pk>/delete/`           | Delete summer activity  |
 | `/activities/admin/profiling/`              | Profiling dashboard     |
 | `/activities/strava/webhook/`               | Strava webhook          |
 | `/activities/sync_strava/`                  | Manual sync             |
@@ -258,6 +271,23 @@ Activities are automatically grouped into trips by `cluster_activities_into_trip
 - Trip names are auto-generated from ski area names and date range
 - User-modified names (`name_modified=True`) are preserved through re-clustering
 - Trips are re-clustered automatically after Strava sync
+
+### Summer Activity Tracking
+Manual tracking of off-season activities (hiking, biking, via ferrata, …) via the
+`SummerActivity` / `SummerActivityType` models. See
+`docs/technical/summer-activities.md` for the full design (implementing commit `d292e38`).
+- **Separate from `Activity` by design:** every ski-specific view, statistic, badge
+  rule and trip clustering queries `Activity`, so they exclude summer activities
+  automatically — no per-queryset filtering required.
+- Optional **Strava link** is a manual association (`strava_id`/`strava_type`), not an
+  import; the ingest pipeline still only imports `AlpineSki`.
+- Optional attribution to a **season pass** (`season_pass` FK) plus a `cost`/`value` pair.
+- **Cost tracking distinguishes summer vs winter** (`cost/models.py`):
+  - summer average = `total_summer_value / count_summer_activities`
+  - winter cost/day = `(price − total_summer_value) / count_valid_activities`
+- UI: list with type/year filters + create/edit/delete forms
+  (`activities/views/summer.py`, templates under `core/templates/activities/summer_activity_*`),
+  sidebar "Summer" entry, and a summer section on the season-pass detail page.
 
 ### Lift Ride Detection Algorithm
 Located in `activities/activity_parser.py`:
@@ -565,7 +595,8 @@ ENABLE_SILK=True  # in .env
 
 ---
 
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-05-31 (summer-activity tracking, commit `d292e38`)
+**Latest referenced commit:** `d292e38` — Add manual summer activity tracking with season-pass costing
 **Django Version:** 5.2.6
 **Python Version:** 3.11
 **PostgreSQL Version:** 16
