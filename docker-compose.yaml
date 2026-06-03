@@ -49,8 +49,8 @@ services:
     image: postgis/postgis:16-3.4
     environment:
       POSTGRES_DB: postgres
-      POSTGRES_USER: django
-      POSTGRES_PASSWORD: password      
+      POSTGRES_USER: ${POSTGRES_USER:-django}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "55432:5432"
     volumes:
