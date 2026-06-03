@@ -4,6 +4,7 @@
 *.osm
 *.json
 planet_pistes-state.txt
+pgdata/
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,django
