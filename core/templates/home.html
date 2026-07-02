@@ -337,10 +337,13 @@ m{% extends "base/base.html" %}
 {% endblock %}
 
 {% block extra_scripts %}
+{{ area_breakdown|json_script:"area-breakdown-data" }}
 <script>
 const weeklyCurrentData = {{ weekly_current|safe }};
 const weeklyPriorData   = {{ weekly_prior|safe }};
-const areaBreakdown     = {{ area_breakdown|safe }};
+// Ski-area names originate from OpenStreetMap (user-editable); parse them from a
+// json_script block so they are HTML-escaped and cannot break out into script.
+const areaBreakdown     = JSON.parse(document.getElementById('area-breakdown-data').textContent);
 
 // ── Weekly Descent Chart ────────────────────────────
 (function() {

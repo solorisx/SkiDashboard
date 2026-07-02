@@ -109,7 +109,11 @@ if os.getenv("ENABLE_SILK", "false").lower() == "true":
 ROOT_URLCONF = 'core.urls'
 
 SOCIALACCOUNT_STORE_TOKENS = True
-SOCIALACCOUNT_LOGIN_ON_GET = True
+# Do not start the social-login OAuth round-trip from a bare GET — that is a
+# login-CSRF vector (allauth flags it). With this False, allauth renders an
+# intermediate page with a CSRF-protected POST button, so the existing
+# {% provider_login_url %} links keep working with one extra confirmation click.
+SOCIALACCOUNT_LOGIN_ON_GET = False
 
 # Custom social account adapter for dynamic Strava scopes
 SOCIALACCOUNT_ADAPTER = 'core.strava_adapter.CustomSocialAccountAdapter'
@@ -377,12 +381,14 @@ LOGGING = {
         },
         'requests': {
             'handlers': ['console'],
-            'level': 'DEBUG',  # See HTTP requests made by anymail
+            # DEBUG can log full request URLs (query strings may carry tokens).
+            # Keep at WARNING unless explicitly overridden for local debugging.
+            'level': os.getenv('HTTP_LOG_LEVEL', 'WARNING').upper(),
             'propagate': False,
         },
         'urllib3': {
             'handlers': ['console'],
-            'level': 'DEBUG',  # See low-level HTTP details
+            'level': os.getenv('HTTP_LOG_LEVEL', 'WARNING').upper(),
             'propagate': False,
         },
     },
@@ -418,4 +424,16 @@ if DEBUG or not any(ALLOWED_HOSTS):
 
 CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Production transport / cookie hardening.
+# Gated behind ON_CLOUD so local development over plain HTTP keeps working.
+# TLS is terminated at the proxy (see SECURE_PROXY_SSL_HEADER above).
+if ON_CLOUD:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
 

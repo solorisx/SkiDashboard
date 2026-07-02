@@ -37,7 +37,8 @@ def _handle_webhook_verification(request):
         return JsonResponse({"hub.challenge": challenge})
     else:
         logger.warning("Strava webhook verification failed.")
-        logger.debug(f"Mode: {mode}, Verify Token: {verify_token}")
+        # Avoid logging the verify_token (a shared secret).
+        logger.debug(f"Mode: {mode}")
         return HttpResponse("Verification failed.", status=403)
 
 
@@ -65,7 +66,7 @@ def _handle_webhook_payload(request):
         if aspect_type == "create":
             return _handle_activity_create(user, activity_id, payload.get("owner_id"))
         elif aspect_type == "delete":
-            return _handle_activity_delete(activity_id)
+            return _handle_activity_delete(user, activity_id)
             
         return HttpResponse("OK")
         
@@ -88,15 +89,19 @@ def _handle_activity_create(user, activity_id, user_id):
     return HttpResponse("OK")
 
 
-def _handle_activity_delete(activity_id):
-    """Handle deletion of activity."""
-    try:
-        activity = Activity.objects.get(strava_id=activity_id)
-        activity.delete()
-        logger.info(f"Deleted activity {activity_id} as per Strava webhook.")
-    except Activity.DoesNotExist:
-        logger.info(f"Activity {activity_id} not found for deletion.")
-    
+def _handle_activity_delete(user, activity_id):
+    """Handle deletion of activity.
+
+    Scope the lookup to the user resolved from the webhook's ``owner_id`` so a
+    forged payload cannot delete another user's activity (Strava does not sign
+    webhook POSTs, so ``owner_id``/``object_id`` are attacker-controllable).
+    """
+    deleted, _ = Activity.objects.filter(user=user, strava_id=activity_id).delete()
+    if deleted:
+        logger.info(f"Deleted activity {activity_id} for user {user.username} as per Strava webhook.")
+    else:
+        logger.info(f"Activity {activity_id} not found for user {user.username}; nothing to delete.")
+
     return HttpResponse("OK")
 
 
@@ -110,8 +115,10 @@ def subscribe_strava_webhook(request):
     verify_token = os.getenv("STRAVA_VERIFY_TOKEN")
     callback_url = os.getenv("STRAVA_WEBHOOK_CALLBACK_URL")
     
-    logger.info(f"Client ID: {client_id}, Callback URL: {callback_url}, Verify Token: {verify_token}")
-    
+    # Do not log the verify_token or client_id — they are secrets used to
+    # authenticate the webhook handshake.
+    logger.info(f"Callback URL: {callback_url}")
+
     if not all([client_id, client_secret, verify_token, callback_url]):
         messages.error(request, "Missing Strava webhook configuration in environment variables.")
         return redirect("admin:index")
