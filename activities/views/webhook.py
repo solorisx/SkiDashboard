@@ -11,7 +11,7 @@ from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 
 from ..models import Activity
-from ..tasks import sync_strava_activity_task
+from ..tasks import delete_strava_activity_task, sync_strava_activity_task
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ def _handle_webhook_payload(request):
         if aspect_type == "create":
             return _handle_activity_create(user, activity_id, payload.get("owner_id"))
         elif aspect_type == "delete":
-            return _handle_activity_delete(activity_id)
+            return _handle_activity_delete(user, activity_id)
             
         return HttpResponse("OK")
         
@@ -88,15 +88,18 @@ def _handle_activity_create(user, activity_id, user_id):
     return HttpResponse("OK")
 
 
-def _handle_activity_delete(activity_id):
-    """Handle deletion of activity."""
-    try:
-        activity = Activity.objects.get(strava_id=activity_id)
-        activity.delete()
-        logger.info(f"Deleted activity {activity_id} as per Strava webhook.")
-    except Activity.DoesNotExist:
+def _handle_activity_delete(user, activity_id):
+    """Handle deletion of activity.
+
+    Strava webhook payloads are not signed, so the deletion is only enqueued for
+    the owner's activity and the task confirms with Strava that it is really gone.
+    """
+    if not Activity.objects.filter(user=user, strava_id=activity_id).exists():
         logger.info(f"Activity {activity_id} not found for deletion.")
-    
+        return HttpResponse("OK")
+
+    delete_strava_activity_task.delay(user.id, activity_id)
+    logger.info(f"Enqueued deletion check for activity {activity_id} of user {user.username}")
     return HttpResponse("OK")
 
 

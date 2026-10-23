@@ -1,4 +1,5 @@
 {% extends '../base/base.html' %}
+{% load custom_filters %}
 {% load l10n %}
 
 {% block pagetitle %}Activity Map - {{ activity.name }}{% endblock %}
@@ -141,7 +142,7 @@ document.addEventListener("DOMContentLoaded", function() {
   var allBounds = L.latLngBounds([]);
 
   // Add buffered track (light gray shading - 200m buffer zone)
-  var bufferedTrack = {{ buffered_track|safe }};
+  var bufferedTrack = {{ buffered_track|json_js }};
   if (bufferedTrack) {
     L.geoJSON(bufferedTrack, {
       style: {
@@ -165,7 +166,7 @@ document.addEventListener("DOMContentLoaded", function() {
   };
 
   // Add lap tracks (black)
-  var lapTracks = {{ lap_tracks_geojson|safe }};
+  var lapTracks = {{ lap_tracks_geojson|json_js }};
   if (lapTracks && lapTracks.features && lapTracks.features.length > 0) {
     allLayers.tracks = L.geoJSON(lapTracks, {
       style: {
@@ -181,7 +182,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   // Add lift rides (blue)
-  var liftRides = {{ lift_rides_geojson|safe }};
+  var liftRides = {{ lift_rides_geojson|json_js }};
   if (liftRides && liftRides.features && liftRides.features.length > 0) {
     L.geoJSON(liftRides, {
       style: {
@@ -200,7 +201,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   // Add qualified piste rides (red - met 80% threshold)
-  var pisteRides = {{ piste_rides_geojson|safe }};
+  var pisteRides = {{ piste_rides_geojson|json_js }};
   if (pisteRides && pisteRides.features && pisteRides.features.length > 0) {
     L.geoJSON(pisteRides, {
       style: {
@@ -221,7 +222,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   // Add below-threshold pistes (orange - below 80%)
-  var belowThreshold = {{ below_threshold_geojson|safe }};
+  var belowThreshold = {{ below_threshold_geojson|json_js }};
   if (belowThreshold && belowThreshold.features && belowThreshold.features.length > 0) {
     L.geoJSON(belowThreshold, {
       style: {

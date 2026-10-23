@@ -762,7 +762,7 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   // ── Monthly bar chart ──────────────────────────────────────────────────
-  const monthlyData = {{ monthly_stats|safe }};
+  const monthlyData = {{ monthly_stats|json_js }};
   let monthlyChart = null;
   const monthlyMetrics = {
     count:   { label: 'Ski Days',    color: 'rgba(14,165,233,0.8)' },
@@ -808,7 +808,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   // ── Calendar heatmap ──────────────────────────────────────────────────
-  const calendarData = {{ calendar_data|safe }};
+  const calendarData = {{ calendar_data|json_js }};
 
   (function buildCalendar() {
     const container = document.getElementById('calendarHeatmap');

@@ -1,4 +1,5 @@
-m{% extends "base/base.html" %}
+{% extends "base/base.html" %}
+{% load custom_filters %}
 
 {% block title %}SlopeLog — Dashboard{% endblock %}
 
@@ -338,9 +339,9 @@ m{% extends "base/base.html" %}
 
 {% block extra_scripts %}
 <script>
-const weeklyCurrentData = {{ weekly_current|safe }};
-const weeklyPriorData   = {{ weekly_prior|safe }};
-const areaBreakdown     = {{ area_breakdown|safe }};
+const weeklyCurrentData = {{ weekly_current|json_js }};
+const weeklyPriorData   = {{ weekly_prior|json_js }};
+const areaBreakdown     = {{ area_breakdown|json_js }};
 
 // ── Weekly Descent Chart ────────────────────────────
 (function() {

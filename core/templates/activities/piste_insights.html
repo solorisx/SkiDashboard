@@ -379,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // ── Piste difficulty doughnut ─────────────────────────────────────────
-  const difficultyData = {{ piste_difficulty_chart|safe }};
+  const difficultyData = {{ piste_difficulty_chart|json_js }};
   if (difficultyData.length && document.getElementById('difficultyDonut')) {
     new Chart(document.getElementById('difficultyDonut'), {
       type: 'doughnut',

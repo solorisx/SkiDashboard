@@ -1086,7 +1086,7 @@
 <!-- Elevation Profile Chart -->
 <script>
 (function() {
-    const lapData = {{ lap_chart_data|safe }};
+    const lapData = {{ lap_chart_data|json_js }};
     const ctx = document.getElementById('elevationChart');
     if (!ctx || !lapData || !lapData.length) return;
 
@@ -1188,7 +1188,7 @@ document.addEventListener("DOMContentLoaded", function() {
     maxZoom: 20
   }).addTo(map);
 
-  var track = {{ activity.geom.geojson|safe }};
+  var track = {{ activity.geom.geojson|json_js }};
   var trackLayer = L.geoJSON(track, {
     style: {
       color: '#0d6efd',

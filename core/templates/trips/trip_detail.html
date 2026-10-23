@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // ── Daily chart ────────────────────────────────────────────────────────
-  const dailyData = {{ daily_stats_json|safe }};
+  const dailyData = {{ daily_stats_json|json_js }};
   const bestIdx = {{ best_day_index|default:"null" }};
   let dailyChart = null;
   const dailyMetrics = {
@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function () {
         touchZoom: false, dragging: false, boxZoom: false, keyboard: false
       }).setView([{{ activity.geom_centroid.y|unlocalize }}, {{ activity.geom_centroid.x|unlocalize }}], 13);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
-      var track = {{ activity.geom_geojson|safe }};
+      var track = {{ activity.geom_geojson|json_js }};
       if (track && track.coordinates && track.coordinates.length > 0) {
         var layer = L.geoJSON(track, {
           style: { color: '#0d6efd', weight: 4, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }

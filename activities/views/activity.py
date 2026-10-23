@@ -484,6 +484,7 @@ def swap_coords(geom):
     return geom
 
 
+@login_required
 def segment_map(request, activity_id):
     """Display segment map for an activity."""
     activity = get_object_or_404(Activity, id=activity_id, user=request.user)

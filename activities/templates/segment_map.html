@@ -1,3 +1,4 @@
+{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,7 +23,7 @@
         }).addTo(map);
 
         // Load Way
-        var way = {{ way_geojson|safe }};
+        var way = {{ way_geojson|json_js }};
         if (way.features.length > 0) {
             var wayLayer = L.geoJSON(way, {
                 style: { color: "blue", weight: 3 }
@@ -35,7 +36,7 @@
         }
 
         // Load Segments
-        var segments = {{ segments_geojson|safe }};
+        var segments = {{ segments_geojson|json_js }};
         L.geoJSON(segments, {
             style: { color: "red", weight: 2, dashArray: "5, 5" }
         }).addTo(map);
@@ -43,7 +44,7 @@
 
         // Load Pistes
         {% if piste_geojson %}
-        var pistes = {{ piste_geojson|safe }};
+        var pistes = {{ piste_geojson|json_js }};
         L.geoJSON(pistes, {
             style: { color: "green", weight: 2, dashArray: "8, 8" }
         }).addTo(map);
