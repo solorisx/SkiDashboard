@@ -1,5 +1,6 @@
 import importlib
 from datetime import timedelta
+from unittest import mock
 
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.models import SocialAccount
@@ -32,13 +33,20 @@ def make_activity(user):
 
 
 class SignupHoneypotTests(TestCase):
+    def signup(self, **extra):
+        data = {"email": "user@example.com", "password1": "S3cure-pass-123", "password2": "S3cure-pass-123"}
+        return self.client.post("/accounts/signup/", {**data, **extra})
+
+    @mock.patch("core.tasks.send_email_async.delay")
+    def test_valid_signup_creates_user(self, _send_email):
+        # Control: the same payload without the honeypot is a valid signup
+        self.signup()
+        self.assertTrue(User.objects.filter(email="user@example.com").exists())
+
     def test_honeypot_submission_creates_no_user(self):
-        resp = self.client.post(
-            "/accounts/signup/",
-            {"email": "bot@example.com", "password1": "S3cure-pass-123", "website": "http://spam.example"},
-        )
+        resp = self.signup(website="http://spam.example")
         self.assertIn(resp.status_code, (200, 302))
-        self.assertFalse(User.objects.filter(email="bot@example.com").exists())
+        self.assertFalse(User.objects.filter(email="user@example.com").exists())
 
     def test_signup_form_renders_honeypot_field(self):
         resp = self.client.get("/accounts/signup/")
