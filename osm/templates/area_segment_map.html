@@ -1,3 +1,4 @@
+{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,7 +23,7 @@
         }).addTo(map);
 
         // Load Way
-        var way = {{ boundary_geojson|safe }};
+        var way = {{ boundary_geojson|json_js }};
         if (way.features.length > 0) {
             var wayLayer = L.geoJSON(way, {
                 style: { color: "blue", weight: 3 }
@@ -35,21 +36,21 @@
         }
 
         // Load Segments
-        var segments = {{ segments_geojson|safe }};
+        var segments = {{ segments_geojson|json_js }};
         L.geoJSON(segments, {
             style: { color: "red", weight: 2, dashArray: "5, 5" }
         }).addTo(map);
 
         // Load Pistes
         {% if pistes_geojson %}
-        var pistes = {{ pistes_geojson|safe }};
+        var pistes = {{ pistes_geojson|json_js }};
         L.geoJSON(segments, {
             style: { color: "green", weight: 2, dashArray: "8, 8" }
         }).addTo(map);
         {% endif %}    
 
         // Load Nodes
-        // var nodes = {{ nodes_geojson|safe }};
+        // var nodes = {{ nodes_geojson|json_js }};
         // L.geoJSON(nodes, {
         //     pointToLayer: function (feature, latlng) {
         //         return L.circleMarker(latlng, { radius: 5, color: "black" });

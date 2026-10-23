@@ -345,7 +345,7 @@ document.addEventListener("DOMContentLoaded", function() {
             attribution: false
           }).addTo(map);
 
-          var track = {{ activity.geom_geojson|safe }};
+          var track = {{ activity.geom_geojson|json_js }};
           if (track && track.coordinates && track.coordinates.length > 0) {
             var trackLayer = L.geoJSON(track, {
               style: {
@@ -395,7 +395,7 @@ document.addEventListener("DOMContentLoaded", function() {
           attribution: false
         }).addTo(map);
 
-        var track = {{ activity.geom_geojson|safe }};
+        var track = {{ activity.geom_geojson|json_js }};
         if (track && track.coordinates && track.coordinates.length > 0) {
           var trackLayer = L.geoJSON(track, {
             style: {

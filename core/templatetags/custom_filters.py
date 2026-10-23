@@ -89,3 +89,17 @@ def icon_to_emoji(icon_class):
 
     # Return mapped emoji or default
     return icon_map.get(icon_class, '🏆')
+
+@register.filter
+def json_js(value):
+    """Render JSON for inline <script> use, escaping <, > and & so data can't close the tag.
+
+    Accepts an already-serialized JSON string or a Python object to serialize.
+    """
+    import json
+    from django.utils.html import _json_script_escapes
+    from django.utils.safestring import mark_safe
+
+    if not isinstance(value, str):
+        value = json.dumps(value, default=str)
+    return mark_safe(value.translate(_json_script_escapes))

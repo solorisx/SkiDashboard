@@ -490,12 +490,15 @@ def buymeacoffee_webhook(request):
         return HttpResponse(status=405)
 
     secret = getattr(django_settings, 'BUYMEACOFFEE_WEBHOOK_SECRET', '')
-    if secret:
-        sig = request.headers.get('X-Signature-SHA256', '')
-        expected = hmac.new(secret.encode(), request.body, hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(sig, expected):
-            logger.warning("BuyMeACoffee webhook signature mismatch")
-            return HttpResponse(status=403)
+    if not secret:
+        # Without a secret anyone could POST a fake payment and grant themselves premium.
+        logger.error("BuyMeACoffee webhook rejected: BUYMEACOFFEE_WEBHOOK_SECRET is not configured")
+        return HttpResponse(status=403)
+    sig = request.headers.get('X-Signature-SHA256', '')
+    expected = hmac.new(secret.encode(), request.body, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expected):
+        logger.warning("BuyMeACoffee webhook signature mismatch")
+        return HttpResponse(status=403)
 
     try:
         payload = json.loads(request.body)

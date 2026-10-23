@@ -159,7 +159,7 @@ Premium users get unlimited sync history and all past seasons. Premium is grante
 | Membership admin page | `core/templates/admin/membership.html` |
 
 ### Payment Providers
-- **BuyMeACoffee**: Webhook at `POST /webhooks/buymeacoffee/`. Grants premium when donation ≥ `BUYMEACOFFEE_PREMIUM_THRESHOLD_USD` (default $20). Uses HMAC-SHA256 signature if `BUYMEACOFFEE_WEBHOOK_SECRET` is set.
+- **BuyMeACoffee**: Webhook at `POST /webhooks/buymeacoffee/`. Grants premium when donation ≥ `BUYMEACOFFEE_PREMIUM_THRESHOLD_USD` (default $20). Requires an HMAC-SHA256 signature; requests are rejected (403) unless `BUYMEACOFFEE_WEBHOOK_SECRET` is set.
 - **Manual**: Staff can grant/revoke via `/admin/membership/`.
 
 ### Environment Variables

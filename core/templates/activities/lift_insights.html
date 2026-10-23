@@ -418,7 +418,7 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   // ── Weekly lift rides line chart ──────────────────────────────────────
-  const weeklyLifts = {{ weekly_lifts|safe }};
+  const weeklyLifts = {{ weekly_lifts|json_js }};
   if (weeklyLifts.length && document.getElementById('weeklyLiftsChart')) {
     new Chart(document.getElementById('weeklyLiftsChart'), {
       type: 'line',
@@ -447,7 +447,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   // ── Lift type doughnut (header card) ──────────────────────────────────
-  const liftTypeData = {{ lift_type_chart|safe }};
+  const liftTypeData = {{ lift_type_chart|json_js }};
   const liftColors = ['#0dcaf0','#198754','#0d6efd','#ffc107','#dc3545','#6f42c1','#fd7e14','#20c997','#adb5bd'];
 
   if (liftTypeData.length && document.getElementById('liftTypeDonut')) {

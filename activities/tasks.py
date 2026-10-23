@@ -42,6 +42,20 @@ def sync_strava_activity_task(user_id, activity_id, update=False):
         logger.error(f"Failed to sync Strava activity in task: {e}", exc_info=True, stack_info=True)
         raise
 
+@shared_task(rate_limit='10/m')
+def delete_strava_activity_task(user_id, activity_id):
+    """Delete a user's activity after confirming with Strava that it no longer exists."""
+    from stravalib.exc import ObjectNotFound
+
+    user = User.objects.get(id=user_id)
+    try:
+        load_activity(user, activity_id)
+    except ObjectNotFound:
+        deleted, _ = Activity.objects.filter(user=user, strava_id=activity_id).delete()
+        logger.info(f"Deleted activity {activity_id} of user {user.username} as per Strava webhook ({deleted} rows).")
+        return
+    logger.warning(f"Ignoring delete webhook for activity {activity_id}: it still exists on Strava.")
+
 @shared_task
 def sync_user_activities_task(user_id, all=False, update=False):
     parse_strava_activities_task.delay(user_id, all=all, update=update)
