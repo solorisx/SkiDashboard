@@ -100,6 +100,7 @@
         <p style="font-size:0.875rem;color:var(--sl-text-muted);margin:.2rem 0 0;">
             {{ season }} season
             {% if total_stats.total_num_activities %}&mdash; {{ total_stats.total_num_activities }} day{{ total_stats.total_num_activities|pluralize }} on snow{% endif %}
+            {% if showing_latest_season %}&middot; your latest season, no activities yet this season{% endif %}
         </p>
     </div>
 

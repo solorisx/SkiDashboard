@@ -1,4 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+
+from django.utils import timezone
 
 
 def get_seasons(user):
@@ -17,6 +19,31 @@ def get_seasons(user):
     return seasons
 
 
+def _season_start_month_day(user=None):
+    """Month and day the ski season starts, from the user's profile or the 1 July default."""
+    profile = getattr(user, "userprofile", None) if user else None
+    if profile is not None:
+        try:
+            start = profile.get_season_start_date(2000)  # Year doesn't matter here
+            return start.month, start.day
+        except AttributeError:
+            pass
+    return 7, 1
+
+
+def get_season_dates_containing(day, user=None):
+    """Start and end of the season containing ``day``.
+
+    The end is the last moment before the next season starts, so activities on the season's
+    final day are included when filtering with ``timestamp__lte=end``.
+    """
+    start_month, start_day = _season_start_month_day(user)
+    start_year = day.year if (day.month, day.day) >= (start_month, start_day) else day.year - 1
+    season_start = datetime(start_year, start_month, start_day)
+    season_end = datetime(start_year + 1, start_month, start_day) - timedelta(microseconds=1)
+    return season_start, season_end
+
+
 def get_season_dates(current=True, user=None):
     """Get start and end dates for current or previous season.
 
@@ -24,50 +51,10 @@ def get_season_dates(current=True, user=None):
         current: If True, get current season dates, otherwise previous season
         user: Optional user object to use custom season boundaries
     """
-    now = datetime.now()
-
-    # Get season boundaries from user preferences or defaults
-    if user and hasattr(user, "userprofile"):
-        try:
-            start_date = user.userprofile.get_season_start_date(2000)  # Year doesn't matter here
-            end_date = user.userprofile.get_season_end_date(2000)
-            start_month = start_date.month
-            start_day = start_date.day
-            end_month = end_date.month
-            end_day = end_date.day
-        except AttributeError:
-            # UserProfile doesn't exist, use defaults
-            start_month, start_day = 7, 1
-            end_month, end_day = 6, 30
-    else:
-        # Use defaults for anonymous/no-profile users
-        start_month, start_day = 7, 1
-        end_month, end_day = 6, 30
-
+    season_start, season_end = get_season_dates_containing(timezone.localdate(), user)
     if current:
-        season_start = (
-            datetime(now.year, start_month, start_day)
-            if now.month >= start_month
-            else datetime(now.year - 1, start_month, start_day)
-        )
-        season_end = (
-            datetime(now.year + 1, end_month, end_day)
-            if now.month >= start_month
-            else datetime(now.year, end_month, end_day)
-        )
-    else:
-        season_start = (
-            datetime(now.year - 1, start_month, start_day)
-            if now.month >= start_month
-            else datetime(now.year - 2, start_month, start_day)
-        )
-        season_end = (
-            datetime(now.year, end_month, end_day)
-            if now.month >= start_month
-            else datetime(now.year - 1, end_month, end_day)
-        )
-
-    return season_start, season_end
+        return season_start, season_end
+    return get_season_dates_containing(season_start.date() - timedelta(days=1), user)
 
 
 def parse_season_string(season, user=None):

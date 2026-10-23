@@ -1,10 +1,12 @@
 import json
 import logging
+from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, F, Sum
 from django.db.models.functions import Round, TruncWeek
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from cost.models import SeasonPass
@@ -18,7 +20,7 @@ from ..utils.completeness import (
 )
 from ..models import Activity
 from ..utils.queries import get_user_activities_base_query
-from ..utils.seasons import get_season_dates
+from ..utils.seasons import get_season_dates, get_season_dates_containing
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ def season_stats(request):
     current = season_param == "current"
 
     # Calculate season dates
-    season_start, season_end = get_season_dates(current)
+    season_start, season_end = get_season_dates(current, user=request.user)
 
     logger.debug(f"Season: {season_start} to {season_end}")
 
@@ -48,7 +50,13 @@ def season_stats(request):
     logger.debug(f"Activities count: {activities.count()}")
 
     # Get most popular ski area
-    skiarea = activities.values("ski_area").annotate(count=Count("id", distinct=True)).order_by("-count").first()
+    skiarea = (
+        activities.exclude(ski_area__isnull=True)
+        .values("ski_area")
+        .annotate(count=Count("id", distinct=True))
+        .order_by("-count")
+        .first()
+    )
 
     # Calculate total stats
     total_stats = activities.aggregate(
@@ -92,8 +100,17 @@ def season_stats(request):
 def home_stats(request):
     """Generate statistics for the home page including YoY comparison and chart data."""
 
-    season_start, season_end = get_season_dates(current=True)
-    prev_start, prev_end = get_season_dates(current=False)
+    season_start, season_end = get_season_dates(current=True, user=request.user)
+
+    # Between seasons the current one is still empty, so show the latest season with activities instead
+    showing_latest_season = False
+    if not Activity.objects.filter(user=request.user, timestamp__gte=season_start, timestamp__lte=season_end).exists():
+        latest = Activity.objects.filter(user=request.user).order_by("-timestamp").values_list("timestamp", flat=True)
+        if latest:
+            season_start, season_end = get_season_dates_containing(timezone.localtime(latest[0]).date(), request.user)
+            showing_latest_season = True
+
+    prev_start, prev_end = get_season_dates_containing(season_start.date() - timedelta(days=1), request.user)
 
     activities = get_user_activities_base_query(request.user).filter(
         timestamp__gte=season_start, timestamp__lte=season_end
@@ -102,7 +119,13 @@ def home_stats(request):
         timestamp__gte=prev_start, timestamp__lte=prev_end
     )
 
-    skiarea = activities.values("ski_area").annotate(count=Count("id", distinct=True)).order_by("-count").first()
+    skiarea = (
+        activities.exclude(ski_area__isnull=True)
+        .values("ski_area")
+        .annotate(count=Count("id", distinct=True))
+        .order_by("-count")
+        .first()
+    )
 
     total_stats = activities.aggregate(
         total_distance_km=Round(Sum(F("total_distance")) / 1000, 2),
@@ -214,6 +237,7 @@ def home_stats(request):
     return {
         "season": f"{season_start.year}-{season_end.year}",
         "prev_season": f"{prev_start.year}-{prev_end.year}",
+        "showing_latest_season": showing_latest_season,
         "skiarea": SkiArea.objects.get(id=skiarea["ski_area"]) if skiarea else None,
         "count": skiarea["count"] if skiarea else 0,
         "total_stats": total_stats,
