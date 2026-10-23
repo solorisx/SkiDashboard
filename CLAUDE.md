@@ -552,7 +552,9 @@ ruff check . && black --check .
 pip-audit -r requirements.txt
 ```
 
-`main` is protected (all three jobs must pass) and Railway waits for CI before deploying.
+These checks only block merges and deploys once two settings are configured manually:
+- **GitHub branch protection** on `main` requiring the `Lint & format`, `Dependency audit` and `Tests` checks
+- **Railway "Wait for CI"** on the service, so pushes to `main` deploy only after the checks pass
 
 ---
 
