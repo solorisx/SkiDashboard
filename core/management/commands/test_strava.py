@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from core.debug import test_strava, print_activities, test_strava_activity
+from core.core.debug import test_strava, print_activities, test_strava_activity
 
 
 class Command(BaseCommand):
