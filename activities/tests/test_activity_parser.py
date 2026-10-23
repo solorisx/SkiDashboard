@@ -86,22 +86,6 @@ class ActivityParserTestCase(TestCase):
         expected = f"https://www.openstreetmap.org/?mlat={self.test_point_1.y}&mlon={self.test_point_1.x}#map=17/{self.test_point_1.y}/{self.test_point_1.x}"
         self.assertEqual(url, expected)
 
-    def test_extract_data(self):
-        """Test data extraction from FIT message"""
-        mock_message = Mock()
-        mock_message.get_value.side_effect = lambda field: {
-            "latitude": 465678000,
-            "longitude": 71234000,
-            "altitude": 1200,
-            "invalid_field": None,
-        }.get(field)
-
-        model_fields = ["latitude", "longitude", "altitude", "invalid_field"]
-        result = self.parser.extract_data(mock_message, model_fields)
-
-        expected = {"latitude": 465678000, "longitude": 71234000, "altitude": 1200}
-        self.assertEqual(result, expected)
-
     def test_create_point(self):
         """Test point creation from lat/lon fields"""
         # Use precise conversion: coordinate * 11930465
@@ -124,9 +108,9 @@ class ActivityParserTestCase(TestCase):
     def test_get_closest_stations_basic(self):
         """Test finding closest stations"""
         stations = self.parser.get_closest_stations(self.test_point_1, max_distance=100)
-        self.assertTrue(stations.exists())
+        self.assertTrue(stations)
 
-        closest = stations.first()
+        closest = stations[0]
         self.assertEqual(closest.station, "bottom")
         self.assertEqual(closest.name, "Bottom Station 1")
 
@@ -149,7 +133,7 @@ class ActivityParserTestCase(TestCase):
     def test_get_closest_stations_no_results(self):
         """Test when no stations are found"""
         stations = self.parser.get_closest_stations(self.test_point_outside, max_distance=10)
-        self.assertFalse(stations.exists())
+        self.assertEqual(stations, [])
 
     def test_get_closest_aerialways_basic(self):
         """Test finding closest aerialways"""

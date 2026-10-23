@@ -3,7 +3,8 @@ from django.db.models import Sum, Avg
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect
 from activities.models import Activity
-from .forms import SeasonPassForm, SeasonPass
+from .forms import SeasonPassForm
+from .models import SeasonPass
 import logging
 from osm.models import SkiAreaNetwork
 from django.db.models.functions import Round
