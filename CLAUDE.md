@@ -542,7 +542,7 @@ ENABLE_SILK=True  # in .env
 |-----|--------------|
 | Lint & format | `ruff check .` and `black --check .` (config in `pyproject.toml`) |
 | Dependency audit | `pip-audit -r requirements.txt` (direct + transitive deps) |
-| Tests | `python3 manage.py check` and `python3 manage.py test` against a PostGIS 16-3.4 service |
+| Tests | `python3 manage.py check`, `makemigrations --check` and `python3 manage.py test` against a PostGIS 16-3.4 service |
 
 Run the same checks locally before pushing:
 
