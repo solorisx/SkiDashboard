@@ -1,14 +1,12 @@
-from django.db import connection, models
-from django.contrib.gis.geos import LineString, Point, Polygon
+from django.contrib.gis.geos import LineString, Polygon
 from django.contrib.gis.db import models
 from djmoney.models.fields import MoneyField
 from django_countries.fields import CountryField
 from django.contrib.gis.geos.error import GEOSException
 from datetime import datetime
 import logging
-from .osm_interface import get_osm_data, load_osm_data, get_country_code
+from .osm_interface import get_country_code
 from django.utils.functional import cached_property
-from django.contrib.gis.db.models.functions import Transform
 
 logger = logging.getLogger(__name__)
 

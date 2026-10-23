@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
 
-from activities.models import Activity, Trip
+from activities.models import Trip
 from activities.trips import cluster_activities_into_trips
 from cost.models import SeasonPass
 from ..utils.queries import get_user_activities_base_query

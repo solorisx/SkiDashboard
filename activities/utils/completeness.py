@@ -696,7 +696,7 @@ def calculate_ski_area_piste_completeness(user, ski_area, force_calc=False, seas
     if not force_calc:
         cached_result = cache.get(cache_key)
         if cached_result:
-            logger.debug(f"Using cached piste completeness")
+            logger.debug("Using cached piste completeness")
             return cached_result
 
     # Get all available line-based pistes

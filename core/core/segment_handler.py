@@ -1,9 +1,7 @@
 import logging
 from typing import List
 from django.contrib.gis.geos import LineString
-import osmium
-import osmium.geom
-from SkiingDashboardApp.osm_models import Way, Node, Aerialway, Piste, SkiArea, Station, SkiAreaBoundary, PisteSegment
+from SkiingDashboardApp.osm_models import Piste, PisteSegment
 
 logger = logging.getLogger('SkiingDashboard')
 

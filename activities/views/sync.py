@@ -8,7 +8,6 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from ..badges import reassign_all_badges
 from ..batch import parse_strava_activities, parse_strava_activity
 from ..forms import BadgeReassignmentForm, GlobalSyncForm, PerUserSyncForm, StravaSyncForm
 from ..models import Activity
@@ -111,7 +110,7 @@ def sync_strava_admin(request):
                     else:
                         messages.success(
                             request,
-                            f"Queued badge reassignment for all users."
+                            "Queued badge reassignment for all users."
                         )
                 except Exception as e:
                     messages.error(request, f"Error reassigning badges: {e}")

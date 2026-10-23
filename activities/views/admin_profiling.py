@@ -3,7 +3,6 @@ Admin profiling views for activity parsing performance monitoring.
 """
 from django.shortcuts import render
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Avg, Max, Min, Sum, Count, Q
 from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import timedelta

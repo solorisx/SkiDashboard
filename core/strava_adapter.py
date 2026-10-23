@@ -122,7 +122,7 @@ def get_dynamic_strava_scope(request):
                 scopes.append('activity:write')
                 logger.info(f"Adding activity:write scope for user {request.user.username}")
         except UserProfile.DoesNotExist:
-            logger.debug(f"No profile found for user")
+            logger.debug("No profile found for user")
         except Exception as e:
             logger.warning(f"Could not check user profile for Strava scopes: {e}")
 
@@ -131,7 +131,7 @@ def get_dynamic_strava_scope(request):
         if request.session.get('strava_reauth_write_scope', False):
             if 'activity:write' not in scopes:
                 scopes.append('activity:write')
-            logger.info(f"Adding activity:write scope from session reauth flag")
+            logger.info("Adding activity:write scope from session reauth flag")
 
     logger.info(f"Strava scopes (list): {scopes}")
     return scopes

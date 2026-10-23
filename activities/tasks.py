@@ -8,7 +8,7 @@ from datetime import timedelta, datetime
 from allauth.socialaccount.models import SocialAccount
 
 from core.models import UserProfile
-from .strava_interface import load_activities, load_activity, load_activity_streams, load_activity_laps
+from .strava_interface import load_activities, load_activity
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

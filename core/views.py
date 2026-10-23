@@ -3,33 +3,24 @@ import hashlib
 import hmac
 import json
 import logging
-from django.shortcuts import render, get_object_or_404, redirect
-from django.db.models import Count, Avg, Min, Max, F, Sum, Q
-from django.db.models.functions import Round
-from django.db import models
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
-from activities.models import Activity, LiftRide, Lap, PisteRide
+from activities.models import LiftRide, Lap, PisteRide
 from osm.models import SkiArea, Aerialway, SkiAreaNetwork
 from cost.models import SeasonPass
 
 
 from .core.skiarea_manager import init_networks
-from cost.forms import CostForm
-from django.db.models import Count, OuterRef, Subquery
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.contrib.admin.views.decorators import staff_member_required
-from dal import autocomplete
 from activities.views import home_stats, season_stats
-from djmoney.models.fields import MoneyField
-import os
 
 from activities.strava_interface import deauthorize_strava
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.contrib.auth import logout
-from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.generic import View
 from django.views.decorators.csrf import csrf_exempt

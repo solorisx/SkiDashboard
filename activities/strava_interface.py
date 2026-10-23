@@ -1,14 +1,9 @@
 from stravalib import Client
 from allauth.socialaccount.models import SocialAccount,SocialToken
-from django.contrib.auth.models import User
 from datetime import datetime, timedelta
 from pytz import UTC
 
-from osm.models import Way, Node, Aerialway, Piste, SkiArea
-from django.db import transaction
-from django.db.models import Q
 import logging
-from core.models import UserProfile
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)

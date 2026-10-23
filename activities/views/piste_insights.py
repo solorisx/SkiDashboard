@@ -1,7 +1,7 @@
 import json
 import logging
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Max, Min, Sum, Q
+from django.db.models import Count, Max, Min, Sum
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.core.cache import cache

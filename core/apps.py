@@ -5,4 +5,4 @@ class core(AppConfig):
     name = 'core'
 
     def ready(self):
-        import core.signals  # Import signals when the app is ready  
+        import core.signals  # noqa: F401  Import signals when the app is ready

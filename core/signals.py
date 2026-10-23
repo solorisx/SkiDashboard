@@ -1,7 +1,6 @@
 import logging
 from django.dispatch import receiver
 from allauth.account.signals import user_signed_up
-from allauth.socialaccount.signals import social_account_added
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from django.conf import settings

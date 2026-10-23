@@ -1,9 +1,8 @@
-import os
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from osm.osm_segments import update_piste_segments
 from osm.models import PisteSegment, SkiArea, Piste
 from activities.models import ActivityPisteSegment
-from activities.activity_parser import parse_strava_activity, calc_ridden_segments
+from activities.activity_parser import calc_ridden_segments
 import logging
 
 logger = logging.getLogger(__name__)

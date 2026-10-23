@@ -1,6 +1,5 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from allauth.socialaccount.models import SocialAccount
 
 User = get_user_model()
 

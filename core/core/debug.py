@@ -1,5 +1,4 @@
 from django.contrib.auth.models import User
-from datetime import datetime, timedelta
 from activities.strava_interface import load_activities
 from activities.activity_parser import sync_strava_activity
 from activities.models import Activity, Lap

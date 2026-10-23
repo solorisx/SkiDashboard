@@ -1,9 +1,7 @@
 from django.contrib.gis.db import models
 from django.contrib.auth.models import User
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 from djmoney.models.fields import MoneyField
-from osm.models import Aerialway, Piste, SkiArea, SkiAreaBoundary, PisteSegment
+from osm.models import Aerialway, Piste, SkiArea, PisteSegment
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 

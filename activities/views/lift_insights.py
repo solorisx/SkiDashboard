@@ -211,7 +211,6 @@ def ski_area_completeness_detail(request, ski_area_id, season=None):
     completeness = calculate_ski_area_completeness(request.user, ski_area, season=season)
 
     # Calculate piste completeness for this ski area
-    from .piste_insights import get_available_pistes_in_ski_area
     from ..utils.completeness import calculate_ski_area_piste_completeness
     piste_completeness = calculate_ski_area_piste_completeness(request.user, ski_area, season=season)
 

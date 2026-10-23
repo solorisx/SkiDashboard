@@ -2,11 +2,9 @@ import osmium
 import osmium.geom
 import logging
 import time
-from datetime import datetime
 from django.utils import timezone
 from .models import Way, Node, Aerialway, Piste, SkiArea, Station, SkiAreaBoundary
 from django.db import transaction
-from django.db.models import Q
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)

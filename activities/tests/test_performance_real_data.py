@@ -59,7 +59,7 @@ class RealDataPerformanceTestCase(TestCase):
                 print("\n⚠️  Test database detected without --keepdb flag - OSM data would be lost")
             cls.loaded_osm_data = False
         
-        print(f"\n=== Data Scale ===")
+        print("\n=== Data Scale ===")
         print(f"Total Nodes: {cls.total_nodes:,}")
         print(f"Total Stations: {cls.total_stations:,}")
         print(f"Total Aerialways: {cls.total_aerialways:,}")
@@ -107,7 +107,7 @@ class RealDataPerformanceTestCase(TestCase):
             
         test_point = self.test_points[0]
         
-        print(f"\n=== Graph Building Performance (Real Data) ===")
+        print("\n=== Graph Building Performance (Real Data) ===")
         print(f"Test point: {test_point}")
         
         # Test different search areas to understand scaling
@@ -151,14 +151,14 @@ class RealDataPerformanceTestCase(TestCase):
             fastest_result = min(results, key=lambda x: x['build_time'])
             slowest_result = max(results, key=lambda x: x['build_time'])
             
-            print(f"\n=== Performance Summary ===")
+            print("\n=== Performance Summary ===")
             print(f"Fastest: {fastest_result['build_time']:.4f}s for {fastest_result['graph_stations']} stations")
             print(f"Slowest: {slowest_result['build_time']:.4f}s for {slowest_result['graph_stations']} stations")
             
             # Flag potential performance issues
             if slowest_result['build_time'] > 5.0:
                 print(f"⚠️  PERFORMANCE ISSUE: Graph building takes {slowest_result['build_time']:.2f}s")
-                print(f"   This is too slow for real-time use")
+                print("   This is too slow for real-time use")
             
             if slowest_result['stations_per_second'] < 100:
                 print(f"⚠️  LOW THROUGHPUT: Only {slowest_result['stations_per_second']:.1f} stations/sec")
@@ -168,7 +168,7 @@ class RealDataPerformanceTestCase(TestCase):
         if not self.test_points:
             self.skipTest("No test points available")
             
-        print(f"\n=== Closest Aerialway Performance (Real Data) ===")
+        print("\n=== Closest Aerialway Performance (Real Data) ===")
         
         # Test multiple distances
         search_distances = [100, 500, 1000, 2500, 5000]  # meters
@@ -191,7 +191,7 @@ class RealDataPerformanceTestCase(TestCase):
         if len(self.test_points) < 2:
             self.skipTest("Need at least 2 test points for pathfinding")
             
-        print(f"\n=== Pathfinding Performance (Real Data) ===")
+        print("\n=== Pathfinding Performance (Real Data) ===")
         
         start_point = self.test_points[0]
         end_point = self.test_points[1]
@@ -223,7 +223,7 @@ class RealDataPerformanceTestCase(TestCase):
         if not self.test_points:
             self.skipTest("No test points available")
             
-        print(f"\n=== Concurrent Performance Simulation ===")
+        print("\n=== Concurrent Performance Simulation ===")
         
         test_point = self.test_points[0]
         num_concurrent_requests = 5
@@ -253,7 +253,7 @@ class RealDataPerformanceTestCase(TestCase):
         if not self.test_points:
             self.skipTest("No test points available")
             
-        print(f"\n=== Memory Usage Analysis ===")
+        print("\n=== Memory Usage Analysis ===")
         
         test_point = self.test_points[0]
         
@@ -268,7 +268,7 @@ class RealDataPerformanceTestCase(TestCase):
         # Each station object: ~1KB, each connection: ~100 bytes
         estimated_memory = (station_count * 1024) + (connection_count * 100)
         
-        print(f"Graph contains:")
+        print("Graph contains:")
         print(f"  Stations: {station_count:,}")
         print(f"  Connections: {connection_count:,}")
         print(f"  Estimated memory: {estimated_memory / 1024 / 1024:.2f} MB")
@@ -279,7 +279,7 @@ class RealDataPerformanceTestCase(TestCase):
 
     def test_database_query_analysis(self):
         """Analyze database query patterns during graph building"""
-        print(f"\n=== Database Query Analysis ===")
+        print("\n=== Database Query Analysis ===")
         
         if not self.test_points:
             self.skipTest("No test points available")
@@ -299,7 +299,7 @@ class RealDataPerformanceTestCase(TestCase):
         
         query_count = len(connection.queries)
         
-        print(f"Graph building statistics:")
+        print("Graph building statistics:")
         print(f"  Build time: {build_time:.4f}s")
         print(f"  Database queries: {query_count}")
         print(f"  Queries per second: {query_count / build_time:.1f}")

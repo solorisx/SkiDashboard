@@ -5,8 +5,7 @@ from django.contrib.gis.geos import Point, LineString
 from django.contrib.auth.models import User
 
 from activities.activity_parser import ActivityParser
-from activities.models import Activity, Lap, LiftRide
-from osm.models import Node, Way, Aerialway, Station, SkiArea, SkiAreaBoundary
+from osm.models import Node, Way, Aerialway, Station, SkiArea
 
 
 class ActivityParserTestCase(TestCase):
@@ -461,7 +460,7 @@ class PerformanceTestCase(TestCase):
         test_point = Point(7.1234, 46.5678)
         
         start_time = time.time()
-        aerialway = self.parser.get_closest_aerialway(test_point, max_distance=1000)
+        self.parser.get_closest_aerialway(test_point, max_distance=1000)
         query_time = time.time() - start_time
         
         self.assertLess(query_time, 1.0, f"Closest aerialway query took {query_time:.4f}s, expected < 1s")

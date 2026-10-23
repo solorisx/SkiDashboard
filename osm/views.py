@@ -108,7 +108,7 @@ def sync_osm_file(request):
                 sync_areas = form.cleaned_data["sync_areas"]
                 logger.debug(f"Syncing OSM data: ways={sync_ways}, relations={sync_relations}, nodes={sync_nodes}, areas={sync_areas}")
                 parse_osm_file_task.delay("planet_pistes-osmium.osm", [sync_nodes, sync_ways, sync_relations, sync_areas])
-                messages.success(request, f"Successfully initiated loading OSM data from file.")
+                messages.success(request, "Successfully initiated loading OSM data from file.")
                 return redirect("sync_osm")
         except Exception as e:
             messages.error(request, f"Error loading OSM data: {e}")

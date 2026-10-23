@@ -1,9 +1,7 @@
 from datetime import datetime
 import json
 import logging
-from django.contrib.contenttypes.models import ContentType
-from djmoney.models.fields import MoneyField
-from osm.models import SkiArea, SkiAreaBoundary, SkiAreaNetwork, SkiAreaNetworkMember
+from osm.models import SkiArea, SkiAreaNetwork, SkiAreaNetworkMember
 
 logger = logging.getLogger('core')
 

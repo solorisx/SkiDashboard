@@ -1,5 +1,4 @@
 from django import forms
-from dal import autocomplete
 from .models import SkiArea, SkiAreaNetwork
 from django.db.models import Q
 

@@ -1,13 +1,12 @@
 import logging
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.decorators.http import require_http_methods
 from django.views import View
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.core.serializers import serialize
 from django.contrib.gis.geos import LineString, Point
-from django.db.models import F, Q, Exists, OuterRef, Case, When, IntegerField
+from django.db.models import F, Q, Exists, OuterRef
 from django.db.models.functions import Round
 from django.contrib.gis.db.models.functions import AsGeoJSON, Centroid
 from django.http import Http404, HttpResponse
@@ -26,8 +25,7 @@ else:
             return func
         return decorator
 
-from activities.models import LiftRide, Badge, PisteRide
-from cost.forms import CostForm
+from activities.models import LiftRide, PisteRide
 from cost.models import SeasonPass
 from osm.models import Aerialway, Piste, PisteSegment, SkiArea
 from osm.osm_util import get_aerialways_with_distance
@@ -396,7 +394,7 @@ def activity_map(request, activity_id):
     # Calculate buffered track from lap geometries
     if lap_tracks_geojson["features"]:
         # Union all lap geometries for buffering
-        from django.contrib.gis.geos import GEOSGeometry, MultiLineString
+        from django.contrib.gis.geos import MultiLineString
         lap_geoms = [lap.geom for lap in activity.laps.all() if lap.geom]
         if lap_geoms:
             combined_geom = MultiLineString(*lap_geoms) if len(lap_geoms) > 1 else lap_geoms[0]

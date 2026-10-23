@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from django.contrib.auth.decorators import login_required
-from django.db.models import Avg, Count, F, OuterRef, Q, Subquery, Sum
+from django.db.models import Count, F, OuterRef, Subquery, Sum
 from django.db.models.functions import Round
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
@@ -11,7 +11,6 @@ from collections import defaultdict
 from activities.models import LiftRide
 from osm.models import Aerialway, SkiArea
 
-from ..models import Activity
 from ..utils.queries import get_filter_query, get_user_activities_base_query
 from ..utils.seasons import get_seasons
 from core.premium import filter_seasons_for_user, premium_season_required

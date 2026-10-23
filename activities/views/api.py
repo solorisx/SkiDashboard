@@ -3,7 +3,7 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, F, Sum
-from django.db.models.functions import Round, TruncWeek, TruncMonth
+from django.db.models.functions import Round, TruncWeek
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
@@ -95,7 +95,6 @@ def season_stats(request):
 
 def home_stats(request):
     """Generate statistics for the home page including YoY comparison and chart data."""
-    from datetime import timedelta
 
     season_start, season_end = get_season_dates(current=True)
     prev_start, prev_end = get_season_dates(current=False)

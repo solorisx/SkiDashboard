@@ -3,8 +3,7 @@ from djmoney.forms.fields import MoneyField as MoneyFormField
 from djmoney.forms.widgets import MoneyWidget
 from dal import autocomplete
 from activities.models import Activity
-from osm.models import SkiArea, SkiAreaNetwork
-from .models import SeasonPass
+from osm.models import SkiArea
 import datetime
 
 this_year = datetime.date.today().year

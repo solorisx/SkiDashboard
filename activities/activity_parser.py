@@ -11,8 +11,8 @@ import polyline
 from django.utils import timezone
 import pytz
 import re
-from activities.models import Activity, Lap, Record, LiftRide, ActivityPisteSegment, PisteRide
-from osm.models import Node, Way, Aerialway, SkiArea, Station, SkiAreaBoundary, PisteSegment, Piste
+from activities.models import Activity, Lap, LiftRide, ActivityPisteSegment, PisteRide
+from osm.models import Node, Aerialway, SkiArea, Station, SkiAreaBoundary, PisteSegment, Piste
 from core.models import UserProfile
 from django.contrib.auth.models import User
 from django.contrib.gis.geos import Point, LineString
@@ -29,7 +29,7 @@ from cost.seasonpass import has_seasonpass
 
 
 
-from .strava_interface import load_activities, load_activity, load_activity_streams, load_activity_laps, update_activity_description, StravaWritePermissionError
+from .strava_interface import load_activity, load_activity_streams, load_activity_laps, update_activity_description, StravaWritePermissionError
 
 # Get an instance of a logger
 logger = logging.getLogger('core')
@@ -1060,7 +1060,7 @@ class ActivityParser:
             logger.debug(f"Found ski area from relation: {ski_area}")
 
         # Create activity data structure
-        logger.debug(f"Raw Strava activity data:")
+        logger.debug("Raw Strava activity data:")
         logger.debug(f"  activity.start_date_local: {activity.start_date_local}")
         logger.debug(f"  activity.start_date (UTC): {activity.start_date if hasattr(activity, 'start_date') else 'N/A'}")
         logger.debug(f"  activity.timezone: {activity.timezone}")
@@ -1094,7 +1094,7 @@ class ActivityParser:
         )
         self.activity = activity_instance
         logger.info(f'{"Created" if created else "Updated"} Activity: {activity_instance.id}')
-        logger.debug(f"Saved activity times:")
+        logger.debug("Saved activity times:")
         logger.debug(f"  start_time: {activity_instance.start_time}, tzinfo: {activity_instance.start_time.tzinfo}")
         logger.debug(f"  timestamp: {activity_instance.timestamp}, tzinfo: {activity_instance.timestamp.tzinfo}")
 

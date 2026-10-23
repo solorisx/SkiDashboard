@@ -5,8 +5,7 @@ from django.shortcuts import get_object_or_404, redirect
 from activities.models import Activity
 from .forms import SeasonPassForm, SeasonPass
 import logging
-from django.http import HttpResponseRedirect
-from osm.models import SkiArea, SkiAreaNetwork
+from osm.models import SkiAreaNetwork
 from django.db.models.functions import Round
 from core.premium import premium_required
 

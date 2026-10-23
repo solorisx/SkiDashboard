@@ -9,7 +9,6 @@ from PIL import Image, ImageDraw, ImageFont
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
 from django.contrib.gis.geos import LineString
 
 logger = logging.getLogger(__name__)
@@ -532,7 +531,6 @@ def create_season_share_image(season_label, season_start, season_end, stats,
     img = Image.new('RGB', (IMAGE_WIDTH, IMAGE_HEIGHT), color=hex_to_rgb(COLOR_SEASON_BG))
     draw = ImageDraw.Draw(img)
 
-    BG       = hex_to_rgb(COLOR_SEASON_BG)
     CARD     = hex_to_rgb(COLOR_SEASON_CARD)
     ACCENT   = hex_to_rgb(COLOR_SEASON_ACCENT)
     GOLD     = hex_to_rgb(COLOR_SEASON_GOLD)
