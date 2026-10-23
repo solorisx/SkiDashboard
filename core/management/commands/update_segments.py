@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from osm.osm_segments import update_piste_segments
 from osm.models import PisteSegment
 from activities.models import Activity, ActivityPisteSegment
-from activities.activity_parser import sync_strava_activity
+from activities.activity_parser import calc_ridden_segments
 import logging
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class Command(BaseCommand):
             logger.info(f"Deleting all piste segments ({PisteSegment.objects.count()})")
             # Evaluate before the segments are deleted, so the affected activities can be reprocessed afterwards
             activity_ids = ActivityPisteSegment.objects.values_list("activity", flat=True).distinct()
-            activities = list(Activity.objects.filter(id__in=activity_ids).select_related("user"))
+            activities = list(Activity.objects.filter(id__in=activity_ids))
             logger.info(f"Affected activities: {len(activities)}")
             ActivityPisteSegment.objects.all().delete()
             PisteSegment.objects.all().delete()
@@ -28,8 +28,10 @@ class Command(BaseCommand):
         logger.debug("Updating all piste segments")
         update_piste_segments()
 
+        # Only segment assignments were invalidated, so rebuild those rather than re-importing from Strava,
+        # which would overwrite manually modified activities
         for activity in activities:
-            sync_strava_activity(activity.user, activity.strava_id, update=True)
-            logger.info(f"Reprocessed activity {activity.strava_id} due to reset of piste segments")
+            calc_ridden_segments(activity)
+            logger.info(f"Recalculated piste segments for activity {activity.strava_id} after segment reset")
 
         logger.info(f"Updated all piste segments ({PisteSegment.objects.count()})")
