@@ -105,9 +105,14 @@ def home_stats(request):
     # Between seasons the current one is still empty, so show the latest season with activities instead
     showing_latest_season = False
     if not Activity.objects.filter(user=request.user, timestamp__gte=season_start, timestamp__lte=season_end).exists():
-        latest = Activity.objects.filter(user=request.user).order_by("-timestamp").values_list("timestamp", flat=True)
-        if latest:
-            season_start, season_end = get_season_dates_containing(timezone.localtime(latest[0]).date(), request.user)
+        latest = (
+            Activity.objects.filter(user=request.user)
+            .order_by("-timestamp")
+            .values_list("timestamp", flat=True)
+            .first()
+        )
+        if latest is not None:
+            season_start, season_end = get_season_dates_containing(timezone.localtime(latest).date(), request.user)
             showing_latest_season = True
 
     prev_start, prev_end = get_season_dates_containing(season_start.date() - timedelta(days=1), request.user)

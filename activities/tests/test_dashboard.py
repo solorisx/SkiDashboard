@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+from datetime import timezone as dt_timezone
 from unittest import mock
 
 from django.contrib.auth.models import User
@@ -33,16 +34,18 @@ class DashboardOffSeasonTests(TestCase):
         UserProfile.objects.create(user=self.user, profile_confirmed=True)
         self.client.force_login(self.user)
 
-    def test_shows_latest_season_when_current_season_has_no_activities(self):
-        # A year ago is always in the previous season, so the current season is empty
-        a_year_ago = timezone.now() - timedelta(days=365)
-        make_activity(self.user, a_year_ago, 1)
-        make_activity(self.user, a_year_ago + timedelta(days=1), 2)
+    @mock.patch("activities.utils.seasons.timezone.localdate", return_value=date(2026, 10, 23))
+    def test_shows_latest_season_when_current_season_has_no_activities(self, _today):
+        # October 2026: the 2026-2027 season has started but is still empty
+        make_activity(self.user, datetime(2026, 2, 10, 10, tzinfo=dt_timezone.utc), 1)
+        make_activity(self.user, datetime(2026, 2, 11, 10, tzinfo=dt_timezone.utc), 2)
 
         resp = self.client.get("/home/")
 
         self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context["season"], "2025-2026")
         self.assertEqual(resp.context["total_stats"]["total_num_activities"], 2)
+        self.assertTrue(resp.context["showing_latest_season"])
         self.assertNotContains(resp, "No activities yet")
 
     def test_user_without_activities_sees_empty_state(self):
