@@ -500,6 +500,7 @@ ENABLE_SILK=True  # in .env
 ## Security
 
 - Email-based authentication (no username/password login)
+- Spam signup protection: allauth honeypot field (`website`), signup rate limit `5/h/ip` (client IP taken from the proxy-appended `X-Forwarded-For` entry), and a daily `core.tasks.purge_unverified_users` task that deletes accounts older than `UNVERIFIED_USER_RETENTION_DAYS` (default 7) with no verified email, no Strava link and no activities
 - OAuth with Strava (django-allauth)
 - CSRF protection enabled
 - Proxy SSL headers for HTTPS

@@ -91,6 +91,17 @@ class AsyncEmailAccountAdapter(DefaultAccountAdapter):
             # Re-raise so allauth knows the email failed
             raise
 
+    def get_client_ip(self, request):
+        """Client IP for rate limiting.
+
+        allauth uses the first X-Forwarded-For entry, which the client controls, so bots could
+        rotate it to dodge per-IP limits. The last entry is the one appended by our proxy.
+        """
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+        if x_forwarded_for:
+            request.META["HTTP_X_FORWARDED_FOR"] = x_forwarded_for.split(",")[-1].strip()
+        return super().get_client_ip(request)
+
     def get_from_email(self):
         """Get the sender email address."""
         return getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@slopelog.com")

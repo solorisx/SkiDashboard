@@ -116,6 +116,14 @@ SOCIALACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
+# Spam signup protection: hidden honeypot field (bots that fill it get a fake success page and
+# no account) and a tighter signup rate limit than allauth's default of 20/m/ip.
+ACCOUNT_SIGNUP_FORM_HONEYPOT_FIELD = "website"
+ACCOUNT_RATE_LIMITS = {"signup": "5/h/ip"}
+# Accounts that never verified their email, never linked Strava and have no activities are
+# removed after this many days (core.tasks.purge_unverified_users).
+UNVERIFIED_USER_RETENTION_DAYS = int(os.getenv("UNVERIFIED_USER_RETENTION_DAYS", 7))
+
 # Use email as username (no separate username field)
 ACCOUNT_AUTHENTICATION_METHOD = "email"  # Use email to login instead of username
 ACCOUNT_USERNAME_REQUIRED = False  # Don't require a username field in forms
@@ -395,6 +403,10 @@ CELERY_BEAT_SCHEDULE = {
     "premium-expiry-reminders": {
         "task": "core.tasks.send_premium_expiry_reminders",
         "schedule": crontab(hour=8, minute=0),
+    },
+    "purge-unverified-users": {
+        "task": "core.tasks.purge_unverified_users",
+        "schedule": crontab(hour=3, minute=17),
     },
 }
 

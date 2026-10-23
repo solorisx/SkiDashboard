@@ -85,3 +85,32 @@ def send_premium_expiry_reminders():
         profile.premium_expiry_7d_notified = True
         profile.save(update_fields=["premium_expiry_7d_notified"])
         logger.info(f"Sent 7-day expiry reminder to {profile.user.email}")
+
+
+@shared_task
+def purge_unverified_users():
+    """Daily task: delete stale spam-like accounts.
+
+    Removes accounts older than UNVERIFIED_USER_RETENTION_DAYS that never verified an email address,
+    never linked Strava and have no activities. Staff, superusers and premium users are kept.
+    """
+    from django.conf import settings
+    from django.contrib.auth.models import User
+    from django.utils import timezone
+
+    cutoff = timezone.now() - timedelta(days=settings.UNVERIFIED_USER_RETENTION_DAYS)
+    stale = (
+        User.objects.filter(
+            date_joined__lt=cutoff,
+            is_staff=False,
+            is_superuser=False,
+            activity__isnull=True,
+            socialaccount__isnull=True,
+        )
+        .exclude(emailaddress__verified=True)
+        .exclude(userprofile__is_premium=True)
+    )
+
+    deleted, _ = User.objects.filter(pk__in=list(stale.values_list("pk", flat=True))).delete()
+    logger.info(f"Purged unverified users older than {settings.UNVERIFIED_USER_RETENTION_DAYS} days ({deleted} rows)")
+    return deleted
