@@ -3,7 +3,8 @@ from typing import List
 from django.contrib.gis.geos import LineString
 from SkiingDashboardApp.osm_models import Piste, PisteSegment
 
-logger = logging.getLogger('SkiingDashboard')
+logger = logging.getLogger("SkiingDashboard")
+
 
 def segmentize_piste(piste: Piste) -> List[PisteSegment]:
     if piste.geom is None:
@@ -20,12 +21,10 @@ def segmentize_piste(piste: Piste) -> List[PisteSegment]:
         return [segment]
 
     line: LineString = piste.geom
-    
+
     segments = [
-        PisteSegment.objects.create(piste=piste, geom=LineString([line.coords[i], line.coords[i+1]]))
+        PisteSegment.objects.create(piste=piste, geom=LineString([line.coords[i], line.coords[i + 1]]))
         for i in range(len(line.coords) - 1)
     ]
 
     return segments
-
-

@@ -20,9 +20,11 @@ def _find_lifts_by_constructed_geometry(ski_area, boundary_geom, user=None):
 
         # Query aerialways that might be in the area (using way node coordinates as proxy)
         from django.db import connection
+
         with connection.cursor() as cursor:
             # Get aerialways whose ways have nodes within the bounding box
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT DISTINCT a.id, a.name
                 FROM osm_aerialway a
                 JOIN osm_way w ON a.way_id = w.id
@@ -30,11 +32,15 @@ def _find_lifts_by_constructed_geometry(ski_area, boundary_geom, user=None):
                 JOIN osm_node n ON wn.node_id = n.id
                 WHERE ST_Within(n.geom, ST_GeomFromText(%s, 4326))
                 LIMIT 100
-            """, [bbox.wkt])
+            """,
+                [bbox.wkt],
+            )
 
             candidate_aerialways = cursor.fetchall()
 
-        logger.info(f"Checking {len(candidate_aerialways)} candidate aerialways for intersection with ski area {ski_area.id}")
+        logger.info(
+            f"Checking {len(candidate_aerialways)} candidate aerialways for intersection with ski area {ski_area.id}"
+        )
 
         for aerialway_id, aerialway_name in candidate_aerialways:
             try:
@@ -50,7 +56,9 @@ def _find_lifts_by_constructed_geometry(ski_area, boundary_geom, user=None):
 
         if lift_ids:
             lifts = Aerialway.objects.filter(id__in=lift_ids)
-            logger.info(f"Found {len(lift_ids)} lifts using constructed geometry intersection for ski area {ski_area.id} (after filtering)")
+            logger.info(
+                f"Found {len(lift_ids)} lifts using constructed geometry intersection for ski area {ski_area.id} (after filtering)"
+            )
             return lifts
         else:
             return Aerialway.objects.none()
@@ -71,8 +79,7 @@ def get_available_lifts_in_ski_area(ski_area, user=None):
             aerialways_with_geom = Aerialway.objects.exclude(geom__isnull=True).exists()
             if aerialways_with_geom:
                 lifts = LiftFilterConfig.filter_lifts_queryset(
-                    Aerialway.objects.filter(geom__intersects=ski_area.geom),
-                    user=user
+                    Aerialway.objects.filter(geom__intersects=ski_area.geom), user=user
                 ).distinct()
                 logger.info(f"Using direct geometry intersection for ski area {ski_area.id}")
             else:
@@ -83,55 +90,63 @@ def get_available_lifts_in_ski_area(ski_area, user=None):
         # If no lifts found yet and we have a boundary way, try constructed geometry
         if not lifts.exists() and ski_area.way:
             boundary_geom = ski_area.way.constructed_geom
-            logger.info(f"Ski area {ski_area.id} has way {ski_area.way.osm_id}, constructed_geom: {type(boundary_geom)}")
+            logger.info(
+                f"Ski area {ski_area.id} has way {ski_area.way.osm_id}, constructed_geom: {type(boundary_geom)}"
+            )
             if boundary_geom:
                 lifts = _find_lifts_by_constructed_geometry(ski_area, boundary_geom, user)
 
         # If still no lifts found, try way relationships as fallback
         if not lifts.exists():
             lifts = LiftFilterConfig.filter_lifts_queryset(
-                Aerialway.objects.filter(way__ski_areas=ski_area),
-                user=user
+                Aerialway.objects.filter(way__ski_areas=ski_area), user=user
             ).distinct()
             if lifts.exists():
-                logger.info(f"Found {lifts.count()} lifts using way relationships for ski area {ski_area.id} (after filtering)")
+                logger.info(
+                    f"Found {lifts.count()} lifts using way relationships for ski area {ski_area.id} (after filtering)"
+                )
             else:
                 logger.info(f"No lifts found via way relationships for ski area {ski_area.id}")
 
         # some areas exist twice, try to find second instance
         if not lifts.exists():
             duplicate_areas = SkiArea.objects.filter(name=ski_area.name).exclude(id=ski_area.id)
-            logger.info(f"No lifts found via geometry/way relationships for ski area {ski_area.id}, checking {duplicate_areas.count()} duplicate areas")
+            logger.info(
+                f"No lifts found via geometry/way relationships for ski area {ski_area.id}, checking {duplicate_areas.count()} duplicate areas"
+            )
             for dup in duplicate_areas:
                 if dup.geom:
                     lifts = LiftFilterConfig.filter_lifts_queryset(
-                        Aerialway.objects.filter(geom__intersects=dup.geom),
-                        user=user
+                        Aerialway.objects.filter(geom__intersects=dup.geom), user=user
                     ).distinct()
                 elif dup.way:
                     lifts = LiftFilterConfig.filter_lifts_queryset(
-                        Aerialway.objects.filter(way__ski_areas=dup),
-                        user=user
+                        Aerialway.objects.filter(way__ski_areas=dup), user=user
                     ).distinct()
                 if lifts.exists():
-                    logger.info(f"Found lifts for ski area {ski_area.id} using duplicate area {dup.id} (after filtering)")
+                    logger.info(
+                        f"Found lifts for ski area {ski_area.id} using duplicate area {dup.id} (after filtering)"
+                    )
                     break
 
         # If no lifts found through spatial/way relationships,
         # include lifts that users have actually ridden in this ski area
         # this will only really work once there is enough user data
         if not lifts.exists():
-            logger.info(f"No lifts found via geometry/way relationships for ski area {ski_area.id}, checking actual ride data")
-            ridden_lift_ids = LiftRide.objects.filter(
-                lap__activity__ski_area=ski_area
-            ).values_list('aerialway', flat=True).distinct()
+            logger.info(
+                f"No lifts found via geometry/way relationships for ski area {ski_area.id}, checking actual ride data"
+            )
+            ridden_lift_ids = (
+                LiftRide.objects.filter(lap__activity__ski_area=ski_area).values_list("aerialway", flat=True).distinct()
+            )
 
             if ridden_lift_ids:
                 lifts = LiftFilterConfig.filter_lifts_queryset(
-                    Aerialway.objects.filter(id__in=ridden_lift_ids),
-                    user=user
+                    Aerialway.objects.filter(id__in=ridden_lift_ids), user=user
                 )
-                logger.info(f"Found {lifts.count()} lifts from actual ride data for ski area {ski_area.id} (after filtering)")
+                logger.info(
+                    f"Found {lifts.count()} lifts from actual ride data for ski area {ski_area.id} (after filtering)"
+                )
 
         return lifts
     except Exception as e:
@@ -154,8 +169,10 @@ def calculate_ski_area_completeness(user, ski_area, force_calc=False, season=Non
     Returns:
         dict: Completeness statistics including percentages and counts
     """
-    logger.debug(f"Calculating completeness for user {user.id} in ski area {ski_area.id}, force_calc={force_calc}, season={season}")
-    
+    logger.debug(
+        f"Calculating completeness for user {user.id} in ski area {ski_area.id}, force_calc={force_calc}, season={season}"
+    )
+
     # Include season in cache key if specified
     cache_key = f"completeness_{user.id}_{ski_area.id}"
     if season:
@@ -173,34 +190,32 @@ def calculate_ski_area_completeness(user, ski_area, force_calc=False, season=Non
 
     if total_lifts == 0:
         result = {
-            'total_available': 0,
-            'total_ridden': 0,
-            'completion_percentage': 0,
-            'lifts_ridden': [],
-            'lifts_not_ridden': [],
-            'lift_type_breakdown': {}
+            "total_available": 0,
+            "total_ridden": 0,
+            "completion_percentage": 0,
+            "lifts_ridden": [],
+            "lifts_not_ridden": [],
+            "lift_type_breakdown": {},
         }
         cache.set(cache_key, result, 3600)  # Cache for 1 hour
         return result
 
     # Get lifts the user has ridden (with optional season filtering)
     user_lift_rides_query = LiftRide.objects.filter(
-        lap__activity__user=user,
-        lap__activity__ski_area=ski_area,
-        aerialway__in=available_lifts
+        lap__activity__user=user, lap__activity__ski_area=ski_area, aerialway__in=available_lifts
     )
 
     # Apply season filtering if specified
     if season:
         from ..utils.seasons import parse_season_string
+
         season_start, season_end = parse_season_string(season, user=user)
         if season_start and season_end:
             user_lift_rides_query = user_lift_rides_query.filter(
-                lap__activity__start_time__gte=season_start,
-                lap__activity__start_time__lte=season_end
+                lap__activity__start_time__gte=season_start, lap__activity__start_time__lte=season_end
             )
 
-    user_lift_rides = user_lift_rides_query.values_list('aerialway', flat=True).distinct()
+    user_lift_rides = user_lift_rides_query.values_list("aerialway", flat=True).distinct()
 
     ridden_lifts = available_lifts.filter(id__in=user_lift_rides)
     not_ridden_lifts = available_lifts.exclude(id__in=user_lift_rides)
@@ -208,35 +223,29 @@ def calculate_ski_area_completeness(user, ski_area, force_calc=False, season=Non
     # Calculate lift type breakdown
     lift_type_breakdown = {}
     for lift in available_lifts:
-        lift_type = getattr(lift, 'aerialway', 'unknown')
+        lift_type = getattr(lift, "aerialway", "unknown")
         if lift_type not in lift_type_breakdown:
-            lift_type_breakdown[lift_type] = {
-                'total': 0,
-                'ridden': 0,
-                'percentage': 0
-            }
-        lift_type_breakdown[lift_type]['total'] += 1
+            lift_type_breakdown[lift_type] = {"total": 0, "ridden": 0, "percentage": 0}
+        lift_type_breakdown[lift_type]["total"] += 1
 
         if lift.id in user_lift_rides:
-            lift_type_breakdown[lift_type]['ridden'] += 1
+            lift_type_breakdown[lift_type]["ridden"] += 1
 
     # Calculate percentages for lift types
     for lift_type_data in lift_type_breakdown.values():
-        if lift_type_data['total'] > 0:
-            lift_type_data['percentage'] = round(
-                (lift_type_data['ridden'] / lift_type_data['total']) * 100, 1
-            )
+        if lift_type_data["total"] > 0:
+            lift_type_data["percentage"] = round((lift_type_data["ridden"] / lift_type_data["total"]) * 100, 1)
 
     completion_percentage = round((len(user_lift_rides) / total_lifts) * 100, 1)
     logger.debug(f"User {user.id} completeness in Ski Area {ski_area.id} (season: {season}): {completion_percentage}%")
 
     result = {
-        'total_available': total_lifts,
-        'total_ridden': len(user_lift_rides),
-        'completion_percentage': completion_percentage,
-        'lifts_ridden': list(ridden_lifts.values('id', 'name')),
-        'lifts_not_ridden': list(not_ridden_lifts.values('id', 'name')),
-        'lift_type_breakdown': lift_type_breakdown
+        "total_available": total_lifts,
+        "total_ridden": len(user_lift_rides),
+        "completion_percentage": completion_percentage,
+        "lifts_ridden": list(ridden_lifts.values("id", "name")),
+        "lifts_not_ridden": list(not_ridden_lifts.values("id", "name")),
+        "lift_type_breakdown": lift_type_breakdown,
     }
 
     cache.set(cache_key, result, None)  # Cache indefinitely, clear on data change
@@ -256,17 +265,15 @@ def calculate_overall_completeness(user):
         return cached_result
 
     # Get all ski areas the user has visited
-    visited_ski_areas = SkiArea.objects.filter(
-        activity__user=user
-    ).distinct()
+    visited_ski_areas = SkiArea.objects.filter(activity__user=user).distinct()
 
     if not visited_ski_areas.exists():
         result = {
-            'total_ski_areas': 0,
-            'total_lifts_available': 0,
-            'total_lifts_ridden': 0,
-            'overall_percentage': 0,
-            'ski_area_breakdown': []
+            "total_ski_areas": 0,
+            "total_lifts_available": 0,
+            "total_lifts_ridden": 0,
+            "overall_percentage": 0,
+            "ski_area_breakdown": [],
         }
         cache.set(cache_key, result, 3600)
         return result
@@ -277,24 +284,22 @@ def calculate_overall_completeness(user):
 
     for ski_area in visited_ski_areas:
         completeness = calculate_ski_area_completeness(user, ski_area)
-        ski_area_breakdown.append({
-            'ski_area_id': ski_area.id,
-            'ski_area_name': ski_area.name,
-            'completeness': completeness
-        })
-        total_lifts_available += completeness['total_available']
-        total_lifts_ridden += completeness['total_ridden']
+        ski_area_breakdown.append(
+            {"ski_area_id": ski_area.id, "ski_area_name": ski_area.name, "completeness": completeness}
+        )
+        total_lifts_available += completeness["total_available"]
+        total_lifts_ridden += completeness["total_ridden"]
 
     overall_percentage = 0
     if total_lifts_available > 0:
         overall_percentage = round((total_lifts_ridden / total_lifts_available) * 100, 1)
 
     result = {
-        'total_ski_areas': visited_ski_areas.count(),
-        'total_lifts_available': total_lifts_available,
-        'total_lifts_ridden': total_lifts_ridden,
-        'overall_percentage': overall_percentage,
-        'ski_area_breakdown': ski_area_breakdown
+        "total_ski_areas": visited_ski_areas.count(),
+        "total_lifts_available": total_lifts_available,
+        "total_lifts_ridden": total_lifts_ridden,
+        "overall_percentage": overall_percentage,
+        "ski_area_breakdown": ski_area_breakdown,
     }
 
     # Cache for 1 hour
@@ -311,10 +316,10 @@ def calculate_activity_completeness(activity):
     """
     if not activity.ski_area:
         return {
-            'lifts_used_today': 0,
-            'total_lifts_available': 0,
-            'daily_completion_percentage': 0,
-            'new_lifts_discovered': 0
+            "lifts_used_today": 0,
+            "total_lifts_available": 0,
+            "daily_completion_percentage": 0,
+            "new_lifts_discovered": 0,
         }
 
     # Check cache first - data only changes if activity is reprocessed or manually modified
@@ -326,9 +331,7 @@ def calculate_activity_completeness(activity):
         return cached_result
 
     # Get lifts used in this activity
-    activity_lifts = LiftRide.objects.filter(
-        lap__activity=activity
-    ).values_list('aerialway', flat=True).distinct()
+    activity_lifts = LiftRide.objects.filter(lap__activity=activity).values_list("aerialway", flat=True).distinct()
 
     # Get all available lifts in the ski area (with user exclusions)
     available_lifts = get_available_lifts_in_ski_area(activity.ski_area, user=activity.user)
@@ -340,19 +343,23 @@ def calculate_activity_completeness(activity):
         daily_percentage = round((len(activity_lifts) / total_available) * 100, 1)
 
     # Calculate new lifts discovered (lifts not ridden before this activity)
-    previous_lifts = LiftRide.objects.filter(
-        lap__activity__user=activity.user,
-        lap__activity__ski_area=activity.ski_area,
-        lap__activity__start_time__lt=activity.start_time
-    ).values_list('aerialway', flat=True).distinct()
+    previous_lifts = (
+        LiftRide.objects.filter(
+            lap__activity__user=activity.user,
+            lap__activity__ski_area=activity.ski_area,
+            lap__activity__start_time__lt=activity.start_time,
+        )
+        .values_list("aerialway", flat=True)
+        .distinct()
+    )
 
     new_lifts = set(activity_lifts) - set(previous_lifts)
 
     result = {
-        'lifts_used_today': len(activity_lifts),
-        'total_lifts_available': total_available,
-        'daily_completion_percentage': daily_percentage,
-        'new_lifts_discovered': len(new_lifts)
+        "lifts_used_today": len(activity_lifts),
+        "total_lifts_available": total_available,
+        "daily_completion_percentage": daily_percentage,
+        "new_lifts_discovered": len(new_lifts),
     }
 
     # Cache indefinitely - only changes if activity is reprocessed or manually modified
@@ -397,21 +404,21 @@ def calculate_batch_activity_completeness(activities, user):
             # Get ski area and calculate lifts
             ski_area = activities_by_ski_area[ski_area_id][0].ski_area
             available_lifts = get_available_lifts_in_ski_area(ski_area, user=user)
-            available_lift_ids = set(available_lifts.values_list('id', flat=True))
+            available_lift_ids = set(available_lifts.values_list("id", flat=True))
             ski_area_lifts_cache[ski_area_id] = available_lift_ids
             # Cache for 30 minutes
             cache.set(cache_key, available_lift_ids, 1800)
 
     # Get all lift rides for all activities in batch
     activity_ids = [a.id for a in activities]
-    all_lift_rides = LiftRide.objects.filter(
-        lap__activity_id__in=activity_ids
-    ).values('lap__activity_id', 'aerialway').distinct()
+    all_lift_rides = (
+        LiftRide.objects.filter(lap__activity_id__in=activity_ids).values("lap__activity_id", "aerialway").distinct()
+    )
 
     # Group lift rides by activity
     activity_lifts = defaultdict(set)
     for ride in all_lift_rides:
-        activity_lifts[ride['lap__activity_id']].add(ride['aerialway'])
+        activity_lifts[ride["lap__activity_id"]].add(ride["aerialway"])
 
     # Pre-calculate previous lifts for new lifts discovery (batch query)
     previous_lifts_by_ski_area = {}
@@ -426,11 +433,15 @@ def calculate_batch_activity_completeness(activities, user):
             previous_lifts_by_ski_area[ski_area_id] = cached_previous
         else:
             # Get all lifts ridden before the earliest activity in this batch
-            previous_lifts = LiftRide.objects.filter(
-                lap__activity__user=user,
-                lap__activity__ski_area_id=ski_area_id,
-                lap__activity__start_time__lt=earliest_timestamp
-            ).values_list('aerialway', flat=True).distinct()
+            previous_lifts = (
+                LiftRide.objects.filter(
+                    lap__activity__user=user,
+                    lap__activity__ski_area_id=ski_area_id,
+                    lap__activity__start_time__lt=earliest_timestamp,
+                )
+                .values_list("aerialway", flat=True)
+                .distinct()
+            )
 
             previous_lifts_set = set(previous_lifts)
             previous_lifts_by_ski_area[ski_area_id] = previous_lifts_set
@@ -444,10 +455,10 @@ def calculate_batch_activity_completeness(activities, user):
 
         if not activity.ski_area:
             results[activity_id] = {
-                'lifts_used_today': 0,
-                'total_lifts_available': 0,
-                'daily_completion_percentage': 0,
-                'new_lifts_discovered': 0
+                "lifts_used_today": 0,
+                "total_lifts_available": 0,
+                "daily_completion_percentage": 0,
+                "new_lifts_discovered": 0,
             }
             continue
 
@@ -469,20 +480,20 @@ def calculate_batch_activity_completeness(activities, user):
             new_lifts = activity_lift_ids - previous_lift_ids
 
             results[activity_id] = {
-                'lifts_used_today': lifts_used_today,
-                'total_lifts_available': total_available,
-                'daily_completion_percentage': daily_percentage,
-                'new_lifts_discovered': len(new_lifts)
+                "lifts_used_today": lifts_used_today,
+                "total_lifts_available": total_available,
+                "daily_completion_percentage": daily_percentage,
+                "new_lifts_discovered": len(new_lifts),
             }
 
         except Exception as e:
             logger.error(f"Error calculating completeness for activity {activity.id}: {e}")
             results[activity_id] = {
-                'error': 'Error calculating completeness',
-                'daily_completion_percentage': 0,
-                'lifts_used_today': 0,
-                'total_lifts_available': 0,
-                'new_lifts_discovered': 0
+                "error": "Error calculating completeness",
+                "daily_completion_percentage": 0,
+                "lifts_used_today": 0,
+                "total_lifts_available": 0,
+                "new_lifts_discovered": 0,
             }
 
     return results
@@ -502,32 +513,31 @@ def get_lift_statistics(user, ski_area=None):
         rides = rides.filter(lap__activity__ski_area=ski_area)
 
     # Most ridden lift
-    most_ridden_lift = rides.values('aerialway__name', 'aerialway__id').annotate(
-        ride_count=Count('id')
-    ).order_by('-ride_count').first()
+    most_ridden_lift = (
+        rides.values("aerialway__name", "aerialway__id")
+        .annotate(ride_count=Count("id"))
+        .order_by("-ride_count")
+        .first()
+    )
 
     # Recent lift rides
-    recent_rides = rides.select_related(
-        'aerialway', 'lap__activity__ski_area'
-    ).order_by('-timestamp')[:20]
+    recent_rides = rides.select_related("aerialway", "lap__activity__ski_area").order_by("-timestamp")[:20]
 
     # Lift type distribution
-    lift_types = rides.values('aerialway__aerialway').annotate(
-        count=Count('id')
-    ).order_by('-count')
+    lift_types = rides.values("aerialway__aerialway").annotate(count=Count("id")).order_by("-count")
 
     # Unique lifts count
-    unique_lifts = rides.values('aerialway').distinct().count()
+    unique_lifts = rides.values("aerialway").distinct().count()
 
     # Total rides
     total_rides = rides.count()
 
     return {
-        'most_ridden_lift': most_ridden_lift,
-        'recent_rides': recent_rides,
-        'lift_types': lift_types,
-        'unique_lifts': unique_lifts,
-        'total_rides': total_rides
+        "most_ridden_lift": most_ridden_lift,
+        "recent_rides": recent_rides,
+        "lift_types": lift_types,
+        "unique_lifts": unique_lifts,
+        "total_rides": total_rides,
     }
 
 
@@ -577,38 +587,42 @@ def get_available_pistes_in_ski_area(ski_area, user=None):
     try:
         pistes = Piste.objects.none()
         from django.db.models import Q
-        query = Q(piste_type='downhill') & ~Q(piste_difficulty='freeride') & Q(length__gt=100) & ~Q(piste_grooming='backcountry')
+
+        query = (
+            Q(piste_type="downhill")
+            & ~Q(piste_difficulty="freeride")
+            & Q(length__gt=100)
+            & ~Q(piste_grooming="backcountry")
+        )
 
         # Strategy 1: Direct geometry intersection
         if ski_area.geom:
             pistes_with_geom = Piste.objects.exclude(geom__isnull=True).exists()
             if pistes_with_geom:
                 # Filter for downhill pistes (piste_type='downhill' and not piste_difficulty='freeride'
-                pistes = Piste.objects.filter(
-                    geom__intersects=ski_area.geom
-                ).filter(
-                    query
-                ).exclude(geom__isnull=True).distinct()
+                pistes = (
+                    Piste.objects.filter(geom__intersects=ski_area.geom)
+                    .filter(query)
+                    .exclude(geom__isnull=True)
+                    .distinct()
+                )
                 logger.info(f"Using direct geometry intersection for ski area {ski_area.id}")
 
         # Strategy 2: Boundary way constructed geometry
         if not pistes.exists() and ski_area.way:
             boundary_geom = ski_area.way.constructed_geom
             if boundary_geom:
-                pistes = Piste.objects.filter(
-                    geom__intersects=boundary_geom
-                ).filter(
-                    query
-                ).exclude(geom__isnull=True).distinct()
+                pistes = (
+                    Piste.objects.filter(geom__intersects=boundary_geom)
+                    .filter(query)
+                    .exclude(geom__isnull=True)
+                    .distinct()
+                )
                 logger.info(f"Using constructed geometry for ski area {ski_area.id}")
 
         # Strategy 3: Way relationships fallback
         if not pistes.exists():
-            pistes = Piste.objects.filter(
-                way__ski_areas=ski_area
-            ).filter(
-                query
-            ).exclude(geom__isnull=True).distinct()
+            pistes = Piste.objects.filter(way__ski_areas=ski_area).filter(query).exclude(geom__isnull=True).distinct()
             if pistes.exists():
                 logger.info(f"Found {pistes.count()} pistes using way relationships for ski area {ski_area.id}")
 
@@ -617,33 +631,28 @@ def get_available_pistes_in_ski_area(ski_area, user=None):
             duplicate_areas = SkiArea.objects.filter(name=ski_area.name).exclude(id=ski_area.id)
             for dup in duplicate_areas:
                 if dup.geom:
-                    pistes = Piste.objects.filter(
-                        geom__intersects=dup.geom
-                                ).filter(
-                                    query
-                    ).exclude(geom__isnull=True).distinct()
+                    pistes = (
+                        Piste.objects.filter(geom__intersects=dup.geom)
+                        .filter(query)
+                        .exclude(geom__isnull=True)
+                        .distinct()
+                    )
                 elif dup.way:
-                    pistes = Piste.objects.filter(
-                        way__ski_areas=dup
-                    ).filter(
-                        query
-                    ).exclude(geom__isnull=True).distinct()
+                    pistes = (
+                        Piste.objects.filter(way__ski_areas=dup).filter(query).exclude(geom__isnull=True).distinct()
+                    )
                 if pistes.exists():
                     logger.info(f"Found pistes using duplicate ski area {dup.id}")
                     break
 
         # Strategy 5: Actual ride data fallback
         if not pistes.exists():
-            ridden_piste_ids = PisteRide.objects.filter(
-                lap__activity__ski_area=ski_area
-            ).values_list('piste', flat=True).distinct()
+            ridden_piste_ids = (
+                PisteRide.objects.filter(lap__activity__ski_area=ski_area).values_list("piste", flat=True).distinct()
+            )
 
             if ridden_piste_ids:
-                pistes = Piste.objects.filter(
-                    id__in=ridden_piste_ids
-                ).filter(
-                    query
-                ).exclude(geom__isnull=True)
+                pistes = Piste.objects.filter(id__in=ridden_piste_ids).filter(query).exclude(geom__isnull=True)
                 logger.info(f"Found {pistes.count()} pistes using ride data for ski area {ski_area.id}")
 
         # CRITICAL: Post-filter for line-based pistes only
@@ -703,70 +712,62 @@ def calculate_ski_area_piste_completeness(user, ski_area, force_calc=False, seas
     available_pistes = get_available_pistes_in_ski_area(ski_area, user=user)
 
     # Calculate total available distance
-    total_distance_available = sum(
-        p.length for p in available_pistes if p.length
-    )
+    total_distance_available = sum(p.length for p in available_pistes if p.length)
 
     if total_distance_available == 0:
         result = {
-            'total_distance_available': 0,
-            'total_distance_ridden': 0,
-            'completion_percentage': 0,
-            'pistes_ridden': [],
-            'pistes_not_ridden': []
+            "total_distance_available": 0,
+            "total_distance_ridden": 0,
+            "completion_percentage": 0,
+            "pistes_ridden": [],
+            "pistes_not_ridden": [],
         }
         cache.set(cache_key, result, 3600)  # Cache for 1 hour even if no pistes
         return result
 
     # Get pistes the user has ridden
     user_piste_rides_query = PisteRide.objects.filter(
-        lap__activity__user=user,
-        lap__activity__ski_area=ski_area,
-        piste__in=available_pistes
+        lap__activity__user=user, lap__activity__ski_area=ski_area, piste__in=available_pistes
     )
 
     # Apply season filtering
     if season:
         from activities.utils.seasons import parse_season_string
+
         season_start, season_end = parse_season_string(season, user=user)
         if season_start and season_end:
             user_piste_rides_query = user_piste_rides_query.filter(
-                lap__activity__start_time__gte=season_start,
-                lap__activity__start_time__lte=season_end
+                lap__activity__start_time__gte=season_start, lap__activity__start_time__lte=season_end
             )
 
     # Get unique pistes ridden
-    ridden_piste_ids = user_piste_rides_query.values_list('piste', flat=True).distinct()
+    ridden_piste_ids = user_piste_rides_query.values_list("piste", flat=True).distinct()
     ridden_pistes = available_pistes.filter(id__in=ridden_piste_ids)
-    not_ridden_pistes = available_pistes.exclude(id__in=ridden_piste_ids).order_by('length')
+    not_ridden_pistes = available_pistes.exclude(id__in=ridden_piste_ids).order_by("length")
 
     # Calculate total distance ridden
-    total_distance_ridden = sum(
-        p.length for p in ridden_pistes if p.length
-    )
+    total_distance_ridden = sum(p.length for p in ridden_pistes if p.length)
 
     completion_percentage = 0
     if total_distance_available > 0:
-        completion_percentage = round(
-            (total_distance_ridden / total_distance_available) * 100, 1
-        )
+        completion_percentage = round((total_distance_ridden / total_distance_available) * 100, 1)
 
     # Calculate average distance per piste
     avg_distance_per_piste = 0
-    pistes_ridden_list = list(ridden_pistes.values('id', 'name', 'length', 'piste_difficulty'))
-    pistes_not_ridden_list = list(not_ridden_pistes.values('id', 'name', 'length', 'piste_difficulty'))
+    pistes_ridden_list = list(ridden_pistes.values("id", "name", "length", "piste_difficulty"))
+    pistes_not_ridden_list = list(not_ridden_pistes.values("id", "name", "length", "piste_difficulty"))
 
     if pistes_ridden_list:
         avg_distance_per_piste = round(total_distance_ridden / len(pistes_ridden_list), 1)
 
     result = {
-        'total_distance_available': round(total_distance_available, 1),
-        'total_distance_ridden': round(total_distance_ridden, 1),
-        'completion_percentage': completion_percentage,
-        'avg_distance_per_piste': avg_distance_per_piste,
-        'total_pistes_available': len(pistes_ridden_list) + len(pistes_not_ridden_list),
-        'pistes_ridden': pistes_ridden_list,
-        'pistes_not_ridden': pistes_not_ridden_list
+        "total_distance_available": round(total_distance_available, 1),
+        "total_distance_ridden": round(total_distance_ridden, 1),
+        "completion_percentage": completion_percentage,
+        "avg_distance_per_piste": avg_distance_per_piste,
+        "total_pistes_available": len(pistes_ridden_list) + len(pistes_not_ridden_list),
+        "pistes_ridden": pistes_ridden_list,
+        "pistes_not_ridden": pistes_not_ridden_list,
     }
 
     # Cache indefinitely, clear on data change
@@ -819,11 +820,11 @@ def calculate_activity_piste_completeness(activity):
     """
     if not activity.ski_area:
         return {
-            'distance_skied_today': 0,
-            'total_distance_available': 0,
-            'daily_completion_percentage': 0,
-            'new_pistes_discovered': 0,
-            'new_distance_discovered': 0
+            "distance_skied_today": 0,
+            "total_distance_available": 0,
+            "daily_completion_percentage": 0,
+            "new_pistes_discovered": 0,
+            "new_distance_discovered": 0,
         }
 
     # Check cache first - data only changes if activity is reprocessed or manually modified
@@ -835,22 +836,16 @@ def calculate_activity_piste_completeness(activity):
         return cached_result
 
     # Get pistes ridden in this activity
-    activity_piste_rides = PisteRide.objects.filter(
-        lap__activity=activity
-    ).select_related('piste')
+    activity_piste_rides = PisteRide.objects.filter(lap__activity=activity).select_related("piste")
 
-    activity_piste_ids = activity_piste_rides.values_list('piste', flat=True).distinct()
+    activity_piste_ids = activity_piste_rides.values_list("piste", flat=True).distinct()
     activity_pistes = Piste.objects.filter(id__in=activity_piste_ids)
 
     # Calculate distance skied today (only line-based pistes)
-    distance_skied_today = sum(
-        p.length for p in activity_pistes if p.length and not p.is_area()
-    )
+    distance_skied_today = sum(p.length for p in activity_pistes if p.length and not p.is_area())
 
     # Get total available piste distance for ski area (cached)
-    total_distance_available = get_ski_area_total_distance_cached(
-        activity.ski_area, activity.user
-    )
+    total_distance_available = get_ski_area_total_distance_cached(activity.ski_area, activity.user)
 
     # Calculate daily completion percentage
     daily_percentage = 0
@@ -858,25 +853,27 @@ def calculate_activity_piste_completeness(activity):
         daily_percentage = round((distance_skied_today / total_distance_available) * 100, 1)
 
     # Calculate new pistes discovered (not ridden before this activity)
-    previous_piste_rides = PisteRide.objects.filter(
-        lap__activity__user=activity.user,
-        lap__activity__ski_area=activity.ski_area,
-        lap__activity__start_time__lt=activity.start_time
-    ).values_list('piste', flat=True).distinct()
+    previous_piste_rides = (
+        PisteRide.objects.filter(
+            lap__activity__user=activity.user,
+            lap__activity__ski_area=activity.ski_area,
+            lap__activity__start_time__lt=activity.start_time,
+        )
+        .values_list("piste", flat=True)
+        .distinct()
+    )
 
     new_piste_ids = set(activity_piste_ids) - set(previous_piste_rides)
     new_pistes = Piste.objects.filter(id__in=new_piste_ids)
 
-    new_distance_discovered = sum(
-        p.length for p in new_pistes if p.length and not p.is_area()
-    )
+    new_distance_discovered = sum(p.length for p in new_pistes if p.length and not p.is_area())
 
     result = {
-        'distance_skied_today': round(distance_skied_today, 1),
-        'total_distance_available': round(total_distance_available, 1),
-        'daily_completion_percentage': daily_percentage,
-        'new_pistes_discovered': len(new_piste_ids),
-        'new_distance_discovered': round(new_distance_discovered, 1)
+        "distance_skied_today": round(distance_skied_today, 1),
+        "total_distance_available": round(total_distance_available, 1),
+        "daily_completion_percentage": daily_percentage,
+        "new_pistes_discovered": len(new_piste_ids),
+        "new_distance_discovered": round(new_distance_discovered, 1),
     }
 
     # Cache indefinitely - only changes if activity is reprocessed or manually modified
@@ -922,17 +919,15 @@ def calculate_overall_piste_completeness(user):
         return cached_result
 
     # Get all ski areas the user has visited
-    visited_ski_areas = SkiArea.objects.filter(
-        activity__user=user
-    ).distinct()
+    visited_ski_areas = SkiArea.objects.filter(activity__user=user).distinct()
 
     if not visited_ski_areas.exists():
         result = {
-            'total_ski_areas': 0,
-            'total_distance_available': 0,
-            'total_distance_ridden': 0,
-            'overall_percentage': 0,
-            'ski_area_breakdown': []
+            "total_ski_areas": 0,
+            "total_distance_available": 0,
+            "total_distance_ridden": 0,
+            "overall_percentage": 0,
+            "ski_area_breakdown": [],
         }
         cache.set(cache_key, result, 3600)
         return result
@@ -943,26 +938,22 @@ def calculate_overall_piste_completeness(user):
 
     for ski_area in visited_ski_areas:
         completeness = calculate_ski_area_piste_completeness(user, ski_area)
-        ski_area_breakdown.append({
-            'ski_area_id': ski_area.id,
-            'ski_area_name': ski_area.name,
-            'completeness': completeness
-        })
-        total_distance_available += completeness['total_distance_available']
-        total_distance_ridden += completeness['total_distance_ridden']
+        ski_area_breakdown.append(
+            {"ski_area_id": ski_area.id, "ski_area_name": ski_area.name, "completeness": completeness}
+        )
+        total_distance_available += completeness["total_distance_available"]
+        total_distance_ridden += completeness["total_distance_ridden"]
 
     overall_percentage = 0
     if total_distance_available > 0:
-        overall_percentage = round(
-            (total_distance_ridden / total_distance_available) * 100, 1
-        )
+        overall_percentage = round((total_distance_ridden / total_distance_available) * 100, 1)
 
     result = {
-        'total_ski_areas': visited_ski_areas.count(),
-        'total_distance_available': round(total_distance_available, 1),
-        'total_distance_ridden': round(total_distance_ridden, 1),
-        'overall_percentage': overall_percentage,
-        'ski_area_breakdown': ski_area_breakdown
+        "total_ski_areas": visited_ski_areas.count(),
+        "total_distance_available": round(total_distance_available, 1),
+        "total_distance_ridden": round(total_distance_ridden, 1),
+        "overall_percentage": overall_percentage,
+        "ski_area_breakdown": ski_area_breakdown,
     }
 
     cache.set(cache_key, result, 3600)  # 1 hour cache

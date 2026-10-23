@@ -8,6 +8,7 @@ from .models import UserProfile
 
 logger = logging.getLogger(__name__)
 
+
 @receiver(user_signed_up)
 def create_user_profile(request, user, **kwargs):
     """
@@ -26,16 +27,16 @@ def notify_admin_new_user(request, user, **kwargs):
         # Get user details
         user_id = user.id
         user_profile_id = UserProfile.objects.get(user=user).id
-        date_joined = user.date_joined.strftime('%Y-%m-%d %H:%M:%S UTC')
-        
+        date_joined = user.date_joined.strftime("%Y-%m-%d %H:%M:%S UTC")
+
         # Get signup method (email vs social)
-        signup_method = 'Email Registration'
-        if hasattr(request, 'session') and 'socialaccount_sociallogin' in request.session:
-            signup_method = 'Social Account (Strava)'
-        
+        signup_method = "Email Registration"
+        if hasattr(request, "session") and "socialaccount_sociallogin" in request.session:
+            signup_method = "Social Account (Strava)"
+
         # Email subject
-        subject = f'New SlopeLog User: {user_id}'
-        
+        subject = f"New SlopeLog User: {user_id}"
+
         # Email content
         message = f"""
 A new user has joined SlopeLog!
@@ -50,12 +51,12 @@ Number of Users now: {User.objects.count()}
    • View User: /admin/auth/user/{user.id}/change/
    • User Profile: /admin/core/userprofile/{user_profile_id}/change/
     """.strip()
-        
+
         # Send email to admin
-        admin_email = getattr(settings, 'DEFAULT_FROM_EMAIL')
+        admin_email = getattr(settings, "DEFAULT_FROM_EMAIL")
         if not admin_email:
             logger.warning("DEFAULT_FROM_EMAIL is not set in settings. Cannot send admin notification.")
-            return        
+            return
         send_mail(
             subject=subject,
             message=message,
@@ -64,6 +65,8 @@ Number of Users now: {User.objects.count()}
             fail_silently=False,
         )
         logger.info(f"Admin notification sent for new user: {user_id}")
-        
+
     except Exception as e:
-        logger.error(f"Failed to send admin notification for new user {user_id}: {str(e)}", exc_info=True, stack_info=True)
+        logger.error(
+            f"Failed to send admin notification for new user {user_id}: {str(e)}", exc_info=True, stack_info=True
+        )

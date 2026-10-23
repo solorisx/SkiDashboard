@@ -5,23 +5,24 @@ from activities.models import Activity, Lap
 
 import logging
 
-logger = logging.getLogger('SkiingDashboard')
+logger = logging.getLogger("SkiingDashboard")
+
 
 def test_strava():
-    user = User.objects.get(username='admin')
+    user = User.objects.get(username="admin")
     sync_strava_activity(user, 13450947648, update=True)
     return
-    #activities = load_activities(user, after=datetime.now() - timedelta(days=90))
+    # activities = load_activities(user, after=datetime.now() - timedelta(days=90))
     activities = load_activities(user)
-    #Activity.objects.filter(user=user).delete()
+    # Activity.objects.filter(user=user).delete()
     for activity in activities:
-        if activity.type == 'AlpineSki':
+        if activity.type == "AlpineSki":
             activity_id = activity.id
             sync_strava_activity(user, activity_id, update=True)
 
 
 def print_activities():
-    user = User.objects.get(username='admin')
+    user = User.objects.get(username="admin")
     for activity in Activity.objects.filter(user=user):
         name = activity.name if activity.name else "Unnamed activity"
         logger.debug(f"Activity {activity.strava_id} {name}")
@@ -34,6 +35,7 @@ def print_activities():
                 logger.debug(f"  Lift: {lift_ride.name}")
                 logger.debug(lift_ride.get_osm_url())
 
+
 def test_strava_activity(activity_id):
-    user = User.objects.get(username='admin')
+    user = User.objects.get(username="admin")
     sync_strava_activity(user, activity_id, update=False)

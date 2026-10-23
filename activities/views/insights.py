@@ -33,29 +33,29 @@ def activity_insights(request, season=None):
     seasons = filter_seasons_for_user(get_seasons(user=request.user), request.user)
 
     # Most recent activities (top 5)
-    recent_activities = activities.annotate(
-        total_distance_km=Round(F("total_distance")/1000, 2)
-    ).order_by("-timestamp")[:5]
+    recent_activities = activities.annotate(total_distance_km=Round(F("total_distance") / 1000, 2)).order_by(
+        "-timestamp"
+    )[:5]
 
     # Activity with most vertical (total_descent)
-    activity_most_vertical = activities.aggregate(
-        max_descent=Max('total_descent')
-    )
+    activity_most_vertical = activities.aggregate(max_descent=Max("total_descent"))
     most_vertical_activity = None
-    if activity_most_vertical['max_descent']:
-        most_vertical_activity = activities.annotate(
-            total_distance_km=Round(F("total_distance")/1000, 2)
-        ).filter(total_descent=activity_most_vertical['max_descent']).first()
+    if activity_most_vertical["max_descent"]:
+        most_vertical_activity = (
+            activities.annotate(total_distance_km=Round(F("total_distance") / 1000, 2))
+            .filter(total_descent=activity_most_vertical["max_descent"])
+            .first()
+        )
 
     # Activity with most lift rides
-    activity_most_lifts = activities.aggregate(
-        max_lifts=Max('num_lift_rides')
-    )
+    activity_most_lifts = activities.aggregate(max_lifts=Max("num_lift_rides"))
     most_lifts_activity = None
-    if activity_most_lifts['max_lifts']:
-        most_lifts_activity = activities.annotate(
-            total_distance_km=Round(F("total_distance")/1000, 2)
-        ).filter(num_lift_rides=activity_most_lifts['max_lifts']).first()
+    if activity_most_lifts["max_lifts"]:
+        most_lifts_activity = (
+            activities.annotate(total_distance_km=Round(F("total_distance") / 1000, 2))
+            .filter(num_lift_rides=activity_most_lifts["max_lifts"])
+            .first()
+        )
 
     # Badge statistics
     activity_badges = ActivityBadge.objects.filter(activity__in=activities)
@@ -64,67 +64,67 @@ def activity_insights(request, season=None):
     total_badges_count = activity_badges.count()
 
     # Unique badges with counts - ordered by rarity (legendary first) then by count
-    unique_badges = activity_badges.values(
-        'badge__natural_key',
-        'badge__name',
-        'badge__description',
-        'badge__icon',
-        'badge__rarity'
-    ).annotate(
-        count=Count('badge')
-    ).order_by(
-        # Custom ordering for rarity (legendary=0, platinum=1, gold=2, silver=3, bronze=4)
-        models.Case(
-            models.When(badge__rarity='legendary', then=0),
-            models.When(badge__rarity='platinum', then=1),
-            models.When(badge__rarity='gold', then=2),
-            models.When(badge__rarity='silver', then=3),
-            models.When(badge__rarity='bronze', then=4),
-            default=5,
-            output_field=models.IntegerField(),
-        ),
-        '-count'  # Then by count descending
+    unique_badges = (
+        activity_badges.values(
+            "badge__natural_key", "badge__name", "badge__description", "badge__icon", "badge__rarity"
+        )
+        .annotate(count=Count("badge"))
+        .order_by(
+            # Custom ordering for rarity (legendary=0, platinum=1, gold=2, silver=3, bronze=4)
+            models.Case(
+                models.When(badge__rarity="legendary", then=0),
+                models.When(badge__rarity="platinum", then=1),
+                models.When(badge__rarity="gold", then=2),
+                models.When(badge__rarity="silver", then=3),
+                models.When(badge__rarity="bronze", then=4),
+                default=5,
+                output_field=models.IntegerField(),
+            ),
+            "-count",  # Then by count descending
+        )
     )
 
     # Badge rarity breakdown - ordered by rarity (legendary first)
-    rarity_breakdown = activity_badges.values('badge__rarity').annotate(
-        count=Count('badge')
-    ).order_by(
-        models.Case(
-            models.When(badge__rarity='legendary', then=0),
-            models.When(badge__rarity='platinum', then=1),
-            models.When(badge__rarity='gold', then=2),
-            models.When(badge__rarity='silver', then=3),
-            models.When(badge__rarity='bronze', then=4),
-            default=5,
-            output_field=models.IntegerField(),
+    rarity_breakdown = (
+        activity_badges.values("badge__rarity")
+        .annotate(count=Count("badge"))
+        .order_by(
+            models.Case(
+                models.When(badge__rarity="legendary", then=0),
+                models.When(badge__rarity="platinum", then=1),
+                models.When(badge__rarity="gold", then=2),
+                models.When(badge__rarity="silver", then=3),
+                models.When(badge__rarity="bronze", then=4),
+                default=5,
+                output_field=models.IntegerField(),
+            )
         )
     )
 
     # Create rarity mapping for display
     rarity_display = {}
     rarity_colors = {
-        'bronze': '#cd7f32',
-        'silver': '#c0c0c0',
-        'gold': '#ffd700',
-        'platinum': '#e5e4e2',
-        'legendary': '#9400d3'
+        "bronze": "#cd7f32",
+        "silver": "#c0c0c0",
+        "gold": "#ffd700",
+        "platinum": "#e5e4e2",
+        "legendary": "#9400d3",
     }
 
     for rarity in rarity_breakdown:
-        rarity_name = rarity['badge__rarity']
+        rarity_name = rarity["badge__rarity"]
         rarity_display[rarity_name] = {
-            'name': rarity_name.title(),
-            'count': rarity['count'],
-            'color': rarity_colors.get(rarity_name, '#6c757d')
+            "name": rarity_name.title(),
+            "count": rarity["count"],
+            "color": rarity_colors.get(rarity_name, "#6c757d"),
         }
 
     # Overall statistics
     overall_stats = activities.aggregate(
-        total_activities=Count('id'),
-        total_distance_km=Round(Sum(F("total_distance"))/1000, 1),
-        total_descent=Round(Sum('total_descent'), 0),
-        total_lift_rides=Sum('num_lift_rides')
+        total_activities=Count("id"),
+        total_distance_km=Round(Sum(F("total_distance")) / 1000, 1),
+        total_descent=Round(Sum("total_descent"), 0),
+        total_lift_rides=Sum("num_lift_rides"),
     )
     for key in overall_stats:
         if overall_stats[key] is None:
@@ -137,14 +137,15 @@ def activity_insights(request, season=None):
         prev_start = season_start - season_length
         prev_end = season_end - season_length
         try:
-            prior_season_stats = get_user_activities_base_query(request.user).filter(
-                timestamp__gte=prev_start,
-                timestamp__lte=prev_end
-            ).aggregate(
-                total_activities=Count('id'),
-                total_distance_km=Round(Sum(F("total_distance"))/1000, 1),
-                total_descent=Round(Sum('total_descent'), 0),
-                total_lift_rides=Sum('num_lift_rides')
+            prior_season_stats = (
+                get_user_activities_base_query(request.user)
+                .filter(timestamp__gte=prev_start, timestamp__lte=prev_end)
+                .aggregate(
+                    total_activities=Count("id"),
+                    total_distance_km=Round(Sum(F("total_distance")) / 1000, 1),
+                    total_descent=Round(Sum("total_descent"), 0),
+                    total_lift_rides=Sum("num_lift_rides"),
+                )
             )
             for key in prior_season_stats:
                 if prior_season_stats[key] is None:
@@ -154,22 +155,19 @@ def activity_insights(request, season=None):
 
     # Monthly breakdown for bar charts (activity count + descent by month)
     monthly_raw = (
-        activities
-        .annotate(month=TruncMonth('timestamp'))
-        .values('month')
-        .annotate(count=Count('id'), descent=Sum('total_descent'), lifts=Sum('num_lift_rides'))
-        .order_by('month')
+        activities.annotate(month=TruncMonth("timestamp"))
+        .values("month")
+        .annotate(count=Count("id"), descent=Sum("total_descent"), lifts=Sum("num_lift_rides"))
+        .order_by("month")
     )
-    monthly_by_key = {
-        row['month'].strftime('%b %Y'): row for row in monthly_raw if row['month']
-    }
+    monthly_by_key = {row["month"].strftime("%b %Y"): row for row in monthly_raw if row["month"]}
 
     # Build full month range; for all-seasons use the data's own span
     now = datetime.now()
     season_months = []
     if is_all_seasons and monthly_by_key:
-        all_months = sorted(monthly_by_key.keys(), key=lambda m: datetime.strptime(m, '%b %Y'))
-        first_month = datetime.strptime(all_months[0], '%b %Y')
+        all_months = sorted(monthly_by_key.keys(), key=lambda m: datetime.strptime(m, "%b %Y"))
+        first_month = datetime.strptime(all_months[0], "%b %Y")
         cur = date(first_month.year, first_month.month, 1)
         end_month = date(now.year, now.month, 1)
     else:
@@ -177,7 +175,7 @@ def activity_insights(request, season=None):
         end_cap = min(season_end, now)
         end_month = date(end_cap.year, end_cap.month, 1)
     while cur <= end_month:
-        season_months.append(cur.strftime('%b %Y'))
+        season_months.append(cur.strftime("%b %Y"))
         if cur.month == 12:
             cur = date(cur.year + 1, 1, 1)
         else:
@@ -185,20 +183,17 @@ def activity_insights(request, season=None):
 
     monthly_stats = [
         {
-            'month': m,
-            'count': monthly_by_key[m]['count'] if m in monthly_by_key else 0,
-            'descent': round(monthly_by_key[m]['descent'] or 0) if m in monthly_by_key else 0,
-            'lifts': monthly_by_key[m]['lifts'] if m in monthly_by_key else 0,
+            "month": m,
+            "count": monthly_by_key[m]["count"] if m in monthly_by_key else 0,
+            "descent": round(monthly_by_key[m]["descent"] or 0) if m in monthly_by_key else 0,
+            "lifts": monthly_by_key[m]["lifts"] if m in monthly_by_key else 0,
         }
         for m in season_months
     ]
 
     # Calendar heatmap data (date → descent) for the current view
-    calendar_raw = activities.values('timestamp__date').annotate(descent=Sum('total_descent'))
-    calendar_data = {
-        str(row['timestamp__date']): round(row['descent'] or 0)
-        for row in calendar_raw
-    }
+    calendar_raw = activities.values("timestamp__date").annotate(descent=Sum("total_descent"))
+    calendar_data = {str(row["timestamp__date"]): round(row["descent"] or 0) for row in calendar_raw}
 
     # Determine which season label to use for the share link
     if season:
@@ -208,23 +203,23 @@ def activity_insights(request, season=None):
         share_season = f"{cs_start.year}-{cs_start.year + 1}"
 
     context = {
-        'recent_activities': recent_activities,
-        'most_vertical_activity': most_vertical_activity,
-        'most_lifts_activity': most_lifts_activity,
-        'total_badges_count': total_badges_count,
-        'unique_badges': unique_badges,
-        'rarity_breakdown': rarity_display,
-        'overall_stats': overall_stats,
-        'prior_season_stats': prior_season_stats,
-        'is_all_seasons': is_all_seasons,
-        'monthly_stats': json.dumps(monthly_stats),
-        'calendar_data': json.dumps(calendar_data),
-        'seasons': seasons,
-        'selected_season': season,
-        'share_season': share_season,
+        "recent_activities": recent_activities,
+        "most_vertical_activity": most_vertical_activity,
+        "most_lifts_activity": most_lifts_activity,
+        "total_badges_count": total_badges_count,
+        "unique_badges": unique_badges,
+        "rarity_breakdown": rarity_display,
+        "overall_stats": overall_stats,
+        "prior_season_stats": prior_season_stats,
+        "is_all_seasons": is_all_seasons,
+        "monthly_stats": json.dumps(monthly_stats),
+        "calendar_data": json.dumps(calendar_data),
+        "seasons": seasons,
+        "selected_season": season,
+        "share_season": share_season,
     }
 
-    return render(request, 'activities/insights.html', context)
+    return render(request, "activities/insights.html", context)
 
 
 @login_required
@@ -238,10 +233,10 @@ def generate_season_share_image_view(request, season):
     activities = get_user_activities_base_query(request.user).filter(filter_query)
 
     stats = activities.aggregate(
-        total_activities=Count('id'),
-        total_distance_km=Round(Sum(F('total_distance')) / 1000, 1),
-        total_descent=Round(Sum('total_descent'), 0),
-        total_lift_rides=Sum('num_lift_rides'),
+        total_activities=Count("id"),
+        total_distance_km=Round(Sum(F("total_distance")) / 1000, 1),
+        total_descent=Round(Sum("total_descent"), 0),
+        total_lift_rides=Sum("num_lift_rides"),
     )
     for key in stats:
         if stats[key] is None:
@@ -252,38 +247,33 @@ def generate_season_share_image_view(request, season):
 
     # Use a clean queryset (no badge JOIN from the base query) to avoid inflated counts.
     top_ski_areas = list(
-        Activity.objects
-        .filter(user=request.user, ski_area__isnull=False)
+        Activity.objects.filter(user=request.user, ski_area__isnull=False)
         .filter(filter_query)
-        .annotate(day=TruncDate('timestamp'))
-        .values('ski_area__name')
-        .annotate(count=Count('day', distinct=True))
-        .order_by('-count')[:5]
+        .annotate(day=TruncDate("timestamp"))
+        .values("ski_area__name")
+        .annotate(count=Count("day", distinct=True))
+        .order_by("-count")[:5]
     )
 
-    best_activity = (
-        activities.select_related('ski_area')
-        .order_by('-total_descent')
-        .first()
-    )
+    best_activity = activities.select_related("ski_area").order_by("-total_descent").first()
 
     activity_badges = ActivityBadge.objects.filter(activity__in=activities)
     badges_by_rarity = {
-        item['badge__rarity']: item['count']
-        for item in activity_badges.values('badge__rarity').annotate(count=Count('badge'))
+        item["badge__rarity"]: item["count"]
+        for item in activity_badges.values("badge__rarity").annotate(count=Count("badge"))
     }
     total_badge_count = activity_badges.count()
 
     monthly_raw = (
-        activities
-        .annotate(month=TruncMonth('timestamp'))
-        .values('month')
-        .annotate(descent=Sum('total_descent'))
-        .order_by('month')
+        activities.annotate(month=TruncMonth("timestamp"))
+        .values("month")
+        .annotate(descent=Sum("total_descent"))
+        .order_by("month")
     )
     monthly_stats = [
-        {'month': row['month'].strftime('%b'), 'descent': round(row['descent'] or 0)}
-        for row in monthly_raw if row['month']
+        {"month": row["month"].strftime("%b"), "descent": round(row["descent"] or 0)}
+        for row in monthly_raw
+        if row["month"]
     ]
 
     img_bytes = generate_season_share_image_bytes(
@@ -299,6 +289,6 @@ def generate_season_share_image_view(request, season):
     )
 
     filename = f"slopelog_season_{season}_summary.png"
-    response = HttpResponse(img_bytes.read(), content_type='image/png')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response = HttpResponse(img_bytes.read(), content_type="image/png")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response

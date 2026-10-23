@@ -19,12 +19,12 @@ class ProfileConfirmationMiddleware:
         if request.user.is_authenticated:
             # Skip check for certain URLs
             exempt_paths = [
-                reverse('profile_management'),
-                reverse('account_logout'),
-                reverse('account_delete'),
-                '/admin/',  # Django admin
-                '/static/',  # Static files
-                '/media/',  # Media files
+                reverse("profile_management"),
+                reverse("account_logout"),
+                reverse("account_delete"),
+                "/admin/",  # Django admin
+                "/static/",  # Static files
+                "/media/",  # Media files
             ]
 
             # Check if current path should be skipped
@@ -35,8 +35,10 @@ class ProfileConfirmationMiddleware:
                 try:
                     profile = request.user.userprofile
                     if not profile.profile_confirmed:
-                        logger.info(f"User {request.user.username} has not confirmed profile, redirecting to profile page")
-                        return redirect('profile_management')
+                        logger.info(
+                            f"User {request.user.username} has not confirmed profile, redirecting to profile page"
+                        )
+                        return redirect("profile_management")
                 except Exception as e:
                     # If UserProfile doesn't exist or any other error, let it pass
                     # The profile will be created when they visit the profile page

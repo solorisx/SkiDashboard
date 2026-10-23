@@ -17,27 +17,27 @@ class LiftFilterConfig:
     # Global exclusions - ALWAYS excluded regardless of user settings
     # These are typically data errors or non-ski infrastructure
     GLOBAL_EXCLUDED_LIFT_TYPES = {
-        'explosive',        # Explosive lifts (not ski lifts)
-        'station',          # Station (not a lift)
-        'goods',            # Goods lift (not for passengers)
-        'zip_line',         # Zip line (not a ski lift)
-        'construction',     # Construction lift (not for skiing)
-        'yes',              # data error
-        'proposed',         # proposed lift (not existing)
-        'planned',          # planned lift (not existing)
-        'disused',          # disused lift (not existing)
-        'abandoned',        # abandoned lift (not existing)
-        'no',               # data error
-        'wire_cable',       # wire cable (not a ski lift)
+        "explosive",  # Explosive lifts (not ski lifts)
+        "station",  # Station (not a lift)
+        "goods",  # Goods lift (not for passengers)
+        "zip_line",  # Zip line (not a ski lift)
+        "construction",  # Construction lift (not for skiing)
+        "yes",  # data error
+        "proposed",  # proposed lift (not existing)
+        "planned",  # planned lift (not existing)
+        "disused",  # disused lift (not existing)
+        "abandoned",  # abandoned lift (not existing)
+        "no",  # data error
+        "wire_cable",  # wire cable (not a ski lift)
         #'unknown',          # unknown type
-        'razed',            # razed lift (not existing)
+        "razed",  # razed lift (not existing)
     }
 
     # Default user exclusions - can be overridden by user preferences
     # These are often excluded but users might want to include them
     DEFAULT_EXCLUDED_LIFT_TYPES = {
-        'magic_carpet',     # Magic carpet (conveyor belt)
-        'rope_tow',         # Rope tow (often very short)
+        "magic_carpet",  # Magic carpet (conveyor belt)
+        "rope_tow",  # Rope tow (often very short)
     }
 
     @classmethod
@@ -45,7 +45,7 @@ class LiftFilterConfig:
         """Get combined exclusion list for user."""
         excluded = cls.GLOBAL_EXCLUDED_LIFT_TYPES.copy()
 
-        if user and hasattr(user, 'userprofile'):
+        if user and hasattr(user, "userprofile"):
             # Add user's custom exclusions
             try:
                 user_excluded = user.userprofile.excluded_lift_types or []
@@ -86,22 +86,20 @@ class LiftFilterConfig:
         from django.db.models import Count
 
         popular_types = (
-            Aerialway.objects
-            .exclude(aerialway__in=cls.GLOBAL_EXCLUDED_LIFT_TYPES)
-            .values('aerialway')
-            .annotate(count=Count('id'))
+            Aerialway.objects.exclude(aerialway__in=cls.GLOBAL_EXCLUDED_LIFT_TYPES)
+            .values("aerialway")
+            .annotate(count=Count("id"))
             .filter(count__gte=min_count)
-            .order_by('-count', 'aerialway')
+            .order_by("-count", "aerialway")
         )
 
-        return [(item['aerialway'], f"{item['aerialway'].replace('_', ' ').title()}")
-                for item in popular_types]
+        return [(item["aerialway"], f"{item['aerialway'].replace('_', ' ').title()}") for item in popular_types]
 
 
 class ValidDuring(models.TextChoices):
-    winter = 'winter', 'Winter'
-    summer = 'summer', 'Summer'
-    all = 'all', 'All Seasons'
+    winter = "winter", "Winter"
+    summer = "summer", "Summer"
+    all = "all", "All Seasons"
 
 
 # Basic OSM Node Model
@@ -115,14 +113,15 @@ class Node(models.Model):
 
     def __str__(self):
         return f"Node {self.osm_id}"
-    
+
     def get_osm_url(self):
         return f"https://www.openstreetmap.org/node/{self.osm_id}"
+
 
 # Basic OSM Way Model
 class Way(models.Model):
     osm_id = models.BigIntegerField(unique=True)
-    nodes = models.ManyToManyField(Node, through='WayNode', related_name='ways')
+    nodes = models.ManyToManyField(Node, through="WayNode", related_name="ways")
     tags = models.JSONField(default=dict)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
@@ -130,7 +129,6 @@ class Way(models.Model):
 
     def __str__(self):
         return f"Way {self.osm_id}"
-
 
     def get_osm_url(self):
         return f"https://www.openstreetmap.org/way/{self.osm_id}"
@@ -144,7 +142,7 @@ class Way(models.Model):
         """
         try:
             # Get nodes in order
-            way_nodes = self.nodes.all().order_by('waynode__sequence')
+            way_nodes = self.nodes.all().order_by("waynode__sequence")
 
             if way_nodes.count() < 2:
                 logger.warning(f"Way {self.osm_id} has insufficient nodes ({way_nodes.count()})")
@@ -183,8 +181,8 @@ class WayNode(models.Model):
     modified_on = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('way', 'node', 'sequence')
-        ordering = ['sequence']
+        unique_together = ("way", "node", "sequence")
+        ordering = ["sequence"]
 
     def __str__(self):
         return f"WayNode {self.way.osm_id} - {self.node.osm_id} - {self.sequence}"
@@ -202,9 +200,10 @@ class Station(models.Model):
 
     def __str__(self):
         return f"Station {self.name or self.node.id}"
-    
+
     def get_osm_url(self):
         return self.node.get_osm_url()
+
 
 # Aerialway Model
 class Aerialway(models.Model):
@@ -226,10 +225,10 @@ class Aerialway(models.Model):
 
     def __str__(self):
         return f"Aerialway {self.way.osm_id} - {self.name}"
-    
+
     def get_osm_url(self):
         return self.way.get_osm_url()
-    
+
     @cached_property
     def get_location(self):
         skiarea = self.way.ski_areas.first()
@@ -237,16 +236,15 @@ class Aerialway(models.Model):
             ski_areas = SkiArea.objects.filter(geom__isnull=False)
             geom = self.way.constructed_geom
             try:
-                skiarea = (
-                    ski_areas
-                    .filter(geom__intersects=geom)
-                    .first()
-                )
+                skiarea = ski_areas.filter(geom__intersects=geom).first()
             except Exception as e:
                 skiarea = None
-                logger.warning(f"Exception when checking if point is within ski area for aerialway {self.way.osm_id}: {e}")
+                logger.warning(
+                    f"Exception when checking if point is within ski area for aerialway {self.way.osm_id}: {e}"
+                )
                 raise e
         return skiarea
+
 
 # Piste Model
 class Piste(models.Model):
@@ -289,7 +287,7 @@ class Piste(models.Model):
             bool: True if the way is closed (area), False if open (line).
                   Returns False if way has insufficient nodes.
         """
-        nodes = list(self.way.nodes.all().order_by('waynode__sequence'))
+        nodes = list(self.way.nodes.all().order_by("waynode__sequence"))
         if len(nodes) < 3:  # Need at least 3 nodes to form an area
             return False
         return nodes[0].id == nodes[-1].id
@@ -304,11 +302,11 @@ class Piste(models.Model):
         Returns:
             bool: True if the last node update is more recent than the geometry update, False otherwise.
         """
-        last_node_update = self.way.nodes.all().order_by('-modified_on').first().modified_on
+        last_node_update = self.way.nodes.all().order_by("-modified_on").first().modified_on
         if not last_node_update:
             return False
         return last_node_update > self.geom_updated_on
-    
+
     def update_geometry(self):
         """
         Updates the geometry of the way by creating a LineString from the ordered nodes.
@@ -321,14 +319,13 @@ class Piste(models.Model):
             LineString: The updated geometry if nodes are present.
             None: If no nodes are associated with the way.
         """
-        nodes = self.way.nodes.all().order_by('waynode__sequence')
+        nodes = self.way.nodes.all().order_by("waynode__sequence")
         if len(nodes) > 1:
             self.geom = LineString(*[node.geom for node in nodes])
             self.geom_updated_on = datetime.now()
             self.save()
             return self.geom
         return None
-
 
     def generate_segments(self, regenerate=False):
         if regenerate:
@@ -346,20 +343,21 @@ class Piste(models.Model):
                 return segments
 
         if way_geom.geom_type == "LineString":
-            segment_lines = [LineString(way_geom.coords[i], way_geom.coords[i + 1])
-                            for i in range(len(way_geom.coords) - 1)]
+            segment_lines = [
+                LineString(way_geom.coords[i], way_geom.coords[i + 1]) for i in range(len(way_geom.coords) - 1)
+            ]
         elif way_geom.geom_type == "MultiLineString":
             segment_lines = [
-                LineString(line.coords[i], line.coords[i + 1])
-                for line in way_geom
-                for i in range(len(line.coords) - 1)
+                LineString(line.coords[i], line.coords[i + 1]) for line in way_geom for i in range(len(line.coords) - 1)
             ]
         else:
             logger.warning(f"Unsupported geometry type {way_geom.geom_type} for piste {self.id}")
             return segments
 
         for segment_geom in segment_lines:
-            buffered_geom = segment_geom.buffer(width=10 / 40000000 * 360, quadsegs=1)  # Buffer to avoid topology exceptions
+            buffered_geom = segment_geom.buffer(
+                width=10 / 40000000 * 360, quadsegs=1
+            )  # Buffer to avoid topology exceptions
             existing_segment = PisteSegment.objects.filter(geom__coveredby=buffered_geom).first()
 
             if existing_segment:
@@ -374,16 +372,15 @@ class Piste(models.Model):
         logger.debug(f"Generated {len(segments)} new segments for piste {self.id}")
         return segments
 
-
     def __str__(self):
         return f"Piste {self.way.osm_id} - {self.name}"
 
     def get_osm_url(self):
         return self.way.get_osm_url()
-    
+
 
 class PisteSegment(models.Model):
-    piste = models.ManyToManyField(Piste, related_name='segments')
+    piste = models.ManyToManyField(Piste, related_name="segments")
     geom = models.LineStringField(null=True, blank=True)
     length = models.FloatField(null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
@@ -391,7 +388,7 @@ class PisteSegment(models.Model):
 
     def __str__(self):
         return f"Piste Segment {self.id}"
-    
+
     def save(self, *args, **kwargs):
         if self.geom:
             try:
@@ -406,9 +403,9 @@ class AbstractSkiArea(models.Model):
     name = models.CharField(max_length=255, null=True)
     geom = models.MultiPolygonField(null=True, blank=True)
 
-    daypass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency='CHF')
-    seasonpass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency='CHF')
-    
+    daypass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency="CHF")
+    seasonpass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency="CHF")
+
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 
@@ -417,31 +414,31 @@ class AbstractSkiArea(models.Model):
 
     def __str__(self):
         return f"Ski Area {self.name}"
-    
+
     def get_osm_id(self):
-        if hasattr(self, 'osm_id'):
+        if hasattr(self, "osm_id"):
             return self.osm_id
-        elif hasattr(self, 'way'):
+        elif hasattr(self, "way"):
             return self.way.osm_id
         else:
             return None
-    
+
     def get_osm_url(self):
-        return f"https://www.openstreetmap.org/relation/{self.osm_id}"   
-    
+        return f"https://www.openstreetmap.org/relation/{self.osm_id}"
+
 
 # SkiArea Model
 class SkiArea(AbstractSkiArea):
-    osm_id = models.BigIntegerField(unique=True) # osm_id of relation or of boundary way of area
+    osm_id = models.BigIntegerField(unique=True)  # osm_id of relation or of boundary way of area
     name = models.CharField(max_length=255, null=True)
     geom = models.MultiPolygonField(null=True, blank=True)
-    ways = models.ManyToManyField(Way, related_name='ski_areas')
+    ways = models.ManyToManyField(Way, related_name="ski_areas")
     way = models.OneToOneField(Way, on_delete=models.CASCADE, related_name="boundary", null=True)
     url = models.URLField(blank=True, null=True)
     wikipedia = models.CharField(max_length=255, blank=True, null=True)
     tags = models.JSONField(default=dict)
-    daypass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency='CHF')
-    seasonpass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency='CHF')
+    daypass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency="CHF")
+    seasonpass_price = MoneyField(max_digits=6, decimal_places=2, blank=True, null=True, default_currency="CHF")
     country = CountryField(null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
@@ -449,7 +446,7 @@ class SkiArea(AbstractSkiArea):
 
     def __str__(self):
         return f"{self.name}"
-    
+
     def set_country(self, country=None):
         if self.way:
             country_code = get_country_code(self.way.osm_id, "Way")
@@ -458,53 +455,50 @@ class SkiArea(AbstractSkiArea):
         if country_code:
             self.country = country_code
             self.save()
-    
 
     def get_osm_url(self):
         if self.way:
             return f"https://www.openstreetmap.org/way/{self.osm_id}"
         else:
             return f"https://www.openstreetmap.org/relation/{self.osm_id}"
-    
+
 
 class SkiAreaBoundary(AbstractSkiArea):
-    way = models.OneToOneField(Way, on_delete=models.CASCADE, related_name="ski_area_boundary")  # Added explicit related_name
-    ways = models.ManyToManyField(Way, related_name='ski_area_boundaries')
+    way = models.OneToOneField(
+        Way, on_delete=models.CASCADE, related_name="ski_area_boundary"
+    )  # Added explicit related_name
+    ways = models.ManyToManyField(Way, related_name="ski_area_boundaries")
 
     def __str__(self):
         return f"Ski Area Boundary {self.way.osm_id}"
-    
+
     def get_osm_url(self):
         return self.way.get_osm_url()
 
 
 class SkiAreaNetwork(models.Model):
     name = models.CharField(max_length=255, unique=True)
-    season_pass_price = MoneyField(max_digits=10, decimal_places=2, default_currency='CHF', null=True)
+    season_pass_price = MoneyField(max_digits=10, decimal_places=2, default_currency="CHF", null=True)
     created_on = models.DateTimeField(auto_now_add=True)
     modified_on = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Ski Area Network {self.name}"
-    
+
     def list_members_array(self, valid_from=None, valid_to=None):
         if valid_from and valid_to:
             members = self.members.filter(
                 models.Q(valid_from__isnull=True) | models.Q(valid_from__lte=valid_to),
-                models.Q(valid_to__isnull=True) | models.Q(valid_to__gte=valid_from)
+                models.Q(valid_to__isnull=True) | models.Q(valid_to__gte=valid_from),
             )
         elif valid_from:
-            members = self.members.filter(
-                models.Q(valid_from__isnull=True) | models.Q(valid_from__lte=valid_from)
-            )
+            members = self.members.filter(models.Q(valid_from__isnull=True) | models.Q(valid_from__lte=valid_from))
         elif valid_to:
-            members = self.members.filter(
-                models.Q(valid_to__isnull=True) | models.Q(valid_to__gte=valid_to)
-            )
+            members = self.members.filter(models.Q(valid_to__isnull=True) | models.Q(valid_to__gte=valid_to))
         else:
             members = self.members.all()
         return members
-    
+
     def list_members(self, valid_from=None, valid_to=None):
         members = self.list_members_array(valid_from, valid_to)
         names = []
@@ -515,9 +509,10 @@ class SkiAreaNetwork(models.Model):
             names.append(name_str)
         unique_names = list(set(names))  # Remove duplicates
         return ", ".join(unique_names)
-    
+
+
 class SkiAreaNetworkMember(models.Model):
-    ski_area_network = models.ForeignKey(SkiAreaNetwork, on_delete=models.CASCADE, related_name='members')
+    ski_area_network = models.ForeignKey(SkiAreaNetwork, on_delete=models.CASCADE, related_name="members")
     member = models.ForeignKey(SkiArea, on_delete=models.CASCADE)
     valid_from = models.DateField(null=True)
     valid_to = models.DateField(null=True)
@@ -528,6 +523,6 @@ class SkiAreaNetworkMember(models.Model):
 
     def __str__(self):
         return f"{self.ski_area_network.name} - {self.member.name} ({self.valid_from} - {self.valid_to})"
-    
+
     class Meta:
-        unique_together = ('ski_area_network', 'member')
+        unique_together = ("ski_area_network", "member")

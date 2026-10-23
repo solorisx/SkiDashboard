@@ -5,8 +5,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class Command(BaseCommand):
-    help = 'Updates all piste segments, takes about 2 hours'
+    help = "Updates all piste segments, takes about 2 hours"
 
     def handle(self, *args, **options):
         # activities
@@ -23,5 +24,3 @@ class Command(BaseCommand):
         SkiAreaNetwork.objects.all().delete()
         SkiArea.objects.all().delete()
         SkiAreaBoundary.objects.all().delete()
-
-

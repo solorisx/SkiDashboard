@@ -18,7 +18,7 @@ from core.premium import filter_seasons_for_user, premium_season_required
 logger = logging.getLogger(__name__)
 
 
-@login_required    
+@login_required
 def lift_ride_list(request, year=None):
     """Show lift ride statistics by year."""
     rides = LiftRide.objects.filter(lap__activity__user=request.user)
@@ -28,20 +28,16 @@ def lift_ride_list(request, year=None):
 
     if year:
         rides = rides.filter(lap__activity__timestamp__year=year)
-    
+
     # Get sort parameter
-    sort_by = request.GET.get('sort', 'rides')  # 'rides' or 'area'
-    
+    sort_by = request.GET.get("sort", "rides")  # 'rides' or 'area'
+
     # Aggregation by aerialway id
-    lift_stats = (
-        rides.values("aerialway")
-        .annotate(total_rides=Count("id"))
-    )
+    lift_stats = rides.values("aerialway").annotate(total_rides=Count("id"))
 
     # Prefetch aerialways with their ski areas
     aerialways = (
-        Aerialway.objects
-        .filter(pk__in=[s["aerialway"] for s in lift_stats])
+        Aerialway.objects.filter(pk__in=[s["aerialway"] for s in lift_stats])
         .select_related("way")
         .prefetch_related("way__ski_areas")
     )
@@ -53,7 +49,7 @@ def lift_ride_list(request, year=None):
         stat["aerialway_name"] = aw.name
         stat["location_name"] = aw.get_location.name if aw.get_location else None
 
-    if sort_by == 'area':
+    if sort_by == "area":
         # 1) Per-area totals
         area_totals = defaultdict(int)
         for lift in lift_stats:
@@ -96,22 +92,22 @@ def lift_ride_list(request, year=None):
     else:
         lift_stats = sorted(lift_stats, key=lambda x: -x.get("total_rides", 0))
         ski_area_totals = {}
-        
+
     # Calculate additional statistics
     total_rides = sum(stat["total_rides"] for stat in lift_stats)
     unique_resorts = len(set(stat["location_name"] for stat in lift_stats if stat["location_name"]))
     top_lift = lift_stats[0] if lift_stats else None
 
     context = {
-        'lift_stats': lift_stats,
-        'selected_year': year,
-        'years': years,
-        'sort_by': sort_by,
-        'group_by_area': sort_by == 'area',
-        'total_rides': total_rides,
-        'unique_resorts': unique_resorts,
-        'top_lift': top_lift,
-        'ski_area_totals': ski_area_totals,
+        "lift_stats": lift_stats,
+        "selected_year": year,
+        "years": years,
+        "sort_by": sort_by,
+        "group_by_area": sort_by == "area",
+        "total_rides": total_rides,
+        "unique_resorts": unique_resorts,
+        "top_lift": top_lift,
+        "ski_area_totals": ski_area_totals,
     }
 
     return render(request, "liftrides/statistics.html", context)
@@ -129,7 +125,7 @@ def lift_ride_list_season(request, season=None):
 
     if years:
         if not rides.filter(lap__activity__timestamp__lte=datetime(years[-1], 6, 30)):
-            years.pop(len(years)-1)
+            years.pop(len(years) - 1)
 
     seasons = [f"{y-1}-{y}" for y in years]
 
@@ -143,20 +139,16 @@ def lift_ride_list_season(request, season=None):
         start_date = datetime(year1, 7, 1)
         end_date = datetime(year2, 6, 30)
         rides = rides.filter(lap__activity__timestamp__range=(start_date, end_date))
-    
+
     # Get sort parameter
-    sort_by = request.GET.get('sort', 'rides')  # 'rides' or 'area'
-    
+    sort_by = request.GET.get("sort", "rides")  # 'rides' or 'area'
+
     # Aggregation by aerialway id
-    lift_stats = (
-        rides.values("aerialway")
-        .annotate(total_rides=Count("id"))
-    )
+    lift_stats = rides.values("aerialway").annotate(total_rides=Count("id"))
 
     # Prefetch aerialways with their ski areas
     aerialways = (
-        Aerialway.objects
-        .filter(pk__in=[s["aerialway"] for s in lift_stats])
+        Aerialway.objects.filter(pk__in=[s["aerialway"] for s in lift_stats])
         .select_related("way")
         .prefetch_related("way__ski_areas")
     )
@@ -170,41 +162,42 @@ def lift_ride_list_season(request, season=None):
         stat["usage_percentage"] = 0  # Will be calculated after sorting
 
     # Apply sorting
-    if sort_by == 'area':
+    if sort_by == "area":
         lift_stats = sorted(lift_stats, key=lambda x: (x["location_name"] or "", -x["total_rides"]))
         # Add ski area totals for grouped view
         from itertools import groupby
+
         ski_area_totals = {}
         for location, group in groupby(lift_stats, key=lambda x: x["location_name"]):
             group_list = list(group)
             ski_area_totals[location] = {
-                'lift_count': len(group_list),
-                'total_rides': sum(lift['total_rides'] for lift in group_list)
+                "lift_count": len(group_list),
+                "total_rides": sum(lift["total_rides"] for lift in group_list),
             }
     else:
         lift_stats = sorted(lift_stats, key=lambda x: -x["total_rides"])
         ski_area_totals = {}
-    
+
     # Calculate additional statistics
     total_rides = sum(stat["total_rides"] for stat in lift_stats)
     unique_resorts = len(set(stat["location_name"] for stat in lift_stats if stat["location_name"]))
     top_lift = lift_stats[0] if lift_stats else None
-    
+
     # Calculate usage percentages
     if total_rides > 0:
         for stat in lift_stats:
             stat["usage_percentage"] = round((stat["total_rides"] / total_rides) * 100, 1)
 
     context = {
-        'lift_stats': lift_stats,
-        'selected_season': season,
-        'seasons': seasons,
-        'sort_by': sort_by,
-        'group_by_area': sort_by == 'area',
-        'total_rides': total_rides,
-        'unique_resorts': unique_resorts,
-        'top_lift': top_lift,
-        'ski_area_totals': ski_area_totals,
+        "lift_stats": lift_stats,
+        "selected_season": season,
+        "seasons": seasons,
+        "sort_by": sort_by,
+        "group_by_area": sort_by == "area",
+        "total_rides": total_rides,
+        "unique_resorts": unique_resorts,
+        "top_lift": top_lift,
+        "ski_area_totals": ski_area_totals,
     }
 
     return render(request, "liftrides/statistics_season.html", context)
@@ -215,13 +208,15 @@ def activity_list_skiarea_detail(request, skiarea_id, season=None):
     """Show detailed activity statistics for a specific ski area."""
     skiarea = get_object_or_404(SkiArea, id=skiarea_id)
     filter_query = get_filter_query(request, season)
-    activities = get_user_activities_base_query(request.user).filter(filter_query, ski_area=skiarea).order_by("-timestamp")
-    
-    activities = activities.annotate(
-        total_distance_km=Round(F("total_distance")/1000, 2),
-        num_distinct_lift_rides=Count('laps__lift_rides__id', distinct=True),
+    activities = (
+        get_user_activities_base_query(request.user).filter(filter_query, ski_area=skiarea).order_by("-timestamp")
     )
-    
+
+    activities = activities.annotate(
+        total_distance_km=Round(F("total_distance") / 1000, 2),
+        num_distinct_lift_rides=Count("laps__lift_rides__id", distinct=True),
+    )
+
     # Debug logging for lift rides
     for activity in activities:
         for lap in activity.laps.all():
@@ -230,37 +225,40 @@ def activity_list_skiarea_detail(request, skiarea_id, season=None):
         logger.debug(f"Activity: {activity}, {activity.num_distinct_lift_rides}")
 
     seasons = filter_seasons_for_user(get_seasons(request.user), request.user)
-    
+
     # Calculate total statistics for the ski area
     total_activities = activities.aggregate(
-        sum_descent=Sum('total_descent'),
-        total_distance_km=Sum('total_distance')/1000,
-        total_num_laps=Count('laps'),
-        num_act=Count('id'),
+        sum_descent=Sum("total_descent"),
+        total_distance_km=Sum("total_distance") / 1000,
+        total_num_laps=Count("laps"),
+        num_act=Count("id"),
     )
-    total_activities['total_num_lift_rides'] = sum(
+    total_activities["total_num_lift_rides"] = sum(
         lap.lift_rides.count() for activity in activities for lap in activity.laps.all()
     )
-    
+
     # Get all aerialways in the ski area
     if skiarea.geom:
         aerialways = Aerialway.objects.filter(station_nodes__node__geom__within=skiarea.geom).distinct()
     else:
         aerialways = Aerialway.objects.filter(way__in=skiarea.ways).distinct()
-    
-    # Annotate aerialways with lift ride counts
-    lift_rides_count = LiftRide.objects.filter(
-        filter_query,
-        aerialway=OuterRef("pk"),
-    ).values("aerialway").annotate(num_rides=Count("id")).values("num_rides")
 
-    aerialways = aerialways.annotate(
-        num_rides=Subquery(lift_rides_count, output_field=models.IntegerField())
+    # Annotate aerialways with lift ride counts
+    lift_rides_count = (
+        LiftRide.objects.filter(
+            filter_query,
+            aerialway=OuterRef("pk"),
+        )
+        .values("aerialway")
+        .annotate(num_rides=Count("id"))
+        .values("num_rides")
     )
+
+    aerialways = aerialways.annotate(num_rides=Subquery(lift_rides_count, output_field=models.IntegerField()))
 
     num_area_rides = aerialways.count()
     logger.debug(f"Num area rides: {num_area_rides}")
-    
+
     # Calculate progress for each activity
     if num_area_rides:
         activities = activities.annotate(
@@ -268,11 +266,11 @@ def activity_list_skiarea_detail(request, skiarea_id, season=None):
         )
 
     context = {
-        'skiarea': skiarea,
-        'activities': activities,
-        'total_activities': total_activities,
-        'aerialways': aerialways,
-        'seasons': seasons,
+        "skiarea": skiarea,
+        "activities": activities,
+        "total_activities": total_activities,
+        "aerialways": aerialways,
+        "seasons": seasons,
     }
 
     return render(request, "activities/skiarea/skiarea_detail.html", context)

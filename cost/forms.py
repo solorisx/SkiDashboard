@@ -7,12 +7,14 @@ from osm.models import SkiArea
 import datetime
 
 this_year = datetime.date.today().year
-years = range(this_year-5, this_year+5)
+years = range(this_year - 5, this_year + 5)
+
 
 class CostForm(forms.ModelForm):
     class Meta:
         model = Activity
-        fields = ['cost']
+        fields = ["cost"]
+
 
 class SeasonPassForm(forms.Form):
     skiareaAdd = forms.ModelChoiceField(
@@ -49,16 +51,12 @@ class SeasonPassForm(forms.Form):
         max_digits=6,
         decimal_places=2,
         default_currency="CHF",
-        widget=MoneyWidget(
-            attrs={"class": "form-control"}
-            ),
+        widget=MoneyWidget(attrs={"class": "form-control"}),
     )
     priceEdit = MoneyFormField(
         label="Price",
         max_digits=6,
         decimal_places=2,
         default_currency="CHF",
-        widget=MoneyWidget(
-            attrs={"class": "form-control"}
-            ),
+        widget=MoneyWidget(attrs={"class": "form-control"}),
     )

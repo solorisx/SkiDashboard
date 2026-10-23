@@ -7,11 +7,9 @@ def get_seasons(user):
 
     # Only fetch start_time and user profile data - avoid loading geometry fields
     activities = (
-        Activity.objects
-        .filter(user=user)
-        .select_related('user', 'user__userprofile')
-        .only('start_time', 'user__userprofile__season_start_month',
-              'user__userprofile__season_start_day')
+        Activity.objects.filter(user=user)
+        .select_related("user", "user__userprofile")
+        .only("start_time", "user__userprofile__season_start_month", "user__userprofile__season_start_day")
     )
     seasons = get_seasons_from_activities(activities)
     seasons = [f"{a}-{b}" for (a, b) in seasons]
@@ -29,9 +27,9 @@ def get_season_dates(current=True, user=None):
     now = datetime.now()
 
     # Get season boundaries from user preferences or defaults
-    if user and hasattr(user, 'userprofile'):
+    if user and hasattr(user, "userprofile"):
         try:
-            start_date = user.userprofile.get_season_start_date(2000) # Year doesn't matter here
+            start_date = user.userprofile.get_season_start_date(2000)  # Year doesn't matter here
             end_date = user.userprofile.get_season_end_date(2000)
             start_month = start_date.month
             start_day = start_date.day
@@ -47,11 +45,27 @@ def get_season_dates(current=True, user=None):
         end_month, end_day = 6, 30
 
     if current:
-        season_start = datetime(now.year, start_month, start_day) if now.month >= start_month else datetime(now.year-1, start_month, start_day)
-        season_end = datetime(now.year+1, end_month, end_day) if now.month >= start_month else datetime(now.year, end_month, end_day)
+        season_start = (
+            datetime(now.year, start_month, start_day)
+            if now.month >= start_month
+            else datetime(now.year - 1, start_month, start_day)
+        )
+        season_end = (
+            datetime(now.year + 1, end_month, end_day)
+            if now.month >= start_month
+            else datetime(now.year, end_month, end_day)
+        )
     else:
-        season_start = datetime(now.year-1, start_month, start_day) if now.month >= start_month else datetime(now.year-2, start_month, start_day)
-        season_end = datetime(now.year, end_month, end_day) if now.month >= start_month else datetime(now.year-1, end_month, end_day)
+        season_start = (
+            datetime(now.year - 1, start_month, start_day)
+            if now.month >= start_month
+            else datetime(now.year - 2, start_month, start_day)
+        )
+        season_end = (
+            datetime(now.year, end_month, end_day)
+            if now.month >= start_month
+            else datetime(now.year - 1, end_month, end_day)
+        )
 
     return season_start, season_end
 
@@ -70,7 +84,7 @@ def parse_season_string(season, user=None):
         year1, year2 = year2, year1
 
     # Use user's custom season boundaries or defaults
-    if user and hasattr(user, 'userprofile'):
+    if user and hasattr(user, "userprofile"):
         try:
             start_month = user.userprofile.season_start_month
             start_day = user.userprofile.season_start_day
@@ -99,7 +113,7 @@ def get_season_for_activity(activity):
     user = activity.user
 
     # Get season boundaries from user preferences or defaults
-    if user and hasattr(user, 'userprofile'):
+    if user and hasattr(user, "userprofile"):
         try:
             start_date = user.userprofile.get_season_start_date(2000)  # Year doesn't matter here
             end_date = user.userprofile.get_season_end_date(2000)
@@ -124,6 +138,7 @@ def get_season_for_activity(activity):
 
     # Otherwise it's in the previous year's season
     return (activity_date.year - 1, activity_date.year)
+
 
 def get_seasons_from_activities(activities):
     """Extract unique seasons from a queryset of activities."""

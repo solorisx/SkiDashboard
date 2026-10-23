@@ -7,14 +7,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class Command(BaseCommand):
-    help = 'Updates all piste segments, takes about 2 hours'
+    help = "Updates all piste segments, takes about 2 hours"
 
     def add_arguments(self, parser):
-        parser.add_argument('--reset', action='store_true', help='Reset all piste segments')
+        parser.add_argument("--reset", action="store_true", help="Reset all piste segments")
 
     def handle(self, *args, **options):
-        if options['reset']:
+        if options["reset"]:
             logger.info(f"Deleting all piste segments ({PisteSegment.objects.count()})")
             activities = ActivityPisteSegment.objects.all().values("activity").distinct()
             logger.info(f"Affected activities: {len(activities)}")

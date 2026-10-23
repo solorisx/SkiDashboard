@@ -4,7 +4,8 @@ from datetime import date
 from django.contrib.auth.models import User
 import logging
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
+
 
 def has_seasonpass(user: User, skiarea: SkiArea, date: date):
     """
@@ -13,7 +14,9 @@ def has_seasonpass(user: User, skiarea: SkiArea, date: date):
 
     for network in SkiAreaNetwork.objects.filter(members__member=skiarea).distinct():
         logger.debug(f"Checking network: {network}")
-        if SeasonPass.objects.filter(user=user, skiarea_network=network, valid_from__lte=date, valid_until__gte=date).exists():
+        if SeasonPass.objects.filter(
+            user=user, skiarea_network=network, valid_from__lte=date, valid_until__gte=date
+        ).exists():
             return True
         else:
             logger.debug(f"No valid season pass found for network: {network}")

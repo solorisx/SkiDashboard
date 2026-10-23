@@ -6,6 +6,3 @@ from .models import SeasonPass, TicketPrice
 
 admin.site.register(SeasonPass)
 admin.site.register(TicketPrice)
-
-
-

@@ -14,34 +14,33 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import include, path
 from . import views
 import os
 
-
 urlpatterns = [
-    path('', views.landing, name="landing"),
-    path('activities/', include('activities.urls')),
-    path('trips/', include('activities.trips_urls')),
-    path('init_networks/', views.initialize_ski_area_networks, name="init_networks"),
-    path('admin/', admin.site.urls),
-    path('home/', views.home, name="home"),
+    path("", views.landing, name="landing"),
+    path("activities/", include("activities.urls")),
+    path("trips/", include("activities.trips_urls")),
+    path("init_networks/", views.initialize_ski_area_networks, name="init_networks"),
+    path("admin/", admin.site.urls),
+    path("home/", views.home, name="home"),
     # Custom Strava OAuth URLs must come BEFORE allauth.urls
-    path('accounts/strava/login/', include('core.strava_urls')),
-    path('accounts/', include('allauth.urls')),
-    path('accounts/delete/', views.UserDeleteView.as_view(), name='account_delete'),
-    path('accounts/profile/', views.profile_management, name='profile_management'),
+    path("accounts/strava/login/", include("core.strava_urls")),
+    path("accounts/", include("allauth.urls")),
+    path("accounts/delete/", views.UserDeleteView.as_view(), name="account_delete"),
+    path("accounts/profile/", views.profile_management, name="profile_management"),
     path("accounts/strava/connection/", views.strava_connection_view, name="strava-connection"),
     path("accounts/strava/unlink/", views.strava_unlink_view, name="strava-unlink"),
-    path('cost/', include('cost.urls')),
-    path("osm/", include('osm.urls')),
+    path("cost/", include("cost.urls")),
+    path("osm/", include("osm.urls")),
     path("privacy/", views.privacy_policy, name="privacy_policy"),
     path("terms/", views.terms_of_service, name="terms_of_service"),
     path("premium/", views.premium_info, name="premium_info"),
     path("webhooks/buymeacoffee/", views.buymeacoffee_webhook, name="buymeacoffee_webhook"),
     path("manage/membership/", views.membership_admin, name="membership_admin"),
-
     path("api/season-stats/", views.season_stats_api, name="season_stats_api"),
     path("api/toggle-dark-mode/", views.toggle_dark_mode, name="toggle_dark_mode"),
     path("api/lift-ride/", views.lift_ride_api, name="lift_ride_api"),
@@ -52,4 +51,4 @@ urlpatterns = [
 ]
 
 if os.getenv("ENABLE_SILK", "false").lower() == "true":
-    urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]
+    urlpatterns += [path("silk/", include("silk.urls", namespace="silk"))]

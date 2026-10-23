@@ -2,7 +2,8 @@ import logging
 from .models import Piste, PisteSegment
 from activities.batch import parse_strava_activity
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
+
 
 def update_piste_segments(osm_id=None, force=False):
     # Update segments
