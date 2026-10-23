@@ -2,7 +2,8 @@ import overpy
 import logging
 import requests
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
+
 
 def get_osm_data(osm_id, osm_type):
     api = overpy.Overpass()
@@ -16,6 +17,7 @@ def get_osm_data(osm_id, osm_type):
         raise ValueError(f"Invalid OSM type: {osm_type}")
     return result
 
+
 def load_osm_data(osm_id, osm_type):
     result = get_osm_data(osm_id, osm_type)
     logger.debug(len(result.nodes))
@@ -23,10 +25,11 @@ def load_osm_data(osm_id, osm_type):
     nodes = result.ways[0].get_nodes(resolve_missing=True)
     logger.debug(len(nodes))
 
+
 def get_country_code(osm_id, osm_type):
     try:
         result = get_osm_data(osm_id, osm_type)
-        
+
         node = None
 
         if osm_type == "Way":
@@ -36,10 +39,7 @@ def get_country_code(osm_id, osm_type):
 
         elif osm_type == "Relation":
             relation = result.relations[0]
-            relation_nodes = [
-                member for member in relation.members
-                if isinstance(member, overpy.RelationNode)
-            ]
+            relation_nodes = [member for member in relation.members if isinstance(member, overpy.RelationNode)]
             if not relation_nodes:
                 logger.debug(f"No nodes found in relation {osm_id}")
                 return None
@@ -100,4 +100,3 @@ if __name__ == "__main__":
         print(f"Country code: {country_code}")
     else:
         print("Country code not found.")
-

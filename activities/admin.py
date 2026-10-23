@@ -35,21 +35,22 @@ def update_strava_descriptions(modeladmin, request, queryset):
     if error_count > 0:
         messages.error(request, f"Failed to update {error_count} activity/activities.")
 
+
 update_strava_descriptions.short_description = "Update Strava descriptions for selected activities"
 
 
 class SkiAreaWithActivitiesFilter(admin.SimpleListFilter):
     """Filter ski areas to only show those that have activities."""
-    title = 'ski area'
-    parameter_name = 'ski_area'
+
+    title = "ski area"
+    parameter_name = "ski_area"
 
     def lookups(self, request, model_admin):
         """Return only ski areas that have at least one activity."""
         from osm.models import SkiArea
+
         # Get ski areas that are referenced by at least one activity
-        ski_areas = SkiArea.objects.filter(
-            activity__isnull=False
-        ).distinct().order_by('name')
+        ski_areas = SkiArea.objects.filter(activity__isnull=False).distinct().order_by("name")
         return [(ski_area.id, ski_area.name) for ski_area in ski_areas]
 
     def queryset(self, request, queryset):
@@ -61,11 +62,11 @@ class SkiAreaWithActivitiesFilter(admin.SimpleListFilter):
 
 @admin.register(Activity)
 class ActivityAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'user', 'start_time', 'ski_area', 'num_lift_rides', 'strava_id']
-    list_filter = [SkiAreaWithActivitiesFilter, 'start_time', 'user']
-    search_fields = ['name', 'user__username', 'strava_id']
+    list_display = ["id", "name", "user", "start_time", "ski_area", "num_lift_rides", "strava_id"]
+    list_filter = [SkiAreaWithActivitiesFilter, "start_time", "user"]
+    search_fields = ["name", "user__username", "strava_id"]
     actions = [update_strava_descriptions]
-    readonly_fields = ['strava_id', 'created_on', 'modified_on', 'processed_on']
+    readonly_fields = ["strava_id", "created_on", "modified_on", "processed_on"]
 
 
 admin.site.register(ActivityBadge)
@@ -73,10 +74,10 @@ admin.site.register(ActivityBadge)
 
 @admin.register(Badge)
 class BadgeAdmin(admin.ModelAdmin):
-    list_display = ['name', 'natural_key', 'rarity', 'created_on']
-    list_filter = ['rarity', 'created_on']
-    search_fields = ['name', 'natural_key', 'description']
-    readonly_fields = ['natural_key', 'name', 'description', 'icon', 'rarity', 'created_on', 'modified_on']
+    list_display = ["name", "natural_key", "rarity", "created_on"]
+    list_filter = ["rarity", "created_on"]
+    search_fields = ["name", "natural_key", "description"]
+    readonly_fields = ["natural_key", "name", "description", "icon", "rarity", "created_on", "modified_on"]
 
     def has_add_permission(self, request):
         return False
@@ -84,19 +85,28 @@ class BadgeAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
+
 @admin.register(StravaSyncSettings)
 class StravaSyncSettingsAdmin(admin.ModelAdmin):
     list_display = (
-        "enable_scheduled_sync", "schedule_every_minutes",
-        "enable_webhook_sync", "updated_at",
+        "enable_scheduled_sync",
+        "schedule_every_minutes",
+        "enable_webhook_sync",
+        "updated_at",
     )
     fieldsets = (
-        ("Scheduling", {
-            "fields": ("enable_scheduled_sync", "schedule_every_minutes"),
-        }),
-        ("Webhook", {
-            "fields": ("enable_webhook_sync", "webhook_verify_token", "webhook_signing_secret"),
-        }),
+        (
+            "Scheduling",
+            {
+                "fields": ("enable_scheduled_sync", "schedule_every_minutes"),
+            },
+        ),
+        (
+            "Webhook",
+            {
+                "fields": ("enable_webhook_sync", "webhook_verify_token", "webhook_signing_secret"),
+            },
+        ),
     )
 
     def has_add_permission(self, request):

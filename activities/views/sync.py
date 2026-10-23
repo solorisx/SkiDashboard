@@ -8,7 +8,6 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from ..badges import reassign_all_badges
 from ..batch import parse_strava_activities, parse_strava_activity
 from ..forms import BadgeReassignmentForm, GlobalSyncForm, PerUserSyncForm, StravaSyncForm
 from ..models import Activity
@@ -30,8 +29,7 @@ def _clean_completed_reprocessing_tasks():
     current_time = time.time()
     timeout = int(os.getenv("REPROCESSING_TIMEOUT", 300))  # Default to 5 minutes
     # Remove entries older than timeout
-    expired_keys = [key for key, timestamp in _reprocessing_activities.items()
-                   if current_time - timestamp > timeout]
+    expired_keys = [key for key, timestamp in _reprocessing_activities.items() if current_time - timestamp > timeout]
     for key in expired_keys:
         _reprocessing_activities.pop(key, None)
 
@@ -61,10 +59,7 @@ def sync_strava_admin(request):
                 update = activity_form.cleaned_data["update"]
                 try:
                     sync_strava_activity_task.delay(user.id, strava_activity_id, update)
-                    messages.success(
-                        request,
-                        f"Started sync for Strava activity {strava_activity_id} (user: {user})."
-                    )
+                    messages.success(request, f"Started sync for Strava activity {strava_activity_id} (user: {user}).")
                 except Exception as e:
                     messages.error(request, f"Error syncing Strava activity: {e}")
                 return redirect("sync_strava_admin")
@@ -104,15 +99,9 @@ def sync_strava_admin(request):
                 try:
                     reassign_badges_task.delay(user_id=user.id if user else None)
                     if user:
-                        messages.success(
-                            request,
-                            f"Queued badge reassignment for user {user}."
-                        )
+                        messages.success(request, f"Queued badge reassignment for user {user}.")
                     else:
-                        messages.success(
-                            request,
-                            f"Queued badge reassignment for all users."
-                        )
+                        messages.success(request, "Queued badge reassignment for all users.")
                 except Exception as e:
                     messages.error(request, f"Error reassigning badges: {e}")
                 return redirect("sync_strava_admin")
@@ -136,7 +125,7 @@ def sync_strava(request):
         return HttpResponse(f"Error syncing Strava activities: {e}")
 
 
-@staff_member_required    
+@staff_member_required
 def sync_reprocess_all(request):
     """Reprocess all Strava activities for the current user."""
     try:
@@ -144,9 +133,9 @@ def sync_reprocess_all(request):
         return HttpResponse("Strava activities sync and reprocessing started")
     except Exception as e:
         return HttpResponse(f"Error syncing Strava activities: {e}")
-    
 
-@staff_member_required    
+
+@staff_member_required
 def reset_all(request):
     """Delete all activities for the current user."""
     Activity.objects.filter(user=request.user).delete()
@@ -188,8 +177,12 @@ def reprocess_activity(request, activity_id, background=True):
         # Queue the reprocessing task
         parse_strava_activity(user=request.user, activity_id=activity.strava_id, update=True, background=background)
 
-        messages.success(request, f"Activity '{activity.name}' has been queued for reprocessing. This may take a few minutes.")
-        logger.info(f"Queued activity {activity_id} (Strava ID: {activity.strava_id}) for reprocessing by user {request.user.username}")
+        messages.success(
+            request, f"Activity '{activity.name}' has been queued for reprocessing. This may take a few minutes."
+        )
+        logger.info(
+            f"Queued activity {activity_id} (Strava ID: {activity.strava_id}) for reprocessing by user {request.user.username}"
+        )
 
     except Exception as e:
         # Remove from dict if queuing failed

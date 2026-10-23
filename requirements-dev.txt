@@ -1,0 +1,4 @@
+# Tooling used by CI (.github/workflows/ci.yml)
+black==26.10.1
+ruff==0.17.2
+pip-audit==2.10.1

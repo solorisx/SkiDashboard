@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 def strava_webhook(request):
     """Handle Strava webhook events."""
     logger.info(f"Strava webhook received: {request}")
-    
+
     if request.method == "GET":
         return _handle_webhook_verification(request)
     elif request.method == "POST":
@@ -46,29 +46,28 @@ def _handle_webhook_payload(request):
     try:
         payload = json.loads(request.body)
         logger.debug(f"Received Strava webhook: {payload}")
-        
+
         if payload.get("object_type") != "activity":
             return HttpResponse("OK")
-            
+
         activity_id = payload.get("object_id")
         aspect_type = payload.get("aspect_type")
-        
+
         try:
             user = get_user_model().objects.get(
-                socialaccount__uid=payload.get("owner_id"), 
-                socialaccount__provider="strava"
+                socialaccount__uid=payload.get("owner_id"), socialaccount__provider="strava"
             )
         except get_user_model().DoesNotExist:
             logger.error(f"No user found for Strava ID {payload.get('owner_id')}", exc_info=True, stack_info=True)
             return HttpResponse("OK")
-        
+
         if aspect_type == "create":
             return _handle_activity_create(user, activity_id, payload.get("owner_id"))
         elif aspect_type == "delete":
             return _handle_activity_delete(user, activity_id)
-            
+
         return HttpResponse("OK")
-        
+
     except json.JSONDecodeError:
         logger.error("Invalid JSON in webhook payload", exc_info=True, stack_info=True)
         return HttpResponse("Bad Request", status=400)
@@ -82,7 +81,7 @@ def _handle_activity_create(user, activity_id, user_id):
     if Activity.objects.filter(user=user, strava_id=activity_id).exists():
         logger.info(f"Activity {activity_id} for user {user.username} ({user_id}) already exists; skipping.")
         return HttpResponse("OK")
-        
+
     sync_strava_activity_task.delay(user.id, activity_id)
     logger.info(f"Enqueued sync for new activity for user {user.username} ({user_id})")
     return HttpResponse("OK")
@@ -107,18 +106,18 @@ def _handle_activity_delete(user, activity_id):
 def subscribe_strava_webhook(request):
     """Subscribe to Strava webhooks."""
     logger.info("Subscribing to Strava webhooks...")
-    
+
     client_id = os.getenv("STRAVA_CLIENT_ID")
     client_secret = os.getenv("STRAVA_CLIENT_SECRET")
     verify_token = os.getenv("STRAVA_VERIFY_TOKEN")
     callback_url = os.getenv("STRAVA_WEBHOOK_CALLBACK_URL")
-    
+
     logger.info(f"Client ID: {client_id}, Callback URL: {callback_url}, Verify Token: {verify_token}")
-    
+
     if not all([client_id, client_secret, verify_token, callback_url]):
         messages.error(request, "Missing Strava webhook configuration in environment variables.")
         return redirect("admin:index")
-        
+
     response = requests.post(
         "https://www.strava.com/api/v3/push_subscriptions",
         data={
@@ -128,12 +127,12 @@ def subscribe_strava_webhook(request):
             "verify_token": verify_token,
         },
     )
-    
+
     logger.info(f"Strava webhook subscription response: {response.status_code}, {response.text}")
-    
+
     if response.status_code == 201:
         messages.success(request, "Successfully subscribed to Strava webhooks.")
     else:
         messages.error(request, f"Failed to subscribe to Strava webhooks: {response.text}")
-        
+
     return redirect("admin:index")

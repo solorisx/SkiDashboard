@@ -1,0 +1,15 @@
+[tool.black]
+line-length = 120
+target-version = ["py311"]
+extend-exclude = '''
+/(migrations|venv|staticfiles)/
+'''
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["*/migrations/*", "venv", "staticfiles"]
+
+[tool.ruff.lint]
+# Pyflakes (unused/undefined names, etc.) plus syntax errors.
+select = ["E9", "F"]

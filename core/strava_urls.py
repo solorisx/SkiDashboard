@@ -1,4 +1,5 @@
 """Custom Strava OAuth URLs with dynamic scope support."""
+
 from allauth.socialaccount.providers.oauth2.views import (
     OAuth2CallbackView,
     OAuth2LoginView,
@@ -6,7 +7,6 @@ from allauth.socialaccount.providers.oauth2.views import (
 from django.urls import path
 from core.strava_adapter import CustomStravaOAuth2Adapter
 import logging
-
 
 logger = logging.getLogger(__name__)
 logger.info("=" * 80)

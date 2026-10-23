@@ -1,15 +1,16 @@
 from .models import Aerialway
 
+
 def get_aerialways_with_distance(lat, lon, distance_km, srid=4326):
     """
     Returns Aerialways within distance along with their actual distance from the point.
-    
+
     Args:
         latitude (float): Latitude of the center point
         longitude (float): Longitude of the center point
         distance_km (float): Maximum distance in kilometers
         srid (int): Spatial Reference System Identifier (default: 4326 for WGS84)
-    
+
     Returns:
         QuerySet: Aerialway objects annotated with distance field
     """

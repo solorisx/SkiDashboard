@@ -1,21 +1,19 @@
 from datetime import datetime
 import json
 import logging
-from django.contrib.contenttypes.models import ContentType
-from djmoney.models.fields import MoneyField
-from osm.models import SkiArea, SkiAreaBoundary, SkiAreaNetwork, SkiAreaNetworkMember
+from osm.models import SkiArea, SkiAreaNetwork, SkiAreaNetworkMember
 
-logger = logging.getLogger('core')
+logger = logging.getLogger("core")
+
 
 def init_networks(request):
     """
     Creates SkiAreaNetwork instances for each SkiArea.
     """
-    
+
     if not request.user.is_staff:
         logger.error("Unauthorized attempt to initialize ski area networks.")
         return
-    
 
     topcard, created = SkiAreaNetwork.objects.get_or_create(name="Topcard", season_pass_price=1300)
     if not created:
@@ -23,7 +21,7 @@ def init_networks(request):
         topcard.members.all().delete()
 
     # TODO: use json to load ski areas
-    
+
     topcard_areas = ["Laax", "Arosa Lenzerheide", "Davos Klosters", "Parsenn", "Jakobshorn", "Rinerhorn", "Madrisa"]
     topcard_addon = ["Titlis", "Adelboden-Lenk", "Jungfrau Ski Region", "Aletsch Arena"]
 
@@ -35,10 +33,10 @@ def init_networks(request):
                     member=skiarea,
                     ski_area_network=topcard,
                     defaults={
-                        'valid_during': 'winter',
-                        'valid_from': datetime(2024, 11, 1),
-                        'max_days': 365,
-                    }
+                        "valid_during": "winter",
+                        "valid_from": datetime(2024, 11, 1),
+                        "max_days": 365,
+                    },
                 )
                 logger.info(f"Added {area} to Topcard network.")
         except SkiArea.DoesNotExist:
@@ -52,16 +50,15 @@ def init_networks(request):
                     ski_area_network=topcard,
                     member=skiarea,
                     defaults={
-                        'valid_during': 'winter',
-                        'valid_from': datetime(2025, 11, 1),
-                        'max_days': 4,
-                    }
+                        "valid_during": "winter",
+                        "valid_from": datetime(2025, 11, 1),
+                        "max_days": 4,
+                    },
                 )
                 logger.info(f"Added {area} to Topcard network add-on. ({skiarea.name})")
         except SkiArea.DoesNotExist:
             logger.warning(f"Could not find ski area {area}")
 
-    
     tsc, created = SkiAreaNetwork.objects.get_or_create(name="Tirol Snowcard", season_pass_price=1000)
     if not created:
         logger.warning("Tirol Snowcard network already exists, resetting members.")
@@ -78,10 +75,10 @@ def init_networks(request):
                         ski_area_network=tsc,
                         member=skiarea,
                         defaults={
-                            'valid_during': 'winter',
-                            'valid_from': datetime(2024, 11, 1),
-                            'max_days': 365,
-                        }
+                            "valid_during": "winter",
+                            "valid_from": datetime(2024, 11, 1),
+                            "max_days": 365,
+                        },
                     )
                     logger.info(f"Added {area} to Tirol Snowcard network.")
             except SkiArea.DoesNotExist:

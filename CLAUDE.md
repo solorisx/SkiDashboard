@@ -534,6 +534,30 @@ ENABLE_SILK=True  # in .env
 
 ---
 
+## Continuous Integration
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`:
+
+| Job | What it runs |
+|-----|--------------|
+| Lint & format | `ruff check .` and `black --check .` (config in `pyproject.toml`) |
+| Dependency audit | `pip-audit -r requirements.txt` (direct + transitive deps) |
+| Tests | `python3 manage.py check` and `python3 manage.py test` against a PostGIS 16-3.4 service |
+
+Run the same checks locally before pushing:
+
+```bash
+python3 -m pip install -r requirements-dev.txt
+ruff check . && black --check .
+pip-audit -r requirements.txt
+```
+
+These checks only block merges and deploys once two settings are configured manually:
+- **GitHub branch protection** on `main` requiring the `Lint & format`, `Dependency audit` and `Tests` checks
+- **Railway "Wait for CI"** on the service, so pushes to `main` deploy only after the checks pass
+
+---
+
 ## Git Workflow
 
 **Main branch:** `main`

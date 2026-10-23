@@ -1,4 +1,5 @@
 """Custom allauth account adapter with async email support."""
+
 import logging
 from allauth.account.adapter import DefaultAccountAdapter
 from django.template.loader import render_to_string
@@ -23,14 +24,15 @@ class AsyncEmailAccountAdapter(DefaultAccountAdapter):
         """
         from core.tasks import send_email_async
 
-        request = context.get('request')
+        request = context.get("request")
 
         # Create a simple site object for email context
         class SimpleSite:
             def __init__(self):
                 import os
+
                 # Priority: ALLAUTH_SITE_DOMAIN env var > request host > ALLOWED_HOSTS
-                allauth_domain = os.getenv('ALLAUTH_SITE_DOMAIN')
+                allauth_domain = os.getenv("ALLAUTH_SITE_DOMAIN")
                 if allauth_domain:
                     self.domain = allauth_domain
                 elif request:
@@ -40,13 +42,13 @@ class AsyncEmailAccountAdapter(DefaultAccountAdapter):
                         self.domain = self._get_default_domain()
                 else:
                     self.domain = self._get_default_domain()
-                self.name = 'SlopeLog'
+                self.name = "SlopeLog"
 
             def _get_default_domain(self):
-                allowed_hosts = getattr(settings, 'ALLOWED_HOSTS', [])
+                allowed_hosts = getattr(settings, "ALLOWED_HOSTS", [])
                 if allowed_hosts and allowed_hosts[0]:
                     return allowed_hosts[0]
-                return 'localhost'
+                return "localhost"
 
         current_site = SimpleSite()
 
@@ -81,11 +83,7 @@ class AsyncEmailAccountAdapter(DefaultAccountAdapter):
 
         try:
             send_email_async.delay(
-                subject=subject,
-                body=body,
-                from_email=from_email,
-                to_emails=[email],
-                html_body=html_body
+                subject=subject, body=body, from_email=from_email, to_emails=[email], html_body=html_body
             )
             logger.info(f"Email queued successfully to {email}")
         except Exception as e:
@@ -95,7 +93,7 @@ class AsyncEmailAccountAdapter(DefaultAccountAdapter):
 
     def get_from_email(self):
         """Get the sender email address."""
-        return getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@slopelog.com')
+        return getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@slopelog.com")
 
     def confirm_email(self, request, email_address):
         """
@@ -110,7 +108,7 @@ class AsyncEmailAccountAdapter(DefaultAccountAdapter):
 
         # Use send_mail to send welcome email asynchronously
         context = {
-            'user': user,
-            'request': request,
+            "user": user,
+            "request": request,
         }
-        self.send_mail('account/email/welcome', user.email, context)
+        self.send_mail("account/email/welcome", user.email, context)

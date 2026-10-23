@@ -23,27 +23,24 @@ load_dotenv()
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-if os.getenv('DJANGO_DEBUG') == 'True':
+if os.getenv("DJANGO_DEBUG") == "True":
     DEBUG = True
 else:
     DEBUG = False
 
-LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 AUTHENTICATION_BACKENDS = [
-    
     # Needed to login by username in Django admin, regardless of `allauth`
-    'django.contrib.auth.backends.ModelBackend',
-
+    "django.contrib.auth.backends.ModelBackend",
     # `allauth` specific authentication methods, such as login by email
-    'allauth.account.auth_backends.AuthenticationBackend',
-    
+    "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
 LOGIN_REDIRECT_URL = "/"
@@ -52,70 +49,65 @@ ACCOUNT_LOGOUT_REDIRECT_URL = "/"
 # Application definition
 
 INSTALLED_APPS = [
-
-    'core',
-    'activities',
-    'osm',
-    'cost',
-
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.gis',
-
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.strava',
-    'dal',
-    'dal_select2',
-
+    "core",
+    "activities",
+    "osm",
+    "cost",
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.gis",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.strava",
+    "dal",
+    "dal_select2",
     "whitenoise.runserver_nostatic",
-
 ]
 
 if os.getenv("ENABLE_SILK", "false").lower() == "true":
     INSTALLED_APPS += [
-        'silk',
+        "silk",
     ]
 
 MIDDLEWARE = [
-    'allauth.account.middleware.AccountMiddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.locale.LocaleMiddleware',  # Auto-detect user's preferred language
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "allauth.account.middleware.AccountMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",  # Auto-detect user's preferred language
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    'core.middleware.ProfileConfirmationMiddleware',  # Redirect to profile if not confirmed
+    "core.middleware.ProfileConfirmationMiddleware",  # Redirect to profile if not confirmed
 ]
 
 if os.getenv("ENABLE_SILK", "false").lower() == "true":
-    MIDDLEWARE.append('silk.middleware.SilkyMiddleware')
+    MIDDLEWARE.append("silk.middleware.SilkyMiddleware")
 
     # Silk configuration (only set when Silk is enabled)
-    SILKY_INTERCEPT_FUNC = lambda request: not request.path.startswith('/accounts/')
+    SILKY_INTERCEPT_FUNC = lambda request: not request.path.startswith("/accounts/")
     SILKY_AUTHENTICATION = True  # User must login
     SILKY_AUTHORISATION = True  # User must have permissions
     SILKY_PYTHON_PROFILER = True  # Enable Python profiling
     SILKY_PYTHON_PROFILER_BINARY = True  # Use cProfile for better performance
 
-ROOT_URLCONF = 'core.urls'
+ROOT_URLCONF = "core.urls"
 
 SOCIALACCOUNT_STORE_TOKENS = True
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
 # Custom social account adapter for dynamic Strava scopes
-SOCIALACCOUNT_ADAPTER = 'core.strava_adapter.CustomSocialAccountAdapter'
+SOCIALACCOUNT_ADAPTER = "core.strava_adapter.CustomSocialAccountAdapter"
 
 # Custom account adapter for async email sending
-ACCOUNT_ADAPTER = 'core.account_adapter.AsyncEmailAccountAdapter'
+ACCOUNT_ADAPTER = "core.account_adapter.AsyncEmailAccountAdapter"
 
 # Email configuration for allauth
 ACCOUNT_EMAIL_REQUIRED = True
@@ -132,35 +124,35 @@ ACCOUNT_USERNAME_REQUIRED = False  # Don't require a username field in forms
 # Strava provider configuration
 # Custom provider registered via provider_classes in strava_adapter.py
 SOCIALACCOUNT_PROVIDERS = {
-    'strava': {
-        'SCOPE': ['read', 'activity:read'],  # Base scopes, will be overridden dynamically
-        'AUTH_PARAMS': {
-            'approval_prompt': 'auto',
+    "strava": {
+        "SCOPE": ["read", "activity:read"],  # Base scopes, will be overridden dynamically
+        "AUTH_PARAMS": {
+            "approval_prompt": "auto",
         },
     }
 }
 
 # Email Configuration
-if os.getenv('SMTP_HOST'):
+if os.getenv("SMTP_HOST"):
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-    EMAIL_HOST = os.getenv('SMTP_HOST')
-    EMAIL_PORT = int(os.getenv('SMTP_PORT', 587))
-    EMAIL_USE_TLS = os.getenv('SMTP_USE_TLS', 'True').lower() == 'true'
-    EMAIL_USE_SSL = os.getenv('SMTP_USE_SSL', 'False').lower() == 'true'
-    EMAIL_HOST_USER = os.getenv('SMTP_USER')
-    EMAIL_HOST_PASSWORD = os.getenv('SMTP_PASSWORD')
-    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', os.getenv('SMTP_USER', 'noreply@slopelog.com'))
+    EMAIL_HOST = os.getenv("SMTP_HOST")
+    EMAIL_PORT = int(os.getenv("SMTP_PORT", 587))
+    EMAIL_USE_TLS = os.getenv("SMTP_USE_TLS", "True").lower() == "true"
+    EMAIL_USE_SSL = os.getenv("SMTP_USE_SSL", "False").lower() == "true"
+    EMAIL_HOST_USER = os.getenv("SMTP_USER")
+    EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASSWORD")
+    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", os.getenv("SMTP_USER", "noreply@slopelog.com"))
     # Set timeout to prevent worker blocking if SMTP connection hangs
-    EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', 10))
-elif os.getenv('MAILGUN_API_KEY'):
+    EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", 10))
+elif os.getenv("MAILGUN_API_KEY"):
     # Fallback to Mailgun HTTP API
     EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
     ANYMAIL = {
-        "MAILGUN_API_KEY": os.getenv('MAILGUN_API_KEY'),
-        "MAILGUN_SENDER_DOMAIN": os.getenv('MAILGUN_SENDER_DOMAIN'),
-        "MAILGUN_API_URL": os.getenv('MAILGUN_API_URL', 'https://api.mailgun.net/v3'),
+        "MAILGUN_API_KEY": os.getenv("MAILGUN_API_KEY"),
+        "MAILGUN_SENDER_DOMAIN": os.getenv("MAILGUN_SENDER_DOMAIN"),
+        "MAILGUN_API_URL": os.getenv("MAILGUN_API_URL", "https://api.mailgun.net/v3"),
     }
-    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@slopelog.com')
+    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@slopelog.com")
 else:
     # Fallback to file-based backend for development
     EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
@@ -169,22 +161,22 @@ else:
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-                'core.context_processors.premium_status',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "core.context_processors.premium_status",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
+WSGI_APPLICATION = "core.wsgi.application"
 
 
 # Database
@@ -200,7 +192,7 @@ if ON_CLOUD:
     _db = dj_database_url.parse(
         db_url,
         conn_max_age=600,
-        ssl_require=True,   # Render Postgres requires SSL
+        ssl_require=True,  # Render Postgres requires SSL
     )
 else:
     # Local dev fallback only
@@ -221,14 +213,14 @@ DATABASES = {"default": _db}
 # https://docs.djangoproject.com/en/5.0/topics/cache/
 
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'django_cache_table',
-        'TIMEOUT': 900,  # 15 minutes
-        'OPTIONS': {
-            'MAX_ENTRIES': 1000,
-            'CULL_FREQUENCY': 3,
-        }
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache_table",
+        "TIMEOUT": 900,  # 15 minutes
+        "OPTIONS": {
+            "MAX_ENTRIES": 1000,
+            "CULL_FREQUENCY": 3,
+        },
     }
 }
 
@@ -238,16 +230,16 @@ CACHES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -255,37 +247,36 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
 # Supported languages for the application
 LANGUAGES = [
-    ('en', 'English'),
-    #('de', 'Deutsch'),
-    #('fr', 'Français'),
-    #('es', 'Español'),
-    #('it', 'Italiano'),
+    ("en", "English"),
+    # ('de', 'Deutsch'),
+    # ('fr', 'Français'),
+    # ('es', 'Español'),
+    # ('it', 'Italiano'),
 ]
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
 USE_TZ = True
 
 USE_L10N = True
-DECIMAL_SEPARATOR = '.'
+DECIMAL_SEPARATOR = "."
 
-CURRENCIES = ['CHF', 'EUR', 'USD', 'GBP', 'JPY', 'CNY']
+CURRENCIES = ["CHF", "EUR", "USD", "GBP", "JPY", "CNY"]
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 # Optional (recommended):
 WHITENOISE_KEEP_ONLY_HASHED_FILES = True
-
 
 
 # Add project-level "static" directory
@@ -294,96 +285,96 @@ STATICFILES_DIRS = [
 ]
 
 # Media files (User uploaded files)
-MEDIA_URL = '/media/'
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Logging
 
 print("Initializing LOGGING in settings.py - if you see this more than once use 'runserver --noreload'")
 
-FORMATTER = os.getenv('FORMATTER', 'json')
+FORMATTER = os.getenv("FORMATTER", "json")
 
 print(f"LOG_LEVEL is set to {LOG_LEVEL} and FORMATTER to {FORMATTER}")
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{asctime} {levelname} {name} {message}',
-            'style': '{',
-            'datefmt': '%Y-%m-%d %H:%M:%S',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{asctime} {levelname} {name} {message}",
+            "style": "{",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
         },
-        'json': {
-            '()': 'core.formatters.JSONFormatter',
+        "json": {
+            "()": "core.formatters.JSONFormatter",
         },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'console': {
-            'level': LOG_LEVEL,
-            'class': 'logging.StreamHandler',
-            'formatter': FORMATTER,
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
         },
     },
-    'root': {   # <--- root logger catches everything not caught by other loggers
-        'handlers': ['console'],
-        'level': "WARNING", #LOG_LEVEL,
+    "handlers": {
+        "console": {
+            "level": LOG_LEVEL,
+            "class": "logging.StreamHandler",
+            "formatter": FORMATTER,
+        },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'WARNING', #LOG_LEVEL,
-            'propagate': False,
+    "root": {  # <--- root logger catches everything not caught by other loggers
+        "handlers": ["console"],
+        "level": "WARNING",  # LOG_LEVEL,
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "WARNING",  # LOG_LEVEL,
+            "propagate": False,
         },
-        'core': {
-            'handlers': ['console'],
-            'level': LOG_LEVEL,
-            'propagate': True,  # Allow child loggers to inherit
+        "core": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": True,  # Allow child loggers to inherit
         },
-        'activities': {
-            'handlers': ['console'],
-            'level': LOG_LEVEL,
-            'propagate': False,
+        "activities": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
         },
-        'osm': {
-            'handlers': ['console'],
-            'level': LOG_LEVEL,
-            'propagate': False,
+        "osm": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
         },
-        'cost': {
-            'handlers': ['console'],
-            'level': LOG_LEVEL,
-            'propagate': False,
+        "cost": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
         },
-        'celery': {
-            'handlers': ['console'],
-            'level': LOG_LEVEL,
-            'propagate': False,
+        "celery": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
         },
-        'anymail': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
+        "anymail": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
         },
-        'requests': {
-            'handlers': ['console'],
-            'level': 'DEBUG',  # See HTTP requests made by anymail
-            'propagate': False,
+        "requests": {
+            "handlers": ["console"],
+            "level": "DEBUG",  # See HTTP requests made by anymail
+            "propagate": False,
         },
-        'urllib3': {
-            'handlers': ['console'],
-            'level': 'DEBUG',  # See low-level HTTP details
-            'propagate': False,
+        "urllib3": {
+            "handlers": ["console"],
+            "level": "DEBUG",  # See low-level HTTP details
+            "propagate": False,
         },
     },
 }
@@ -392,30 +383,30 @@ LOGGING = {
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL")
 
 # Optional but recommended settings
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND")  # Optional: to store task results
-CELERY_TIMEZONE = 'UTC'
+CELERY_TIMEZONE = "UTC"
 broker_connection_retry_on_startup = True
 
 from celery.schedules import crontab
+
 CELERY_BEAT_SCHEDULE = {
-    'premium-expiry-reminders': {
-        'task': 'core.tasks.send_premium_expiry_reminders',
-        'schedule': crontab(hour=8, minute=0),
+    "premium-expiry-reminders": {
+        "task": "core.tasks.send_premium_expiry_reminders",
+        "schedule": crontab(hour=8, minute=0),
     },
 }
 
 # --- Premium / Free Tier ---
-FREE_TIER_MAX_SYNC_DAYS = int(os.getenv('FREE_TIER_MAX_SYNC_DAYS', 365))
-BUYMEACOFFEE_WEBHOOK_SECRET = os.getenv('BUYMEACOFFEE_WEBHOOK_SECRET', '')
-BUYMEACOFFEE_PREMIUM_THRESHOLD_USD = float(os.getenv('BUYMEACOFFEE_PREMIUM_THRESHOLD_USD', 20))
+FREE_TIER_MAX_SYNC_DAYS = int(os.getenv("FREE_TIER_MAX_SYNC_DAYS", 365))
+BUYMEACOFFEE_WEBHOOK_SECRET = os.getenv("BUYMEACOFFEE_WEBHOOK_SECRET", "")
+BUYMEACOFFEE_PREMIUM_THRESHOLD_USD = float(os.getenv("BUYMEACOFFEE_PREMIUM_THRESHOLD_USD", 20))
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 # Add localhost/development hosts when in DEBUG mode or ALLOWED_HOSTS is empty
 if DEBUG or not any(ALLOWED_HOSTS):
-    ALLOWED_HOSTS.extend(['localhost', '127.0.0.1', '0.0.0.0', '[::1]'])
+    ALLOWED_HOSTS.extend(["localhost", "127.0.0.1", "0.0.0.0", "[::1]"])
 
 CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-

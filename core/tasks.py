@@ -21,12 +21,7 @@ def send_email_async(self, subject, body, from_email, to_emails, html_body=None)
     try:
         logger.info(f"Sending email to {to_emails} with subject: {subject}")
 
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            body=body,
-            from_email=from_email,
-            to=to_emails
-        )
+        msg = EmailMultiAlternatives(subject=subject, body=body, from_email=from_email, to=to_emails)
 
         if html_body:
             msg.attach_alternative(html_body, "text/html")
@@ -50,14 +45,14 @@ def send_premium_expiry_reminders():
     from core.models import UserProfile
 
     now = timezone.now()
-    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com')
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com")
 
     # 30-day reminders
     for profile in UserProfile.objects.filter(
         is_premium=True,
         premium_expiry_30d_notified=False,
         premium_expires_at__range=(now, now + timedelta(days=31)),
-    ).select_related('user'):
+    ).select_related("user"):
         subject = "Your SlopeLog Premium expires in 30 days"
         body = (
             f"Hi {profile.user.get_full_name() or profile.user.username},\n\n"
@@ -69,7 +64,7 @@ def send_premium_expiry_reminders():
         )
         send_email_async.delay(subject, body, from_email, [profile.user.email])
         profile.premium_expiry_30d_notified = True
-        profile.save(update_fields=['premium_expiry_30d_notified'])
+        profile.save(update_fields=["premium_expiry_30d_notified"])
         logger.info(f"Sent 30-day expiry reminder to {profile.user.email}")
 
     # 7-day reminders
@@ -77,7 +72,7 @@ def send_premium_expiry_reminders():
         is_premium=True,
         premium_expiry_7d_notified=False,
         premium_expires_at__range=(now, now + timedelta(days=8)),
-    ).select_related('user'):
+    ).select_related("user"):
         subject = "Your SlopeLog Premium expires in 7 days"
         body = (
             f"Hi {profile.user.get_full_name() or profile.user.username},\n\n"
@@ -88,5 +83,5 @@ def send_premium_expiry_reminders():
         )
         send_email_async.delay(subject, body, from_email, [profile.user.email])
         profile.premium_expiry_7d_notified = True
-        profile.save(update_fields=['premium_expiry_7d_notified'])
+        profile.save(update_fields=["premium_expiry_7d_notified"])
         logger.info(f"Sent 7-day expiry reminder to {profile.user.email}")

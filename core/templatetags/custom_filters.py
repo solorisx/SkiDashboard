@@ -4,6 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 register = template.Library()
 
+
 @register.filter
 def divide(value, arg):
     try:
@@ -12,7 +13,8 @@ def divide(value, arg):
         return value / arg
     except (ValueError, ZeroDivisionError):
         return 0
-    
+
+
 @register.filter
 def multiply(value, arg):
     try:
@@ -21,21 +23,24 @@ def multiply(value, arg):
         return value * arg
     except (ValueError, ZeroDivisionError):
         return 0
-    
+
+
 @register.filter
 def subtract(value, arg):
     try:
         return value - arg
     except (ValueError, ZeroDivisionError):
         return 0
-    
+
+
 @register.filter
 def add(value, arg):
     try:
         return value + arg
     except (ValueError, ZeroDivisionError):
         return 0
-    
+
+
 @register.filter
 def round_to(value, arg):
     try:
@@ -44,16 +49,18 @@ def round_to(value, arg):
         return round(value, arg)
     except (ValueError, ZeroDivisionError):
         return 0
-    
+
+
 @register.filter
 def format_money(value):
     if value is None:
-        return ''
+        return ""
 
     currency = value.currency
     amount = value.amount
 
     return f"{currency} {amount:,.2f}"
+
 
 @register.filter
 def icon_to_emoji(icon_class):
@@ -62,33 +69,34 @@ def icon_to_emoji(icon_class):
     Falls back to a default trophy emoji if no mapping is found.
     """
     if not icon_class:
-        return '🏆'
+        return "🏆"
 
     # Mapping of Font Awesome classes to emoji
     icon_map = {
-        'fa-solid fa-cable-car': '🚡',
-        'fa-solid fa-medal': '🥇',
-        'fa-solid fa-trophy': '🏆',
-        'fa-solid fa-mountain': '⛰️',
-        'fa-solid fa-mountain-sun': '🏔️',
-        'fa-solid fa-map-location-dot': '📍',
-        'fa-solid fa-map-pin': '📌',
-        'fa-solid fa-compass': '🧭',
-        'fa-solid fa-map': '🗺️',
-        'fa-solid fa-crown': '👑',
-        'fa-solid fa-calendar-day': '📅',
-        'fa-solid fa-calendar-check': '✅',
-        'fa-solid fa-calendar-star': '⭐',
-        'fa-solid fa-calendar-crown': '👑',
-        'fa-solid fa-list': '📋',
-        'fa-solid fa-grip': '⚡',
-        'fa-solid fa-star': '⭐',
-        'fa-solid fa-gem': '💎',
-        'fa-solid fa-fire': '🔥',
+        "fa-solid fa-cable-car": "🚡",
+        "fa-solid fa-medal": "🥇",
+        "fa-solid fa-trophy": "🏆",
+        "fa-solid fa-mountain": "⛰️",
+        "fa-solid fa-mountain-sun": "🏔️",
+        "fa-solid fa-map-location-dot": "📍",
+        "fa-solid fa-map-pin": "📌",
+        "fa-solid fa-compass": "🧭",
+        "fa-solid fa-map": "🗺️",
+        "fa-solid fa-crown": "👑",
+        "fa-solid fa-calendar-day": "📅",
+        "fa-solid fa-calendar-check": "✅",
+        "fa-solid fa-calendar-star": "⭐",
+        "fa-solid fa-calendar-crown": "👑",
+        "fa-solid fa-list": "📋",
+        "fa-solid fa-grip": "⚡",
+        "fa-solid fa-star": "⭐",
+        "fa-solid fa-gem": "💎",
+        "fa-solid fa-fire": "🔥",
     }
 
     # Return mapped emoji or default
-    return icon_map.get(icon_class, '🏆')
+    return icon_map.get(icon_class, "🏆")
+
 
 @register.filter
 def json_js(value):

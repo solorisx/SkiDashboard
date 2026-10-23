@@ -2,6 +2,7 @@ from centerline.geometry import Centerline
 from .models import Piste, SkiArea
 from shapely import Polygon
 
+
 def reduce_polygon(piste: Piste):
     """
     Reduce the polygon of a piste to a line string
@@ -15,7 +16,7 @@ def reduce_polygon(piste: Piste):
         print(piste.get_osm_url())
     else:
         return
-    
+
     # Reduce the polygon to a line string
     line = Centerline(polygon).geometry
 
@@ -52,6 +53,3 @@ def delete_all_polygon_pistes():
     for piste in pistes:
         if piste.geom.coords[0] == piste.geom.coords[-1]:
             piste.delete()
-
-
-

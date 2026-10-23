@@ -8,6 +8,7 @@ from .tasks import sync_strava_activity_task
 
 logger = logging.getLogger(__name__)
 
+
 def parse_strava_activities(user, all=False, update=False):
     # deprecated, use parse_strava_activities_task instead
     if all:
@@ -18,16 +19,18 @@ def parse_strava_activities(user, all=False, update=False):
             after = datetime.now() - timedelta(days=max_strava_sync)
     else:
         after = datetime.now() - timedelta(days=90)
-    
+
     activities = load_activities(user, after=after)
 
     for activity in activities:
-        if activity.type == 'AlpineSki':
+        if activity.type == "AlpineSki":
             try:
                 activity_id = activity.id
                 sync_strava_activity_task.delay(user.id, activity_id, update)
             except Exception as e:
-                logger.error(f"Failed to queue task for Strava activity {activity_id}: {e}", exc_info=True, stack_info=True)
+                logger.error(
+                    f"Failed to queue task for Strava activity {activity_id}: {e}", exc_info=True, stack_info=True
+                )
                 continue
 
 

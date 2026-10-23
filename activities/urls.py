@@ -2,7 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('admin/', views.sync_strava_admin, name="sync_strava_admin"),
+    path("admin/", views.sync_strava_admin, name="sync_strava_admin"),
     path("", views.activity_list, name="activity_list"),
     path("<int:activity_id>/", views.activity_detail, name="activity_detail"),
     path("<int:activity_id>/map/", views.activity_map, name="activity_map_view"),
@@ -11,7 +11,7 @@ urlpatterns = [
     path("strava/webhook/", views.strava_webhook, name="strava_webhook"),
     path("strava/<strava_id>/", views.activity_detail_strava, name="activity_detail_strava"),
     path("skiarea/<int:ski_area_id>/", views.ski_area_completeness_detail, name="skiarea_detail"),
-    path("skiarea/<int:ski_area_id>/<str:season>", views.ski_area_completeness_detail, name="skiarea_detail_season"),    
+    path("skiarea/<int:ski_area_id>/<str:season>", views.ski_area_completeness_detail, name="skiarea_detail_season"),
     path("sync_strava_all/", views.sync_strava_all, name="sync_strava_all"),
     path("sync_strava/", views.sync_strava, name="sync_strava"),
     path("reprocess_all/", views.sync_reprocess_all, name="reprocess_all"),
@@ -27,25 +27,83 @@ urlpatterns = [
     path("admin/profiling/<int:activity_id>/", views.activity_profiling_detail, name="activity_profiling_detail"),
     path("insights/", views.activity_insights, name="activity_insights"),
     path("insights/<str:season>/", views.activity_insights, name="activity_insights_season"),
-    path("insights/<str:season>/share-image/", views.generate_season_share_image_view, name="generate_season_share_image"),
+    path(
+        "insights/<str:season>/share-image/", views.generate_season_share_image_view, name="generate_season_share_image"
+    ),
     path("lift-insights/", views.lift_insights, name="lift_insights"),
     path("lift-insights/<str:season>/", views.lift_insights, name="lift_insights_season"),
     path("piste-insights/", views.piste_insights, name="piste_insights"),
     path("piste-insights/<str:season>/", views.piste_insights, name="piste_insights_season"),
-    path("ski-area-piste-completeness/<int:ski_area_id>/", views.ski_area_piste_completeness_detail, name="ski_area_piste_completeness_detail"),
-    path("ski-area-piste-completeness/<int:ski_area_id>/<str:season>/", views.ski_area_piste_completeness_detail, name="ski_area_piste_completeness_detail_season"),
-    path("ski-area-piste-completeness/all/", views.ski_area_piste_completeness_all, name="ski_area_piste_completeness_all"),
-    path("ski-area-piste-completeness/all/<str:season>/", views.ski_area_piste_completeness_all, name="ski_area_piste_completeness_all_season"),
-    path("ski-area-completeness/<int:ski_area_id>/", views.ski_area_completeness_detail, name="ski_area_completeness_detail"),
-    path("ski-area-completeness/<int:ski_area_id>/<str:season>/", views.ski_area_completeness_detail, name="ski_area_completeness_detail_season"),
+    path(
+        "ski-area-piste-completeness/<int:ski_area_id>/",
+        views.ski_area_piste_completeness_detail,
+        name="ski_area_piste_completeness_detail",
+    ),
+    path(
+        "ski-area-piste-completeness/<int:ski_area_id>/<str:season>/",
+        views.ski_area_piste_completeness_detail,
+        name="ski_area_piste_completeness_detail_season",
+    ),
+    path(
+        "ski-area-piste-completeness/all/",
+        views.ski_area_piste_completeness_all,
+        name="ski_area_piste_completeness_all",
+    ),
+    path(
+        "ski-area-piste-completeness/all/<str:season>/",
+        views.ski_area_piste_completeness_all,
+        name="ski_area_piste_completeness_all_season",
+    ),
+    path(
+        "ski-area-completeness/<int:ski_area_id>/",
+        views.ski_area_completeness_detail,
+        name="ski_area_completeness_detail",
+    ),
+    path(
+        "ski-area-completeness/<int:ski_area_id>/<str:season>/",
+        views.ski_area_completeness_detail,
+        name="ski_area_completeness_detail_season",
+    ),
     path("ski-area-completeness/all/", views.ski_area_completeness_all, name="ski_area_completeness_all"),
-    path("ski-area-completeness/all/<str:season>/", views.ski_area_completeness_all, name="ski_area_completeness_all_season"),
-    path("api/activity-completeness/<int:activity_id>/", views.activity_completeness_api, name="activity_completeness_api"),
-    path("api/activity-completeness-batch/", views.activity_completeness_batch_api, name="activity_completeness_batch_api"),
-    path("api/activity-piste-completeness/<int:activity_id>/", views.activity_piste_completeness_api, name="activity_piste_completeness_api"),
-    path("api/activity-piste-completeness-batch/", views.activity_piste_completeness_batch_api, name="activity_piste_completeness_batch_api"),
-    path("api/reload-ski-area-completeness/<int:ski_area_id>/", views.reload_ski_area_completeness, name="reload_ski_area_completeness"),
-    path("api/reload-ski-area-piste-completeness/<int:ski_area_id>/", views.reload_ski_area_piste_completeness, name="reload_ski_area_piste_completeness"),
+    path(
+        "ski-area-completeness/all/<str:season>/",
+        views.ski_area_completeness_all,
+        name="ski_area_completeness_all_season",
+    ),
+    path(
+        "api/activity-completeness/<int:activity_id>/",
+        views.activity_completeness_api,
+        name="activity_completeness_api",
+    ),
+    path(
+        "api/activity-completeness-batch/",
+        views.activity_completeness_batch_api,
+        name="activity_completeness_batch_api",
+    ),
+    path(
+        "api/activity-piste-completeness/<int:activity_id>/",
+        views.activity_piste_completeness_api,
+        name="activity_piste_completeness_api",
+    ),
+    path(
+        "api/activity-piste-completeness-batch/",
+        views.activity_piste_completeness_batch_api,
+        name="activity_piste_completeness_batch_api",
+    ),
+    path(
+        "api/reload-ski-area-completeness/<int:ski_area_id>/",
+        views.reload_ski_area_completeness,
+        name="reload_ski_area_completeness",
+    ),
+    path(
+        "api/reload-ski-area-piste-completeness/<int:ski_area_id>/",
+        views.reload_ski_area_piste_completeness,
+        name="reload_ski_area_piste_completeness",
+    ),
     path("api/activity/<int:activity_id>/", views.ActivityAPI.as_view(), name="activity_api"),
-    path("api/update-strava-description/<int:activity_id>/", views.update_strava_description_api, name="update_strava_description_api"),
+    path(
+        "api/update-strava-description/<int:activity_id>/",
+        views.update_strava_description_api,
+        name="update_strava_description_api",
+    ),
 ]

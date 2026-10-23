@@ -1,5 +1,4 @@
 import logging
-from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -57,11 +56,7 @@ def cluster_activities_into_trips(user):
     from .models import Activity, Trip
 
     # Fetch all activities ordered oldest-first so we can compute gaps
-    activities = list(
-        Activity.objects.filter(user=user)
-        .select_related('ski_area')
-        .order_by('timestamp')
-    )
+    activities = list(Activity.objects.filter(user=user).select_related("ski_area").order_by("timestamp"))
 
     if not activities:
         # No activities → remove all trips for this user
@@ -69,7 +64,7 @@ def cluster_activities_into_trips(user):
         return
 
     # --- Build clusters ---
-    clusters = []          # list of lists of Activity
+    clusters = []  # list of lists of Activity
     current_cluster = [activities[0]]
 
     for activity in activities[1:]:
@@ -86,10 +81,7 @@ def cluster_activities_into_trips(user):
     clusters.append(current_cluster)
 
     # --- Snapshot existing trips keyed by (start_date, end_date) ---
-    existing_trips = {
-        (t.start_date, t.end_date): t
-        for t in Trip.objects.filter(user=user)
-    }
+    existing_trips = {(t.start_date, t.end_date): t for t in Trip.objects.filter(user=user)}
 
     # --- Match clusters to existing trips and create/update as needed ---
     used_trip_ids = set()
@@ -108,7 +100,7 @@ def cluster_activities_into_trips(user):
             # Only overwrite the display name if the user hasn't changed it
             if not trip.name_modified:
                 trip.name = auto_name
-            trip.save(update_fields=['auto_name', 'name', 'modified_on'])
+            trip.save(update_fields=["auto_name", "name", "modified_on"])
         else:
             trip = Trip.objects.create(
                 user=user,
@@ -125,9 +117,7 @@ def cluster_activities_into_trips(user):
 
     # --- Clear trip from activities that no longer belong to any cluster ---
     # (shouldn't normally happen, but defensive)
-    Activity.objects.filter(user=user).exclude(
-        pk__in=[a.pk for cluster in clusters for a in cluster]
-    ).update(trip=None)
+    Activity.objects.filter(user=user).exclude(pk__in=[a.pk for cluster in clusters for a in cluster]).update(trip=None)
 
     # --- Delete trips that are no longer referenced ---
     Trip.objects.filter(user=user).exclude(pk__in=used_trip_ids).delete()

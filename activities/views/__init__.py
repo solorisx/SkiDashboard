@@ -78,74 +78,68 @@ from .trips import (
     recluster_trips,
 )
 
-# For backward compatibility, we also need to ensure the home_stats view 
+# For backward compatibility, we also need to ensure the home_stats view
 # returns a proper HttpResponse for template rendering
 from django.shortcuts import render
+
 
 def home_stats(request):
     """Wrapper for home_stats to return proper template response."""
     context = home_stats_data(request)
     return render(request, "home.html", context)
 
+
 # Export all views for URL configuration
 __all__ = [
     # Activity views
-    'activity_detail',
-    'activity_detail_strava',
-    'activity_list',
-    'activity_map',
-    'get_unique_lift_rides',
-    'segment_map',
-    'ActivityAPI',
-    'generate_share_image',
-    
+    "activity_detail",
+    "activity_detail_strava",
+    "activity_list",
+    "activity_map",
+    "get_unique_lift_rides",
+    "segment_map",
+    "ActivityAPI",
+    "generate_share_image",
     # API views
-    'activity_completeness_api',
-    'activity_completeness_batch_api',
-    'activity_piste_completeness_api',
-    'activity_piste_completeness_batch_api',
-    'home_stats',
-    'season_stats',
-    'update_strava_description_api',
-    
+    "activity_completeness_api",
+    "activity_completeness_batch_api",
+    "activity_piste_completeness_api",
+    "activity_piste_completeness_batch_api",
+    "home_stats",
+    "season_stats",
+    "update_strava_description_api",
     # Statistics views
-    'activity_list_skiarea_detail',
-    'lift_ride_list',
-    'lift_ride_list_season',
-    
+    "activity_list_skiarea_detail",
+    "lift_ride_list",
+    "lift_ride_list_season",
     # Sync views
-    'reprocess_activity',
-    'reset_all',
-    'sync_reprocess_all',
-    'sync_strava',
-    'sync_strava_admin',
-    'sync_strava_all',
-    
+    "reprocess_activity",
+    "reset_all",
+    "sync_reprocess_all",
+    "sync_strava",
+    "sync_strava_admin",
+    "sync_strava_all",
     # Webhook views
-    'strava_webhook',
-    'subscribe_strava_webhook',
-
+    "strava_webhook",
+    "subscribe_strava_webhook",
     # Admin profiling views
-    'activity_profiling_dashboard',
-    'activity_profiling_detail',
-
+    "activity_profiling_dashboard",
+    "activity_profiling_detail",
     # Insights views
-    'activity_insights',
-    'generate_season_share_image_view',
-    'lift_insights',
-    'ski_area_completeness_detail',
-    'ski_area_completeness_all',
-    'reload_ski_area_completeness',
-
+    "activity_insights",
+    "generate_season_share_image_view",
+    "lift_insights",
+    "ski_area_completeness_detail",
+    "ski_area_completeness_all",
+    "reload_ski_area_completeness",
     # Piste insights views
-    'piste_insights',
-    'ski_area_piste_completeness_detail',
-    'ski_area_piste_completeness_all',
-    'reload_ski_area_piste_completeness',
-
+    "piste_insights",
+    "ski_area_piste_completeness_detail",
+    "ski_area_piste_completeness_all",
+    "reload_ski_area_piste_completeness",
     # Trip views
-    'trip_list',
-    'trip_detail',
-    'rename_trip',
-    'recluster_trips',
+    "trip_list",
+    "trip_detail",
+    "rename_trip",
+    "recluster_trips",
 ]
